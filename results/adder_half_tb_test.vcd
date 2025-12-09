@@ -1,0 +1,107 @@
+$date
+	Tue Dec  9 11:01:58 2025
+$end
+$version
+	Icarus Verilog
+$end
+$timescale
+	1ps
+$end
+$scope module adder_half_tb $end
+$var wire 1 ! ec $end
+$var wire 1 " es $end
+$var wire 1 # sum $end
+$var wire 1 $ carry $end
+$var parameter 32 % DELAY $end
+$var parameter 32 & USE_CASE $end
+$var reg 1 ' a $end
+$var reg 1 ( b $end
+$scope begin genblk1 $end
+$scope module adder_half_dut $end
+$var wire 1 ' a $end
+$var wire 1 ( b $end
+$var wire 1 ) sum $end
+$var wire 1 * carry $end
+$var parameter 32 + TRiseA $end
+$var parameter 32 , TRiseB $end
+$upscope $end
+$upscope $end
+$upscope $end
+$enddefinitions $end
+$comment Show the parameter values. $end
+$dumpall
+b10 ,
+b11 +
+b0 &
+b1010 %
+$end
+#0
+$dumpvars
+x*
+x)
+0(
+0'
+x$
+x#
+0"
+0!
+$end
+#2000
+0$
+0*
+#3000
+0#
+0)
+#10000
+1#
+1)
+1"
+1(
+#20000
+0(
+1'
+#30000
+0#
+0)
+0"
+1!
+1(
+#32000
+1$
+1*
+#40000
+0$
+0*
+1"
+0!
+0'
+#43000
+1#
+1)
+#50000
+0(
+1'
+#60000
+0#
+0)
+0"
+1!
+1(
+#62000
+1$
+1*
+#70000
+0$
+0*
+1"
+0!
+0'
+#73000
+1#
+1)
+#80000
+0#
+0)
+0"
+0(
+#100000
