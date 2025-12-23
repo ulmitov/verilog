@@ -1,5 +1,5 @@
 $date
-	Tue Dec  9 11:01:58 2025
+	Tue Dec 23 14:37:53 2025
 $end
 $version
 	Icarus Verilog
@@ -22,8 +22,8 @@ $var wire 1 ' a $end
 $var wire 1 ( b $end
 $var wire 1 ) sum $end
 $var wire 1 * carry $end
-$var parameter 32 + TRiseA $end
-$var parameter 32 , TRiseB $end
+$var parameter 32 + TholdA $end
+$var parameter 32 , TholdB $end
 $upscope $end
 $upscope $end
 $upscope $end

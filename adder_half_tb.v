@@ -1,5 +1,6 @@
 `timescale 1ns / 1ps
 
+
 module adder_half_tb;
     parameter DELAY = 10;
     parameter USE_CASE = 0;
@@ -9,48 +10,37 @@ module adder_half_tb;
 
     generate
         if (USE_CASE)
-          adder_half adder_half_dut (.sum(sum), .carry(carry), .a(a), .b(b));
+            adder_half_gateflow adder_half_dut (.a(a), .b(b), .sum(sum), .carry(carry));
         else
-          adder_half_dataflow adder_half_dut (.sum(sum), .carry(carry), .a(a), .b(b));
+            adder_half_dataflow adder_half_dut (.a(a), .b(b), .sum(sum), .carry(carry));
     endgenerate
   
+    `define _APPLY_VALUES(x, y) \
+    begin \
+        a = x; \
+        b = y; \
+        #DELAY if ((sum) !== (es) || (carry) !== (ec)) \
+            $display("ERROR: sum %d !== %d || carry %d !== %d", sum, es, carry, ec); \
+    end
+
     // expected results
     assign ec = a&b;
     assign es = a^b;
 
     initial begin
-        $dumpfile("results/adder_half_tb_test.vcd");
+        $dumpfile("results/adder_half_tb.vcd");
         $dumpvars(0, adder_half_tb);
-        $display("Starting simulation... %s", USE_CASE);
-        $monitor("%d a=%b, b=%b, sum,carry=(%b, %b), exp=(%b, %b)", $time, a, b, sum, carry, es, ec);
-        a = 0; b = 0;
-        #DELAY if ((sum) !== (es) || (carry) !== (ec))
-          $display("ERROR: sum %d !== $d || carry %d !== %d", sum, es, carry, ec);
-        a = 0; b = 1;
-        #DELAY if ((sum) !== (es) || (carry) !== (ec))
-          $display("ERROR: sum %d !== $d || carry %d !== %d", sum, es, carry, ec);
-        a = 1; b = 0;
-        #DELAY if ((sum) !== (es) || (carry) !== (ec))
-          $display("ERROR: sum %d !== $d || carry %d !== %d", sum, es, carry, ec);
-        a = 1; b = 1;
-        #DELAY if ((sum) !== (es) || (carry) !== (ec))
-          $display("ERROR: sum %d !== $d || carry %d !== %d", sum, es, carry, ec);
-        a = 0; b = 1;
-        #DELAY if ((sum) !== (es) || (carry) !== (ec))
-          $display("ERROR: sum %d !== $d || carry %d !== %d", sum, es, carry, ec);
-        a = 1; b = 0;
-        #DELAY if ((sum) !== (es) || (carry) !== (ec))
-          $display("ERROR: sum %d !== $d || carry %d !== %d", sum, es, carry, ec);
-        a = 1; b = 1;
-        #DELAY if ((sum) !== (es) || (carry) !== (ec))
-          $display("ERROR: sum %d !== $d || carry %d !== %d", sum, es, carry, ec);
-        a = 0;
-        #DELAY if ((sum) !== (es) || (carry) !== (ec))
-          $display("ERROR: sum %d !== $d || carry %d !== %d", sum, es, carry, ec);
-        b = 0;
-        #DELAY if ((sum) !== (es) || (carry) !== (ec))
-          $display("ERROR: sum %d !== $d || carry %d !== %d", sum, es, carry, ec);
-        #10 $display("End simulation...");
+        $display("Starting simulation... USE_CASE=%0d", USE_CASE);
+        $monitor("%d (a, b)=(%b, %b), sum,carry=(%b, %b), exp=(%b, %b)", $time, a, b, sum, carry, es, ec);
+        `_APPLY_VALUES(0, 0);
+        `_APPLY_VALUES(0, 1);
+        `_APPLY_VALUES(1, 0);
+        `_APPLY_VALUES(1, 1);
+        `_APPLY_VALUES(0, 1);
+        `_APPLY_VALUES(1, 0);
+        `_APPLY_VALUES(1, 1);
+        `_APPLY_VALUES(0, 1);
+        `_APPLY_VALUES(0, 0);
+        #10 $finish;
     end
 endmodule
-
