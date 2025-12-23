@@ -30,18 +30,18 @@ module counter_tb();
     #T_CYC;
     #T_CYC res_n = 1;
     
-    for (i = 0; i < 2; i += 1) #T_CYC;
+    for (i = 0; i < 2; i = i + 1) #T_CYC;
 
     enable = 1;
     up_down = 1;
-    for (i = 0; i < 2**n - 1; i += 1) begin
-      expected += 1;
+    for (i = 0; i < 2**n - 1; i = i + 1) begin
+      expected = expected + 1;
       #T_CYC;
     end
 
     up_down = 0;
-    for (i = 0; i < 2**n - 1; i += 1) begin
-       expected -= 1;
+    for (i = 0; i < 2**n - 1; i = i + 1) begin
+       expected = expected - 1;
        #T_CYC;
     end
     
@@ -50,8 +50,8 @@ module counter_tb();
     expected = set;
     #T_CYC set = 0;
     load = 0;
-    for (i = 0; i < 2**n - 1; i += 1) begin
-       expected -= 1;
+    for (i = 0; i < 2**n - 1; i = i + 1) begin
+       expected = expected - 1;
        #T_CYC;
     end
     $finish;

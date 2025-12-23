@@ -18,7 +18,7 @@ module adder_full_n_tb();
         $display("Test start");
 
         // Per stage test
-        for (j = 0; j < n; j++) begin
+        for (j = 0; j < n; j = j + 1) begin
 
             // test stuck at 1's
             X = 0; Y = 0; Cin = 0;
@@ -30,7 +30,7 @@ module adder_full_n_tb();
 
             // test all paths per stage
             $display("Testing stage %d", j);
-            for (q = 3'b001; q < 3'b111; q++) begin
+            for (q = 3'b001; q < 3'b111; q = q + 1) begin
                 if (j == 0)
                     {Cin, X[j], Y[j]} = q;
                 else

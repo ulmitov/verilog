@@ -16,7 +16,7 @@ integer k;
 
 always @(X, Y, Cin) begin
     C[0] = Cin;
-    for (k = 0; k < n; k++) begin
+    for (k = 0; k < n; k = k + 1) begin
         sum[k] = X[k] ^ Y[k] ^ C[k];
         C[k + 1] = (X[k] & Y[k]) | (X[k] & C[k]) | (Y[k] & C[k]);
     end
