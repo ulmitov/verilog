@@ -1,5 +1,9 @@
 /*
     N bit FULL ADDER
+
+f="adder_full_n"
+m="adder_full_n"
+yosys -p "read_verilog ${f}.v; hierarchy -check -top $m; proc; flatten; techmap; clean; splitnets -ports; opt; clean -purge; stat; write_verilog -noattr synth/${m}_synth.v; show -format svg -prefix synth/${m} ${m}; show ${m}"
 */
 module adder_full_n(X, Y, Cin, sum, carry);
 parameter n = 4;
