@@ -1,6 +1,7 @@
 /*
     Counters
 */
+`include "consts.v"
 `include "flip_flop.v"
 
 /*
@@ -24,7 +25,7 @@ module counter_behavioral #(parameter n = 3) (
         else if (load)
             count <= set;
         else if (en)
-            count <= count + (count_up ? 1 : -1);
+            #`T_FF_DELAY count <= count + (count_up ? 1 : -1);
     end
 endmodule
 
@@ -32,14 +33,18 @@ endmodule
 /*
 TFF async N bit counter
 
+This counter is sensitive to delays,
+since the output of each TFF is connected to the clock of the next TFF.
+So each next FF clock has additional delay !
+So the minimum clock high phase time should be: num of bits (FFs) * FF delay.
+
 f="counter"; m="counter_tff_async"
 yosys -p "read_verilog ${f}.v; hierarchy -check -top $m; proc; opt; clean; stat; write_verilog -noattr synth/${m}_synth.v; show -format svg -prefix synth/${m} ${m}; show ${m}"
 */
-module counter_tff_async #(parameter n = 3) (
+module counter_tff_async #(parameter n = 3, parameter count_up = 1) (
     input clk,
     input res_n,
     input en,
-    input count_up,
     output wire [n-1:0] count
 );
     wire [n-1:0] ff_clk;
@@ -82,9 +87,7 @@ endmodule
 
 
 /*
-JKFF async N bit UP counter
-
-opt -nodffe -nosdff
+JKFF sync N bit Up-Down counter
 
 f="counter"; m="counter_jkff"
 yosys -p "read_verilog ${f}.v; hierarchy -check -top $m; proc; opt; wreduce; clean; stat; write_verilog -noattr synth/${m}_synth.v; show -format svg -prefix synth/${m} ${m}; show ${m}"
@@ -93,22 +96,28 @@ module counter_jkff #(parameter n = 3) (
     input clk,
     input res_n,
     input en,
+    input count_up,
     output wire [n-1:0] count
 );
-    wire j, k, ff_clk, c;
-    // reset: J=0, K=1; disabled: J=0, K=0; Reset is higher priority
-    // Set: J=1, K=0.
-    assign j = en & res_n;
-    assign k = ~(res_n & ~en);
+    wire J, K;
+    wire [n-1:0] j, k, d;
 
+    // Clear: J=0, K=1; hold: J=0, K=0; Clear has higher priority:
+    assign J = en & res_n;
+    assign K = en | ~res_n;
+
+    // Combinational circuit with flip flops synced by same clock
+    // each JK input is a product of two previous outputs (or values determined in previous circuit)
     generate
         genvar i;
         for (i = 0; i < n; i = i + 1) begin
             if (i == 0)
-                ff_jk ff_i ( .clk(clk), .J(j), .K(k), .Q(count[i]) );
+                assign d[i] = en;
             else
-                // sync reset: propagate clock to all FF's if reset requested
-                ff_jk ff_i ( .clk((~count[i-1] & res_n) | (clk & ~res_n)), .J(j), .K(k), .Q(count[i]) );
+                assign d[i] = d[i-1] & (count_up ? count[i-1] : ~count[i-1]);
+            assign j[i] = J != K ? J : d[i];
+            assign k[i] = J != K ? K : d[i];
+            ff_jk ff ( .clk(clk), .J(j[i]), .K(k[i]), .Q(count[i]) );
         end
     endgenerate
 endmodule

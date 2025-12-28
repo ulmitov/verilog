@@ -1,18 +1,17 @@
-/* posedge D flip flop with sync reset - n bit register */
+`include "consts.v"
+
+// posedge D flip flop with sync reset - n bit register
 module ff_d (
     input clk,
     input res_n,
     input din,
     output reg Q
 );
-    specify
-        $setup(d, q, 25);
-    endspecify
     always @(posedge clk or negedge res_n) begin
         if (!res_n)
             Q <= 0;
         else
-            Q <= din;
+            #`T_FF_DELAY Q <= din;
     end
 endmodule
 
@@ -28,14 +27,13 @@ module ff_t (
         if (!res_n)
             Q <= 0;
         else if (T)
-            Q <= ~Q;
+            #`T_FF_DELAY Q <= ~Q;
         else
-            Q <= Q;
+            #`T_FF_DELAY Q <= Q;
     end
 endmodule
 
 
-/* JK Flip Flop */
 module ff_jk (
     input clk,
     input J,
@@ -45,10 +43,10 @@ module ff_jk (
     // synced clear instead of reset
     always @(posedge clk) begin
         case ({J, K})
-            2'b00: Q <= Q;
+            2'b00: #`T_FF_DELAY Q <= Q;
             2'b01: Q <= 1'b0;
             2'b10: Q <= 1'b1;
-            2'b11: Q <= ~Q;
+            2'b11: #`T_FF_DELAY Q <= ~Q;
             default: Q <= 1'bX;
         endcase
     end

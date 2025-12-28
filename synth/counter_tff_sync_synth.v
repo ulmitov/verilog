@@ -48,10 +48,10 @@ module ff_t(clk, res_n, T, Q);
   wire clk;
   input res_n;
   wire res_n;
-  input [0:0] T;
-  wire [0:0] T;
-  output [0:0] Q;
-  reg [0:0] Q;
+  input T;
+  wire T;
+  output Q;
+  reg Q;
   wire _0_;
   always @(posedge clk, negedge res_n)
     if (!res_n) Q <= 1'h0;

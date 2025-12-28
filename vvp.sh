@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 if [[ -z "$VIRTUAL_ENV_PROMPT" ]]; then source ~/Downloads/oss-cad-suite/environment; fi
 if [[ -z "$1" ]]; then
-    echo -e "USAGE: sourcvvvp file [topmodule or testbench file]\nRun first . ./vvp.sh";
+    echo -e "USAGE: ./vvp.sh file [topmodule or testbench file]\nRun first . ./vvp.sh";
 else
     file="${1%.*}"
     if [[ -n "$2" ]]; then
@@ -20,8 +20,14 @@ else
         vvpfile="${file}_tb"
     fi
     vvpfile=${vvpfile##*/}
-    cmd="iverilog -Wall -g2012 -gspecify -o ./results/${vvpfile}.vvp ${topmodule} ${file}.v"
+    # -g2012 -g2005
+    cmd="iverilog -Wall -gspecify -o ./results/${vvpfile}.vvp ${topmodule} ${file}.v"
     echo $cmd; echo -e "vvp ./results/${vvpfile}.vvp\n"
     `$cmd`
-    vvp ./results/${vvpfile}.vvp
+    rc=$?
+    if [[ $rc -eq 0 ]]; then
+        vvp ./results/${vvpfile}.vvp
+    else
+        echo "Run Failed: ${rc}"
+    fi
 fi
