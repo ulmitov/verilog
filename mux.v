@@ -85,7 +85,7 @@ endmodule
     MUX 2 to 1
 
 f="mux"; m="mux_2to1";
-yosys -p "read_verilog ${f}.v; hierarchy -check -top $m; proc; opt; simplemap; show -format svg -prefix synth/${m}_${m} ${m}; show ${m}"
+yosys -p "read_verilog ${f}.v; hierarchy -check -top $m; proc; opt; simplemap; show -format svg -prefix synth/${m} ${m}; show ${m}"
 */
 module mux_2to1 (
     input  W0,
@@ -111,7 +111,7 @@ endmodule
 MUX 4 to 1
 
 f="mux"; m="mux_4to1";
-yosys -p "read_verilog ${f}.v; hierarchy -check -top $m; proc; opt; wreduce -keepdc; simplemap; muxcover -mux4=100; show -format svg -prefix synth/${m}_${m} ${m}; show ${m}"
+yosys -p "read_verilog ${f}.v; hierarchy -check -top $m; proc; opt; wreduce -keepdc; simplemap; muxcover -mux4=100; show -format svg -prefix synth/${m} ${m}; show ${m}"
 */
 module mux_4to1(
     input [3:0] W,
@@ -136,7 +136,7 @@ endmodule
 MUX 16 to 1
 
 f="mux"; m="mux_16to1";
-yosys -p "read_verilog ${f}.v; hierarchy -check -top $m; proc; opt; wreduce -keepdc; simplemap; muxcover -mux4=100; show -format svg -prefix synth/${m}_${m} ${m}; show ${m}"
+yosys -p "read_verilog ${f}.v; hierarchy -check -top $m; proc; opt; wreduce -keepdc; simplemap; muxcover -mux4=100; show -format svg -prefix synth/${m} ${m}; show ${m}"
 */
 module mux_16to1(
     input [15:0] W,
@@ -187,7 +187,7 @@ endmodule
 DECODER 2 to 4. Can be used as a DEMUX using en = din
 
 f="mux"; m="decoder2to4";
-yosys -p "read_verilog ${f}.v; hierarchy -check -top $m; proc; opt; simplemap; clean; show -format svg -prefix synth/${m}_${m} ${m}; show ${m}"
+yosys -p "read_verilog ${f}.v; hierarchy -check -top $m; proc; opt; simplemap; clean; show -format svg -prefix synth/${m} ${m}; show ${m}"
 */
 module decoder2to4 (
     input en,
@@ -241,7 +241,7 @@ endmodule
 DECODER 4 to 16. Can be used as a DEMUX using en = din
 
 f="mux"; m="decoder4to16";
-yosys -p "read_verilog ${f}.v; hierarchy -check -top $m; proc; opt; simplemap; clean; show -format svg -prefix synth/${m}_${m} ${m}; show ${m}"
+yosys -p "read_verilog ${f}.v; hierarchy -check -top $m; proc; opt; simplemap; clean; show -format svg -prefix synth/${m} ${m}; show ${m}"
 */
 module decoder4to16 (
     input en,
@@ -262,7 +262,7 @@ endmodule
 PRIORITY ENCODER 8 to 3
 
 f="mux"; m="priority_enc_8to3";
-yosys -p "read_verilog ${f}.v; hierarchy -check -top $m; proc; opt; simplemap; clean; show -format svg -prefix synth/${m}_${m} ${m}; show ${m}"
+yosys -p "read_verilog ${f}.v; hierarchy -check -top $m; proc; opt; simplemap; clean; show -format svg -prefix synth/${m} ${m}; show ${m}"
 */
 module priority_enc_8to3 (
     input [7:0] in,
