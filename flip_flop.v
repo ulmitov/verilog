@@ -1,17 +1,18 @@
 `include "consts.v"
 
 
-/* posedge D flip flop with async neg reset */
-module ff_d (
+/* posedge D flip flop with async neg reset - N bit register */
+module ff_d #(parameter N = 4) (
     input clk,
     input res_n,
-    input din,
-    output reg Q
+    input en,
+    input [N-1:0] din,
+    output reg [N-1:0] Q
 );
     always @(posedge clk or negedge res_n) begin
         if (!res_n)
             Q <= 0;
-        else
+        else if (en)
             #`T_FF_DELAY Q <= din;
     end
 endmodule
