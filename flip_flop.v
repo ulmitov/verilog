@@ -1,6 +1,7 @@
 `include "consts.v"
 
-// posedge D flip flop with sync reset - n bit register
+
+/* posedge D flip flop with async neg reset */
 module ff_d (
     input clk,
     input res_n,
@@ -16,7 +17,7 @@ module ff_d (
 endmodule
 
 
-/* T Flip Flop with async neg reset */
+/* posedge T Flip Flop with async neg reset */
 module ff_t (
     input clk,
     input res_n,
@@ -51,3 +52,4 @@ module ff_jk (
         endcase
     end
 endmodule
+
