@@ -2,19 +2,9 @@
     MUX, DEMUX, ENCODER, DECODER gates
 */
 
-`define SYNTH         // uncomment for yosys - error parsing tri0 types
-//`define GATEFLOW      // uncomment to use gate flow logic
-//`define BEHAVIORAL      // uncomment to use behavioral flow logic
-
-
-module mux_Nto1 #(parameter N = 16) (
-    input [N-1:0] W,
-    input [$clog2(N):0] SEL,
-    output wire Y
-);
-    // synth produces a shiftx gate
-    assign Y = W[SEL];
-endmodule
+`define SYNTH           // uncomment for yosys - error parsing tri0 types
+//`define GATEFLOW      // uncomment to use gate flow logic (default is DATAFLOW)
+//`define BEHAVIORAL    // uncomment to use behavioral flow logic (default is DATAFLOW)
 
 
 module not_cmos (
@@ -29,8 +19,7 @@ module not_cmos (
     `else
         tri0 out;
     `endif
-    //pmos p1(p_out, d_in, ctrl);
-    //nmos n1(n_out, d_in, ctrl);
+
     pmos p1(out, vcc, din);
     nmos n1(gnd, out, din);
     assign Y = out;
@@ -51,7 +40,7 @@ module pmos_mux (
         tri0 out;
     `endif
     //pmos p1(p_out, d_in, ctrl);
-    //nmos n1(n_out, d_in, ctrl);
+    //nmos (strong1, strong0) (delay_r, delay_f, delay_o ) gg (n_out, d_in, ctrl);
     not_cmos n1(ns, SEL);
     pmos p1(out, W0, SEL);
     pmos p2(out, W1, ns);
@@ -82,10 +71,23 @@ endmodule
 
 
 /*
+f="mux"; m="mux_Nto1";
+yosys -p "read_verilog ${f}.v; hierarchy -check -top $m; proc; opt; techmap; muxcover -mux2=100; clean; show -format svg -prefix synth/${m} ${m}; show ${m}"
+*/
+module mux_Nto1 #(parameter N = 8) (
+    input [N-1:0] W,
+    input [$clog2(N)-1:0] SEL,
+    output wire Y
+);
+    assign Y = W[SEL];
+endmodule
+
+
+/*
     MUX 2 to 1
 
 f="mux"; m="mux_2to1";
-yosys -p "read_verilog ${f}.v; hierarchy -check -top $m; proc; opt; simplemap; show -format svg -prefix synth/${m} ${m}; show ${m}"
+yosys -p "read_verilog ${f}.v; hierarchy -check -top $m; proc; opt; techmap; show -format svg -prefix synth/${m} ${m}; show ${m}"
 */
 module mux_2to1 (
     input  W0,
@@ -177,7 +179,6 @@ module mux_16to1(
             endcase 
         end
     `else
-        // synth produces a shiftx gate
         mux_Nto1 m1 ( .W(W), .SEL(SEL), .Y(Y) );
     `endif
 endmodule
@@ -200,14 +201,14 @@ module decoder2to4 (
         assign y = out;
         always @ (*) begin
             if (!en) begin
-                out = 0;
+                out = 4'h0;
             end else begin
                 case (w)
                     2'b00: out = 4'b0001;
                     2'b01: out = 4'b0010;
                     2'b10: out = 4'b0100;
                     2'b11: out = 4'b1000;
-                    default: out = 0;
+                    default: out = 4'h0;
                 endcase
             end
         end
