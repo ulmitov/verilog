@@ -12,7 +12,7 @@ module mux_tb;
     mux_16to1 DUT(.W(din), .SEL(sel), .Y(out));
 
     initial begin
-        $dumpfile("results/mux_tb.vcd");
+        $dumpfile("vcd/mux_tb.vcd");
         $dumpvars(0, mux_tb);
         $display("Start test");
         $monitor("%d: din=%16b, sel=%d, out=%d, exp=%d", $time, din, sel, out, exp);
@@ -42,7 +42,7 @@ module cmos_mux_tb;
     end
 
     initial begin
-        $dumpfile("results/cmos_mux_tb.vcd");
+        $dumpfile("vcd/cmos_mux_tb.vcd");
         $dumpvars(0, cmos_mux_tb);
         $monitor("%d: a=%0b, b=%0b, s=%0b, out_c=%0b, out_p=%0b, exp=%0b", $time, a, b, s, out_c, out_p, exp);
 
@@ -70,7 +70,7 @@ module decoder_tb;
         #`T_CLK if (out !== exp) $display("%4d: ERROR: exp=%16b, out=%16b", $time, exp, out);
 
     initial begin
-        $dumpfile("results/decoder_tb.vcd");
+        $dumpfile("vcd/decoder_tb.vcd");
         $dumpvars(0, decoder_tb);
         $monitor("%4d: en=%0d, din=%4b, out=%16b", $time, en, din, out);
         en = 0;
@@ -112,7 +112,7 @@ module priority_enc_tb;
 
     // stimulus
     initial begin
-        $dumpfile("results/priority_enc_tb.vcd");
+        $dumpfile("vcd/priority_enc_tb.vcd");
         $dumpvars(0, priority_enc_tb);
         $monitor("%4d: din=%b, out=%b, valid=%b", $time, din, out, valid);
 

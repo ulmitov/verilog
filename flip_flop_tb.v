@@ -9,7 +9,7 @@ module ff_jk_tb;
     always #5 clk = ~clk;
 
     initial begin
-        $dumpfile("results/ff_jk_tb.vcd");
+        $dumpfile("vcd/ff_jk_tb.vcd");
         $dumpvars(0, ff_jk_tb);
         clk = 1;
         $monitor("%d j=%b, k=%b, Q=%b", $time, j, k, Q);

@@ -1,1 +1,1 @@
-`define T_FF_DELAY 2
+`define T_DELAY_FF 2

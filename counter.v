@@ -25,7 +25,7 @@ module counter_behavioral #(parameter n = 3) (
         else if (load)
             count <= set;
         else if (en)
-            #`T_FF_DELAY count <= count + (count_up ? 1 : -1);
+            #`T_DELAY_FF count <= count + (count_up ? 1 : -1);
     end
 endmodule
 

@@ -2,32 +2,60 @@
 # assuming each module has a tb file with the name of module under test with _tb.v
 if [[ -z "$VIRTUAL_ENV_PROMPT" ]]; then source ~/Downloads/oss-cad-suite/environment; fi
 if [[ -z "$1" ]]; then
-    echo -e "USAGE: ./vvp.sh file (without .v) [topmodule name]\nRun first . ./vvp.sh";
+    echo -e "USAGE: ./vvp.sh testbench_name [testbench_file verilog_files]\nRun first . ./vvp.sh";
 else
-    file="${1%.*}"
+    topmodule=$1
+    vvpfile="${topmodule%.*}"
     if [[ -n "$2" ]]; then
-        if [[ $2 == *".v"* ]]; then
-            # testbench with different name but topmodule with same name
-            topmodule="$2"
-            vvpfile="${topmodule%.*}"
+        if [[ -n "$3" ]]; then
+            # 3 or more args - tbname tbfile.sv module.v...
+            modules="-s ${topmodule} ${@:2}"
         else
-            # testbench with same name but different topmodule
-            topmodule="-s $2 $1_tb.v"
-            vvpfile=$2
+            # only 2 args
+            dut_file=$2
+            if [[ "$dut_file" == *"_tb"* ]]; then
+                # tbname tb_file.v
+                dut_file=${dut_file//"_tb"/""}
+                modules="-s ${topmodule} $2 ${dut_file}"
+            else
+                # tbname module.v
+                tb="${2%.*}"
+                if [ -f "${tb}_tb.sv" ]; then
+                    tb="${tb}_tb.sv"
+                else
+                    tb="${tb}_tb.v"
+                fi
+                modules="-s ${topmodule} ${tb} ${dut_file}"
+            fi
         fi
     else
-        # testbench with same name and same topmodule
-        topmodule="-s ${file}_tb ${file}_tb.v"
-        vvpfile="${file}_tb"
+        # only one arg received - testbench is with same name and same topmodule
+        dut_file=${vvpfile%"_tb"}
+        if [ -f "${dut_file}.sv" ]; then
+            dut_file="${dut_file}.sv"
+        else
+            dut_file="${dut_file}.v"
+        fi
+        if [ ! -f "${topmodule}" ]; then
+            if [ -f "${topmodule}.sv" ]; then
+                tb="${topmodule}.sv"
+            else
+                tb="${topmodule}.v"
+            fi
+        fi
+        modules="-s ${topmodule} ${tb} ${dut_file}"
     fi
     vvpfile=${vvpfile##*/}
-    # -g2012 -g2005
-    cmd="iverilog -Wall -g2012 -gspecify -o ./results/${vvpfile}.vvp ${topmodule} ${file}.v"
-    echo $cmd; echo -e "vvp ./results/${vvpfile}.vvp\n"
-    `$cmd`
+    if [[ "$modules" == *".sv"* ]]; then sysv="-g2005" else sysv="-g2012"; fi
+    if [ -e "./vcd" ]; then simdir="./vcd/"; else simdir=""; fi
+    cmd="iverilog -Wall ${sysv} -gspecify -o ${simdir}${vvpfile}.vvp ${modules}"
+    echo $cmd; `$cmd`
     rc=$?
     if [[ $rc -eq 0 ]]; then
-        vvp ./results/${vvpfile}.vvp
+        vv="verilator -Wall -cc --timing ${dut_file}"
+        echo -e "\n${vv}"; `$vv`
+        echo -e "\nvvp ${simdir}${vvpfile}.vvp";
+        vvp ${simdir}${vvpfile}.vvp
     else
         echo "Run Failed: ${rc}"
     fi

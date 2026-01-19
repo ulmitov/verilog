@@ -1,14 +1,14 @@
 `include "consts.v"
 
-`timescale 1ns / 1ns;
+`timescale 1ns / 1ns
 
 
 module counter_tb();
     parameter n = 4;
-    parameter T_CLK = `T_FF_DELAY * n + 1;
+    parameter T_CLK = `T_DELAY_FF * n + 1;
     parameter T_CYC = T_CLK * 2;
     parameter TYPE = "tff_async";
-    parameter vcd = {"results/counter_", TYPE, "_tb.vcd"};
+    parameter vcd = {"vcd/counter_", TYPE, "_tb.vcd"};
 
     reg res_n, enable, count_up, load;
     reg clk = 1'b0;
