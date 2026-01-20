@@ -8,8 +8,9 @@ else
     vvpfile="${topmodule%.*}"
     if [[ -n "$2" ]]; then
         if [[ -n "$3" ]]; then
-            # 3 or more args - tbname tbfile.sv module.v...
+            # 3 or more args - tbname tbfile.sv module1.v module2.v...
             modules="-s ${topmodule} ${@:2}"
+            dut_file=${@:3}
         else
             # only 2 args
             dut_file=$2
@@ -52,8 +53,8 @@ else
     echo $cmd; `$cmd`
     rc=$?
     if [[ $rc -eq 0 ]]; then
-        vv="verilator -Wall -cc --timing ${dut_file}"
-        echo -e "\n${vv}"; `$vv`
+        echo -e "\nverilator --lint-only -Wall -cc --timing ${dut_file}"
+        verilator --lint-only -Wall -cc --timing ${dut_file}
         echo -e "\nvvp ${simdir}${vvpfile}.vvp";
         vvp ${simdir}${vvpfile}.vvp
     else

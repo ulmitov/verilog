@@ -1,6 +1,10 @@
 /*
     Counters
 */
+/* verilator lint_off DECLFILENAME */
+/* verilator lint_off MULTITOP */
+/* verilator lint_off GENUNNAMED */
+
 `include "consts.v"
 `include "flip_flop.v"
 

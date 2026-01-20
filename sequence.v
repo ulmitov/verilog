@@ -1,7 +1,9 @@
 /*
     4 bit sequence detector with async reset and overlapping
 */
-
+/* verilator lint_off DECLFILENAME */
+/* verilator lint_off MULTITOP */
+/* verilator lint_off GENUNNAMED */
 `timescale 1ns / 1ns
 
 /*
