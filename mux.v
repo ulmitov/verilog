@@ -1,12 +1,11 @@
 /*
-    MUX, DEMUX, ENCODER, DECODER gates
+    MUX, DEMUX, ENCODER, DECODER units
 */
 /* verilator lint_off DECLFILENAME */
 /* verilator lint_off MULTITOP */
 /* verilator lint_off GENUNNAMED */
+`include "consts.v"
 
-//`define GATEFLOW      // uncomment to use gate flow logic (default is DATAFLOW)
-//`define BEHAVIORAL    // uncomment to use behavioral flow logic (default is DATAFLOW)
 
 /*
 f="mux"; m="mux_Nto1";
@@ -36,12 +35,11 @@ module mux_2to1 (
     `ifdef GATEFLOW
         wire not_sel, and1, and2;
 
-        not (not_sel, SEL);
-        and (and1, W0, not_sel);
-        and (and2, W1, SEL);
-        or (Y, and1, and2);
+        not #(`T_DELAY_PD) (not_sel, SEL);
+        and #(`T_DELAY_PD) (and1, W0, not_sel);
+        and #(`T_DELAY_PD) (and2, W1, SEL);
+        or #(`T_DELAY_PD) (Y, and1, and2);
     `else
-        // synth produces a single mux
         assign Y = (SEL) ? W1 : W0;
     `endif
 endmodule
@@ -65,7 +63,6 @@ module mux_4to1(
         mux_2to1 m2 ( .W0(W[2]), .W1(W[3]), .SEL(SEL[0]), .Y(y2) );
         mux_2to1 m3 ( .W0(y1), .W1(y2), .SEL(SEL[1]), .Y(Y) );
     `else
-        // synth produces a single mux
         assign Y = SEL[1] ? (SEL[0] ? W[3] : W[2]) : (SEL[0] ? W[1] : W[0]);
     `endif
 endmodule
