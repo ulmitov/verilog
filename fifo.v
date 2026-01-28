@@ -8,7 +8,7 @@ yosys -p "read_verilog ${f}.v; hierarchy -check -top $m; proc; opt; simplemap; c
 
 
 module fifo #(
-    parameter ADDR_WIDTH = 3,   // how much addresses, so depth is 2**ADDR_WIDTH
+    parameter ADDR_WIDTH = 3,           // how much addresses, so depth is 2**ADDR_WIDTH
     parameter WORD_WIDTH = 8
 ) (
     input res,
@@ -17,7 +17,7 @@ module fifo #(
     input pull,
     input wire [WORD_WIDTH-1:0] din,    // pushes a value into fifo
     output wire [WORD_WIDTH-1:0] dout,  // pulls a value from fifo
-    output reg [ADDR_WIDTH:0] count,    // counter shows how much the fifo is filled
+    output reg [ADDR_WIDTH:0] count,    // items counter. if this logic is required then uncomment the define line
     output wire empty,
     output wire full
 );
@@ -39,7 +39,7 @@ module fifo #(
         if (res) begin
             r_ptr <= 0;
         end else if (pull & ~empty) begin
-            //dout <= mem[r_ptr];   // instead of FFs, using the assign
+            //dout <= mem[r_ptr];   // instead of FFs, using the assign below
             r_ptr <= r_ptr + 1;
         end
     end
@@ -59,7 +59,7 @@ module fifo #(
             end else if (push & ~full & ~pull) begin
                 // push
                 pushed <= 1'b1;
-            end else if (pull & ~empty) begin // even if if push and pull in parallel
+            end else if (pull & ~empty) begin // even if push and pull in parallel
                 // pull
                 pushed <= 1'b0;
             end
@@ -71,7 +71,6 @@ module fifo #(
         assign empty = ~|count;             // at least one item was pushed
 
         // looks like if the casez is in separate combinational logic the synth has less elements, though not a big differrence
-        // but anyway this counter is additional adder logic, TODO: remove it and stay with the above logic?
         always @(*) begin
             // 4to1 mux
             casez ({pull, push, empty, full})
