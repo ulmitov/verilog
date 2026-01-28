@@ -12,6 +12,7 @@ while an instruction that has signed operands can use the overflow signal.
 /* verilator lint_off GENUNNAMED */
 `include "consts.v"
 
+
 /*
     N bit FULL ADDER and Comparator - max delay is N bits * FA delay (N*3 gates)
 
@@ -77,12 +78,13 @@ f="adder_full_n"
 m="adder_full_n"
 yosys -p "read_verilog ${f}.v; hierarchy -check -top $m; proc; flatten; techmap; clean; splitnets -ports; opt; clean -purge; stat; write_verilog -noattr synth/${m}_synth.v; show -format svg -prefix synth/${m} ${m}; show ${m}"
 */
-module adder_full_n(X, Y, Cin, sum, carry);
-    parameter n = 4;
-    input Cin;
-    input [n-1:0] X, Y;
-    output reg [n-1:0] sum;
-    output reg carry;
+module adder_full_n #(parameter n = 4) (
+    input [n-1:0] X,
+    input [n-1:0] Y,
+    input Cin,
+    output reg [n-1:0] sum,
+    output reg carry
+);
     reg [n:0] C;
     integer k;
 
@@ -116,8 +118,8 @@ module full_adder (
         half_adder h1(.a(sum1), .b(cin), .sum(sum), .carry(c2));
         or #(`T_DELAY_PD) o1(carry, c1, c2);
     `else
-        assign #`T_DELAY_PD sum = a ^ b ^ cin;
-        assign #`T_DELAY_PD carry = (a & b) | (a & cin) | (b & cin);
+        assign sum = a ^ b ^ cin;
+        assign carry = (a & b) | (a & cin) | (b & cin);
     `endif
 endmodule
 
@@ -138,7 +140,7 @@ module half_adder (
         and #(`T_DELAY_PD) (carry, a, b);
         xor #(`T_DELAY_PD) (sum, a, b);
     `else
-        assign #`T_DELAY_PD carry = a & b;
-        assign #`T_DELAY_PD sum = a ^ b;
+        assign carry = a & b;
+        assign sum = a ^ b;
     `endif
 endmodule

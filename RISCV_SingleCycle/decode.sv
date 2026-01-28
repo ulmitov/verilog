@@ -62,6 +62,6 @@ module decode (
             OPCODE_I_TYPE_LOAD,
             OPCODE_I_TYPE_JALR:     i_type = 1'b1;
         endcase
-        $strobe("%0d: OPCODE=%7b funct3=%0b, , rs1_addr=%0h, rs2_addr=%0h, IMM=%0h", $time, opcode, funct3, rs1_addr, rs2_addr, immediate);
+        $strobe("%0d: OPCODE=%7b funct3=%0b, rs1_addr=%0h, rs2_addr=%0h, IMM=%0h", $time, opcode, funct3, rs1_addr, rs2_addr, immediate);
     end
 endmodule

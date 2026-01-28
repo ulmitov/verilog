@@ -62,6 +62,7 @@ module riscv_32i #(
         .j_type(j_type)
     );
 
+
     register_file reg_file (
         .clk(clk),
         .res_n(res_n),
@@ -69,9 +70,9 @@ module riscv_32i #(
         .rd_addr(rd_addr),
         .rs1_addr(rs1_addr),
         .rs2_addr(rs2_addr),
-        .wr_data(wr_data),
         .rs1_data(rs1_data),
-        .rs2_data(rs2_data)
+        .rs2_data(rs2_data),
+        .wr_data(wr_data)
     );
 
 
@@ -83,23 +84,24 @@ module riscv_32i #(
         .branch_taken(branch_taken)
     );
 
-    // for vcd debug - see x when no need for data
+    // DEBUG only: see x when no need for data. (TODO: remove it)
     logic [31:0] dmem_addr;
     assign dmem_addr = dmem_req ? alu_res : 32'bX;
-
     logic [31:0] dmem_wr_data;
     assign dmem_wr_data = dmem_req ? rs2_data : 32'bX;
 
+
     data_memory #( .ADDR_WIDTH(ADDR_WIDTH), .DATA_WIDTH(DATA_WIDTH)) data_mem (
         .clk(clk),
-        .dmem_zero_ex(dmem_zero_ex),
         .dmem_req(dmem_req),
         .dmem_wr(dmem_wr),
         .dmem_size(dmem_size),
         .dmem_addr(dmem_addr),
+        .dmem_zero_ex(dmem_zero_ex),
         .dmem_wr_data(dmem_wr_data),
         .dmem_rd_data(dmem_rd_data)
     );
+
 
     alu alu_stage (
         .alu_op(alu_op),
@@ -107,6 +109,7 @@ module riscv_32i #(
         .alu_b(alu_b),
         .alu_res(alu_res)
     );
+
 
     control ctrl (
         .opcode(opcode),
@@ -122,16 +125,15 @@ module riscv_32i #(
         .pc_sel(pc_sel),
         .op1_sel(op1_sel),
         .op2_sel(op2_sel),
-        .rf_wr_data_sel(rf_wr_data_sel),
         .dmem_size(dmem_size),
         .dmem_req(dmem_req),
         .dmem_wr(dmem_wr),
         .dmem_zero_ex(dmem_zero_ex),
-        .rf_wr_en(rf_wr_en)
+        .rf_wr_en(rf_wr_en),
+        .rf_wr_data_sel(rf_wr_data_sel)
     );
 
-    // start fetching on the next clock after reset is done
-    // NOP is 00000013
+    // start fetching on the next clock after reset is done. TODO: use NOP 00000013 ?
     always_ff @(posedge clk or negedge res_n) begin
         if (!res_n)
             pc_en <= 1'b0;
@@ -150,18 +152,17 @@ module riscv_32i #(
     adder_full_n #(32) pc_adder (.X(pc), .Y(32'h4), .Cin(1'b0), .sum(next_seq_pc), .carry());
     //assign next_seq_pc = pc + 32'h4;
     assign pc_jump = {alu_res[31:1], 1'b0};
-    assign alu_a = op1_sel ? pc : rs1_data; // 1- pc, 0- rs1
-    assign alu_b = op2_sel ? immediate : rs2_data; // 1- imm, 0- rs2
-    assign pc_mux = branch_taken | pc_sel;   // pc_sel: 1-alu_res(jump), 0-next_pc
+    assign alu_a = op1_sel ? pc : rs1_data;         // 1- pc, 0- rs1
+    assign alu_b = op2_sel ? immediate : rs2_data;  // 1- imm, 0- rs2
+    assign pc_mux = branch_taken | pc_sel;          // pc_sel: 1-alu_res(jump), 0-next_pc
     assign next_pc = pc_mux ? pc_jump : next_seq_pc;
-
 
     always_comb begin
         case (rf_wr_data_sel)
             OP_RF_SEL_ALU: wr_data = alu_res;
             OP_RF_SEL_MEM: wr_data = dmem_rd_data;
             OP_RF_SEL_IMM: wr_data = immediate;
-            OP_RF_SEL_PC: wr_data = next_seq_pc;
+            OP_RF_SEL_PC:  wr_data = next_seq_pc;
         endcase
     end
 endmodule

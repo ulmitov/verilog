@@ -1,10 +1,13 @@
 `timescale 1ns / 100ps
 `include "consts.v"
-`define T_CLK (`T_DELAY_PD * (32*4))
+
+`define T_CLK (`T_DELAY_PD * (32*4)) // TODO: calc exact delay. change to verilog 2005?
 `define T_CYC (`T_CLK * 2)
 
 /*
 // https://risc-v-cpu-visualizer.vercel.app/assembler bugs in lw and sw funct3 !!!
+https://risc-v-cpu-visualizer.vercel.app/help
+https://www.cs.cornell.edu/courses/cs3410/2019sp/riscv/interpreter/#
 
 tC > tIFetch + tRFetch + tALU+ tDMem+ tRWB
 https://docs.riscv.org/reference/isa/_attachments/riscv-unprivileged.pdf
