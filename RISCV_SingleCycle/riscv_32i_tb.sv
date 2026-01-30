@@ -15,7 +15,7 @@ https://passlab.github.io/CSCE513/notes/lecture07_RISCV_Impl.pdf
 https://risc-v-cpu-visualizer.vercel.app/assembler
 
 
-iverilog -Wall -g2012 -I ../ -o vcd/riscv_tb.vvp -s riscv_32i_tb riscv_32i_tb.sv risc_pkg.sv riscv_32i.sv instruction_mem.sv fetch.sv decode.sv register_file.sv branch_control.sv data_memory.sv alu.sv control.sv ../adder.v ../shift.v ../mux.v
+iverilog -Wall -g2012 -I ../ -o vcd/riscv_tb.vvp -s riscv_32i_tb riscv_32i_tb.sv risc_pkg.sv riscv_32i.sv instruction_mem.sv fetch.sv decode.sv register_file.sv branch_control.sv ../mem.sv alu.sv control.sv ../adder.v ../shift.v ../mux.v
 vvp vcd/riscv_tb.vvp
 */
 module riscv_32i_tb;

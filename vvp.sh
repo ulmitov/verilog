@@ -48,7 +48,7 @@ else
         modules="-s ${topmodule} ${tb} ${dut_file}"
     fi
     vvpfile=${vvpfile##*/}
-    if [[ "$modules" == *".sv"* ]]; then sysv="-g2005" else sysv="-g2012"; fi
+    if [[ "$modules" == *".sv"* ]]; then sysv="-g2012"; else sysv="-g2005"; fi
     if [ -e "./vcd" ]; then simdir="./vcd/"; else simdir=""; fi
     cmd="iverilog -Wall ${sysv} -gspecify -o ${simdir}${vvpfile}.vvp ${modules}"
     echo $cmd; `$cmd`

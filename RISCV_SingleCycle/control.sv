@@ -39,7 +39,7 @@ module control (
     always_comb begin
         // defaults
         dmem_zero_ex = 1'b0;
-        dmem_size = OP_DMEM_BYTE;
+        dmem_size = OP_DMEM_WORD;
         rf_wr_data_sel = OP_RF_SEL_ALU;
         alu_op = OP_ALU_ADD;    // for branching and jumps
         pc_sel = 1'b0;          // 1- alu_res(jump), 0- next_pc
@@ -63,9 +63,9 @@ module control (
 
         if (s_type) begin
             case (funct3)
+                OP_S_TYPE_SB:   dmem_size = OP_DMEM_BYTE;
                 OP_S_TYPE_SH:   dmem_size = OP_DMEM_HALF;
-                OP_S_TYPE_SW:   dmem_size = OP_DMEM_WORD;
-                default:        dmem_size = OP_DMEM_BYTE;   // case SB
+                default:        dmem_size = OP_DMEM_WORD;
             endcase
         end
 

@@ -27,13 +27,15 @@ module riscv_32i #(
     op_alu_enum alu_op;
     op_dmem_size dmem_size;
     op_wr_data_sel rf_wr_data_sel;
+    logic [ADDR_WIDTH-1:0] dmem_addr;
+    logic [31:0] dmem_wr_data;
 
 
     instruction_memory #(
         .ADDR_WIDTH(ADDR_WIDTH),
         .DATA_WIDTH(DATA_WIDTH),
         .MEM_FILE(MEM_FILE)
-    ) inst_mem (
+    ) rom (
         .imem_req(imem_req),
         .imem_addr(imem_addr),
         .imem_data(imem_data)
@@ -93,22 +95,31 @@ module riscv_32i #(
 
     `ifdef DEBUG
         // DEBUG only: see x when no need for data. (TODO: remove it)
-        logic [31:0] dmem_addr;
-        assign dmem_addr = dmem_req ? alu_res : 32'bX;
-        logic [31:0] dmem_wr_data;
+        assign dmem_addr = dmem_req ? alu_res : {ADDR_WIDTH{1'bX}};
         assign dmem_wr_data = dmem_req ? rs2_data : 32'bX;
+    `else
+        assign dmem_addr = alu_res;
+        assign dmem_wr_data = rs2_data;
     `endif
 
 
-    data_memory #( .ADDR_WIDTH(ADDR_WIDTH), .DATA_WIDTH(DATA_WIDTH)) data_mem (
-        .clk(clk),
-        .dmem_req(dmem_req),
-        .dmem_wr(dmem_wr),
-        .dmem_size(dmem_size),
-        .dmem_addr(dmem_addr),
-        .dmem_zero_ex(dmem_zero_ex),
-        .dmem_wr_data(dmem_wr_data),
-        .dmem_rd_data(dmem_rd_data)
+    mem #(
+        .DEPTH(2**ADDR_WIDTH),
+        .WIDTH(DATA_WIDTH),
+        .SYNC_READ(0),
+        .ENDIANESS(0)       // assuming ram is Little endian
+    ) ram (
+        .rclk(),
+        .wclk(clk),
+        .res(~res_n),
+        .req(dmem_req),
+        .wen(dmem_wr),
+        .ren(1'b1),
+        .addr(dmem_addr),
+        .mem_size(dmem_size),
+        .zero_ex(dmem_zero_ex),
+        .wr_data(dmem_wr_data),
+        .rd_data(dmem_rd_data)
     );
 
 

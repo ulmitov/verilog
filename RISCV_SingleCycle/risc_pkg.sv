@@ -29,9 +29,9 @@ typedef enum logic [3:0] {
 } op_alu_enum;
 
 typedef enum logic [1:0] {
-    OP_DMEM_BYTE = 2'b00,
-    OP_DMEM_HALF = 2'b01,
-    OP_DMEM_WORD = 2'b11
+    OP_DMEM_BYTE = 2'b01,
+    OP_DMEM_HALF = 2'b10,
+    OP_DMEM_WORD = 2'b00
 } op_dmem_size;
 
 // B type inst

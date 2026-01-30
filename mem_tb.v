@@ -6,29 +6,34 @@
 `define T_RD 10
 `define T_CLK (`T_WR * 2)
 
-`define D_WIDTH 4   // Memory data word width
-`define D_DEPTH 8  // Memory depth
+`define OP_DMEM_WORD 2'b00
+`define OP_DMEM_BYTE 2'b01
+`define D_WIDTH 8   // Memory data word width
+`define D_DEPTH 4  // Memory depth
 // TODO: simultaneous read\write test? two clocks test? minimum f test? `define RO_DELAY (`T_DELAY_FF + `T_WR)
 
 
-module RAM_tb;
+module mem_tb;
     reg clk, rclk, we, re, res;
-    reg [$clog2(`D_DEPTH)-1:0] add;
+    reg [$clog2(`D_DEPTH)-1:0] addr;
     reg [`D_WIDTH-1:0] data, exp;
     reg [`D_WIDTH-1:0] exp_ram [`D_DEPTH-1:0];
     wire [`D_WIDTH-1:0] out;
     wire done_flag;
-    integer i, j;
+    integer i, j, a;
 
-    RAM #( .WIDTH(`D_WIDTH), .DEPTH(`D_DEPTH), .RCLK_EDGE("RISE")) uut (
+    mem #( .WIDTH(`D_WIDTH), .DEPTH(`D_DEPTH) ) uut (
         .wclk(clk),
         .rclk(rclk),
+        .req(1'b1),
         .res(res),
         .wen(we),
         .ren(re),
-        .data(data),
-        .address(add),
-        .Q(out)
+        .zero_ex(1'b0),
+        .mem_size(`OP_DMEM_BYTE),
+        .wr_data(data),
+        .addr(addr),
+        .rd_data(out)
     );
 
     // clock generation
@@ -40,7 +45,7 @@ module RAM_tb;
         input [$clog2(`D_DEPTH)-1:0] address;
         input [`D_WIDTH-1:0] din;
         begin
-            add = address;
+            addr = address;
             we = 1'b1;
             data = din;
             //wait (done_flag == 1);
@@ -56,20 +61,19 @@ module RAM_tb;
         input [$clog2(`D_DEPTH)-1:0] address;
         input [`D_WIDTH-1:0] din;
         begin
-            add = address;
+            addr = address;
             we = 1'b0;
             re = 1'b1;
-            if (uut.RCLK_EDGE == "NONE")
+            if (uut.SYNC_READ == 0)
                 #`T_CLK re = 1'b0; // if async then wait only flip flop delay ?
             else
                 #`T_CLK re = 1'b0;
-            if (out !== din) $display("%0d: ERROR: add=%0h: out=%0h not as expected %0h", $time, add, out, din);
+            if (out !== din) $display("%0d: ERROR: addr=%0h: out=%0h not as expected %0h", $time, addr, out, din);
         end
     endtask
 
     // read whole ram and compare to expected
     task check_ram;
-        integer a;
         for (a = 0; a < `D_DEPTH; a = a + 1)
             r_op(a, exp_ram[a]);
     endtask
@@ -79,9 +83,11 @@ module RAM_tb;
         $dumpfile("vcd/RAM_tb.vcd");
         $dumpvars();
         if (`D_DEPTH < 24)
-            $monitor("%0d: add=%0h, we=%0b, data=%0h, out=%0h, done=%0b", $time, add, we, data, out, done_flag);
+            $monitor("%0d: addr=%0h, we=%0b, data=%0h, out=%0h, done=%0b", $time, addr, we, data, out, done_flag);
 
         // initial state
+        for (a = 0; a < `D_DEPTH; a = a + 1)
+            exp_ram[a] = {`D_WIDTH{1'b1}};
         clk = 1'b0;
         rclk = 1'b0;
         res = 1'b0;
@@ -89,7 +95,7 @@ module RAM_tb;
         #`T_CLK res = 1'b0;
         // wait half phase in order to send steady signals before posedge
         #`T_WR;
-        add = 0;
+        addr = 0;
         data = 0;
         we = 1'b0;
         re = 1'b0;
