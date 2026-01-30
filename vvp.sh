@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # assuming each module has a tb file with the name of module under test with _tb.v
-if [[ -z "$VIRTUAL_ENV_PROMPT" ]]; then source ~/Downloads/oss-cad-suite/environment; fi
+export UVM_HOME="~/dev/sda6/uvm-core-2020.3.1/src"
+if [[ -z "$VIRTUAL_ENV_PROMPT" ]]; then source ~/dev/sda6/oss-cad-suite/environment; fi
 if [[ -z "$1" ]]; then
     echo -e "USAGE: ./vvp.sh testbench_name [testbench_file verilog_files]\nRun first . ./vvp.sh";
 else

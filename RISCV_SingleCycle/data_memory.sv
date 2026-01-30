@@ -39,7 +39,7 @@ module data_memory #(
 
     always_comb begin
         if (dmem_req & ~dmem_wr) begin
-            if (dmem_zero_ex === 1'b0) begin
+            if (~dmem_zero_ex) begin
                 case (dmem_size)
                     OP_DMEM_BYTE: zero_ex = temp_rd[7];
                     OP_DMEM_HALF: zero_ex = temp_rd[15];
@@ -54,6 +54,6 @@ module data_memory #(
                 default: dmem_rd_data = temp_rd;
             endcase
         end else
-            dmem_rd_data = 32'b0;
+            dmem_rd_data = 32'b1;
     end
 endmodule

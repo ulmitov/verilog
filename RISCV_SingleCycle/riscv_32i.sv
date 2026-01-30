@@ -1,5 +1,7 @@
 import risc_pkg::*;
 
+`define DEBUG 1
+
 
 module riscv_32i #(
     parameter RESET_PC = 32'h0,
@@ -27,7 +29,11 @@ module riscv_32i #(
     op_wr_data_sel rf_wr_data_sel;
 
 
-    instruction_memory #( .MEM_FILE(MEM_FILE), .ADDR_WIDTH(ADDR_WIDTH), .DATA_WIDTH(DATA_WIDTH) ) inst_mem (
+    instruction_memory #(
+        .ADDR_WIDTH(ADDR_WIDTH),
+        .DATA_WIDTH(DATA_WIDTH),
+        .MEM_FILE(MEM_FILE)
+    ) inst_mem (
         .imem_req(imem_req),
         .imem_addr(imem_addr),
         .imem_data(imem_data)
@@ -84,11 +90,14 @@ module riscv_32i #(
         .branch_taken(branch_taken)
     );
 
-    // DEBUG only: see x when no need for data. (TODO: remove it)
-    logic [31:0] dmem_addr;
-    assign dmem_addr = dmem_req ? alu_res : 32'bX;
-    logic [31:0] dmem_wr_data;
-    assign dmem_wr_data = dmem_req ? rs2_data : 32'bX;
+
+    `ifdef DEBUG
+        // DEBUG only: see x when no need for data. (TODO: remove it)
+        logic [31:0] dmem_addr;
+        assign dmem_addr = dmem_req ? alu_res : 32'bX;
+        logic [31:0] dmem_wr_data;
+        assign dmem_wr_data = dmem_req ? rs2_data : 32'bX;
+    `endif
 
 
     data_memory #( .ADDR_WIDTH(ADDR_WIDTH), .DATA_WIDTH(DATA_WIDTH)) data_mem (
@@ -143,7 +152,7 @@ module riscv_32i #(
 
     always_ff @(posedge clk or negedge res_n) begin
         if (!res_n)
-            pc = RESET_PC;
+            pc <= RESET_PC;
         else if (pc_en)
             pc <= next_pc;
     end

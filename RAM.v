@@ -57,11 +57,10 @@ f="RAM"; m="RAM";
 yosys -p "read_verilog ${f}.v; hierarchy -check -top $m; proc; opt; clean; show -format svg -prefix synth/${m} ${m}; show ${m}"
 
 */
-`default_nettype none
 `include "consts.v"
 
-`define DATA_WIDTH 8 // Memory data word width
-`define DATA_DEPTH 16
+`define DATA_WIDTH 8        // Mem data word width
+`define DATA_DEPTH 2**4     // Mem depth
 
 
 module RAM #(
@@ -69,13 +68,13 @@ module RAM #(
     parameter DEPTH = `DATA_DEPTH,
     parameter WCLK_EDGE = "RISE",   // RISE, FALL
     parameter RCLK_EDGE = "NONE",   // RISE, FALL, NONE
-    parameter WE_POLARITY = 1'b1,   // 1 or 0 (none)
-    parameter RE_POLARITY = 1'b1,    // 1 or 0 (none)
+    parameter WE_POLARITY = 1,      // 0 is none
+    parameter RE_POLARITY = 1,      // 0 is none
     parameter MEM_FILE = ""
 ) (
-    input wclk,
-    /* verilator lint_off UNUSEDSIGNAL */ input rclk, /* verilator lint_on UNUSEDSIGNAL */
-    /* verilator lint_off UNUSEDSIGNAL */ input res, /* verilator lint_on UNUSEDSIGNAL */
+    input wclk, /* verilator lint_off UNUSEDSIGNAL */ 
+    input rclk,
+    input res, /* verilator lint_on UNUSEDSIGNAL */
     input wen,
     input ren,
     input [WIDTH-1:0] data,
@@ -90,7 +89,7 @@ module RAM #(
         if (MEM_FILE != "")
             $readmemh(MEM_FILE, MEMX);
         else
-            for (i = 0; i < DEPTH; i = i + 1) MEMX[i] = 0;
+            for (i = 0; i < DEPTH; i = i + 1) MEMX[i] = {WIDTH{1'b1}};
     end
     //TODO: assign F_WDONE = wen ? MEMX[address] == data : 0;
     //TODO: reset is unsed for now
@@ -98,12 +97,12 @@ module RAM #(
     // write operation
     if (WCLK_EDGE == "RISE") begin: wop_rise
         always @(posedge wclk) begin
-            if (wen | ~WE_POLARITY)
+            if (wen | !WE_POLARITY)
                 #`T_DELAY_FF MEMX[address] <= data;
         end
     end else begin: wop_fall
         always @(negedge wclk) begin
-            if (wen | ~WE_POLARITY)
+            if (wen | !WE_POLARITY)
                 #`T_DELAY_FF MEMX[address] <= data;
         end
     end
@@ -111,18 +110,18 @@ module RAM #(
     // read operation
     if (RCLK_EDGE == "RISE") begin: rop_rise
         always @(posedge rclk) begin
-            if (ren | ~RE_POLARITY) Q <= MEMX[address];
+            if (ren | !RE_POLARITY) Q <= MEMX[address];
         end
     end else if (RCLK_EDGE == "FALL") begin: rop_fall
         always @(negedge rclk) begin
-            if (ren | ~RE_POLARITY) Q <= MEMX[address];
+            if (ren | !RE_POLARITY) Q <= MEMX[address];
         end
     end else begin: rop_async
         always @(*) begin
-            // this will need DFF's and MUXes
-            Q = (ren | ~RE_POLARITY) ? MEMX[address] : {WIDTH{1'bX}};
-            // this will need latches and if ren is 0 then it will return previously stored Q
-            //if (ren || ~RE_POLARITY) Q = MEMX[address];
+            // this will synth DFF's and MUXes
+            Q = (ren | !RE_POLARITY) ? MEMX[address] : {WIDTH{1'bX}};
+            // this will synth latches and if ren is 0 then it will return previously stored Q
+            //if (ren || !RE_POLARITY) Q = MEMX[address];
             //else Q = {{WIDTH{1'bX}}};
         end
     end

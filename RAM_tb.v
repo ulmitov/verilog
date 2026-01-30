@@ -2,21 +2,19 @@
 
 `timescale 1ns / 1ns
 
-`define T_WR 5
-`define T_RD 5
+`define T_WR 10
+`define T_RD 10
 `define T_CLK (`T_WR * 2)
 
 `define D_WIDTH 4   // Memory data word width
 `define D_DEPTH 8  // Memory depth
-
-
 // TODO: simultaneous read\write test? two clocks test? minimum f test? `define RO_DELAY (`T_DELAY_FF + `T_WR)
+
 
 module RAM_tb;
     reg clk, rclk, we, re, res;
-    reg [`D_WIDTH-1:0] data;
     reg [$clog2(`D_DEPTH)-1:0] add;
-    reg [`D_WIDTH-1:0] exp;
+    reg [`D_WIDTH-1:0] data, exp;
     reg [`D_WIDTH-1:0] exp_ram [`D_DEPTH-1:0];
     wire [`D_WIDTH-1:0] out;
     wire done_flag;

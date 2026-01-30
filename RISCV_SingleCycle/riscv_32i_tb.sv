@@ -26,7 +26,7 @@ module riscv_32i_tb;
     logic clk = 1'b0;
     logic res_n = 1'b0;
     
-    riscv_32i #( .MEM_FILE({"asm/", mem_file}), .ADDR_WIDTH(8) ) dut ( .clk(clk), .res_n(res_n) );
+    riscv_32i #( .ADDR_WIDTH(8), .MEM_FILE({"asm/", mem_file}) ) dut ( .clk(clk), .res_n(res_n) );
 
     always #`T_CLK clk = ~clk;
 
