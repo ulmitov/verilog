@@ -41,12 +41,12 @@ module RAM_tb;
         input [`D_WIDTH-1:0] din;
         begin
             add = address;
-            we = 1;
+            we = 1'b1;
             data = din;
             //wait (done_flag == 1);
             //@(done_flag);
             //we = 0;
-            #`T_CLK we = 0;
+            #`T_CLK we = 1'b0;
             exp_ram[address] = din;
         end
     endtask
@@ -57,12 +57,12 @@ module RAM_tb;
         input [`D_WIDTH-1:0] din;
         begin
             add = address;
-            we = 0;
-            re = 1;
+            we = 1'b0;
+            re = 1'b1;
             if (uut.RCLK_EDGE == "NONE")
-                #`T_CLK re = 0; // if async then wait only flip flop delay ?
+                #`T_CLK re = 1'b0; // if async then wait only flip flop delay ?
             else
-                #`T_CLK re = 0;
+                #`T_CLK re = 1'b0;
             if (out !== din) $display("%0d: ERROR: add=%0h: out=%0h not as expected %0h", $time, add, out, din);
         end
     endtask
@@ -82,17 +82,17 @@ module RAM_tb;
             $monitor("%0d: add=%0h, we=%0b, data=%0h, out=%0h, done=%0b", $time, add, we, data, out, done_flag);
 
         // initial state
-        clk = 0;
-        rclk = 0;
-        res = 0;
-        #`T_CLK res = 1;
-        #`T_CLK res = 0;
+        clk = 1'b0;
+        rclk = 1'b0;
+        res = 1'b0;
+        #`T_CLK res = 1'b1;
+        #`T_CLK res = 1'b0;
         // wait half phase in order to send steady signals before posedge
         #`T_WR;
         add = 0;
         data = 0;
-        we = 0;
-        re = 0;
+        we = 1'b0;
+        re = 1'b0;
 
         $display("*** Test stuck at 1's ***");
         for (i = 0; i < `D_DEPTH; i = i + 1) begin

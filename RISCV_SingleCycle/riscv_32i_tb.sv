@@ -21,12 +21,15 @@ vvp vcd/riscv_tb.vvp
 module riscv_32i_tb;
     localparam mem_file = "fibonacci_sequence.mem"; // see the values each dmem_wr in dmem_wr_data
     //localparam mem_file = "find_max_in_array.mem";// see max value 2A in the end at dmem address d24 (h18)
-    //localparam mem_file = "bubble_sort.mem"; // see the results in the end of the run in rd=x11-x14.
+    //localparam mem_file = "bubble_sort.mem";      // see the results in the end of the run in rd=x11-x14.
 
     logic clk = 1'b0;
     logic res_n = 1'b0;
     
-    riscv_32i #( .ADDR_WIDTH(8), .MEM_FILE({"asm/", mem_file}) ) dut ( .clk(clk), .res_n(res_n) );
+    riscv_32i #(
+        .ADDR_WIDTH(8),
+        .MEM_FILE({"asm/", mem_file})
+    ) dut ( .clk(clk), .res_n(res_n) );
 
     always #`T_CLK clk = ~clk;
 
@@ -57,9 +60,9 @@ module instruction_mem_tb;
     //localparam mem_file = "fibonacci_sequence.mem";
     localparam mem_file = "find_maximum_in_array.mem";
 
+    logic imem_req = 1'b0;
     logic [31:0] imem_data;
     logic [31:0] imem_addr = 32'b0;
-    logic imem_req = 1'b0;
     
     instruction_memory #( .MEM_FILE(mem_file) ) dut (
         .imem_req(imem_req),
@@ -69,7 +72,7 @@ module instruction_mem_tb;
 
     initial begin
         $dumpfile("instruction_mem_tb.vcd");
-        $dumpvars(0, instruction_mem_tb);
+        $dumpvars();
         $monitor("%d res=%b", $time, res_n);
         $display("START %s", mem_file);
         imem_req = 1'b1;
