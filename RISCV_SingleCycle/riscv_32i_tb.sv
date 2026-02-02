@@ -5,7 +5,7 @@
 `define T_CYC (`T_CLK * 2)
 
 /*
-// https://risc-v-cpu-visualizer.vercel.app/assembler bugs in lw and sw funct3 !!!
+// https://risc-v-cpu-visualizer.vercel.app/assembler bugs in lw and sw funct3 and rs1 !!!
 https://risc-v-cpu-visualizer.vercel.app/help
 https://www.cs.cornell.edu/courses/cs3410/2019sp/riscv/interpreter/#
 
@@ -15,13 +15,13 @@ https://passlab.github.io/CSCE513/notes/lecture07_RISCV_Impl.pdf
 https://risc-v-cpu-visualizer.vercel.app/assembler
 
 
-iverilog -Wall -g2012 -I ../ -o vcd/riscv_tb.vvp -s riscv_32i_tb riscv_32i_tb.sv risc_pkg.sv riscv_32i.sv instruction_mem.sv fetch.sv decode.sv register_file.sv branch_control.sv ../mem.sv alu.sv control.sv ../adder.v ../shift.v ../mux.v
+iverilog -Wall -g2012 -I ../ -o vcd/riscv_tb.vvp -s riscv_32i_tb riscv_32i_tb.sv risc_pkg.sv riscv_32i.sv fetch.sv decode.sv register_file.sv branch_control.sv ../mem.sv alu.sv control.sv ../adder.v ../shift.v ../mux.v
 vvp vcd/riscv_tb.vvp
 */
 module riscv_32i_tb;
-    localparam mem_file = "fibonacci_sequence.mem"; // see the values each dmem_wr in dmem_wr_data
-    //localparam mem_file = "find_max_in_array.mem";// see max value 2A in the end at dmem address d24 (h18)
-    //localparam mem_file = "bubble_sort.mem";      // see the results in the end of the run in rd=x11-x14.
+    //localparam mem_file = "fibonacci_sequence.mem";   // see values each dmem_wr in dmem_wr_data
+    //localparam mem_file = "find_max_in_array.mem";    // see max value 2A in the end at dmem address d24 (h18)
+    localparam mem_file = "bubble_sort.mem";            // see values in the end in reg_file wr_data at rd_addr=x11-x14
 
     logic clk = 1'b0;
     logic res_n = 1'b0;
@@ -43,7 +43,7 @@ module riscv_32i_tb;
     initial begin
         $dumpfile({"vcd/", mem_file, ".vcd"});
         $dumpvars(0, riscv_32i_tb);
-        $monitor("%d res=%b", $time, res_n);
+        $monitor("%0d: TB: INFO: res=%0b", $time, res_n);
         $display("START %s", mem_file);
         res_n = 1'b1;
         #`T_CYC res_n = 1'b0;

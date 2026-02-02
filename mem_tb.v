@@ -9,7 +9,7 @@
 `define OP_DMEM_WORD 2'b00
 `define OP_DMEM_BYTE 2'b01
 `define D_WIDTH 8   // Memory data word width
-`define D_DEPTH 4  // Memory depth
+`define D_DEPTH 4   // Memory depth
 // TODO: simultaneous read\write test? two clocks test? minimum f test? `define RO_DELAY (`T_DELAY_FF + `T_WR)
 
 

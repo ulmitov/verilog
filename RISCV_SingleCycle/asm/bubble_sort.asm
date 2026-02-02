@@ -85,16 +85,13 @@
 0x0070:                   jal     x0, outer_loop_cond     # repeat outer loop
 
                 ###################################################
-                # STEP 9: Sorting Done                            #
+                # STEP 9: Sorting Done Load results into x11-x14  #
                 ###################################################
-0x0074: .sort_done:      addi    x0, x0, 0               # nop / halt
-                ###################################################
-                # STEP 10: Load results into x11-x14              #
-                ###################################################
-0x0078:                  lw      x11, 0(x17)
-0x007C:                  lw      x12, 4(x17)
-0x0080:                  lw      x13, 8(x17)
-0x0084:                  lw      x14, C(x17)
+0x0074: .sort_done: lw      x11, 0(x17)
+0x0078:                  lw      x12, 4(x17)
+0x007C:                  lw      x13, 8(x17)
+0x0080:                  lw      x14, C(x17)
+0x0084: addi    x0, x0, 0               # nop / halt
 
 
 

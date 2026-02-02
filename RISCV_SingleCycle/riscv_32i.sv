@@ -14,7 +14,8 @@ module riscv_32i #(
 );
     logic [31:0] pc, next_pc, next_seq_pc, pc_jump;
     logic [31:0] imem_addr, imem_data, instruction, immediate, rs1_data, rs2_data, wr_data;
-    logic [31:0] dmem_rd_data, alu_a, alu_b, alu_res;
+    logic [31:0] dmem_wr_data, dmem_rd_data, alu_a, alu_b, alu_res;
+    logic [ADDR_WIDTH-1:0] dmem_addr;
     logic r_type, i_type, s_type, b_type, u_type, j_type;
     logic branch_taken, rf_wr_en;
     logic dmem_zero_ex, dmem_req, dmem_wr;
@@ -27,18 +28,25 @@ module riscv_32i #(
     op_alu_enum alu_op;
     op_dmem_size dmem_size;
     op_wr_data_sel rf_wr_data_sel;
-    logic [ADDR_WIDTH-1:0] dmem_addr;
-    logic [31:0] dmem_wr_data;
 
 
-    instruction_memory #(
-        .ADDR_WIDTH(ADDR_WIDTH),
-        .DATA_WIDTH(DATA_WIDTH),
-        .MEM_FILE(MEM_FILE)
-    ) rom (
-        .imem_req(imem_req),
-        .imem_addr(imem_addr),
-        .imem_data(imem_data)
+    mem #(
+        .DEPTH(2**8),       // 2**8/4 = 64 instructions
+        .SYNC_READ(0),
+        .MEM_FILE(MEM_FILE),
+        .ENDIANESS(1)       // Instructions are in big endian
+    ) instruction_mem (
+        .rclk(),
+        .wclk(),
+        .res(),
+        .wen(),
+        .wr_data(),
+        .mem_size(),
+        .req(1'b1),
+        .zero_ex(1'b1),
+        .ren(imem_req),
+        .addr(imem_addr),
+        .rd_data(imem_data)
     );
 
 
@@ -105,8 +113,8 @@ module riscv_32i #(
 
     mem #(
         .DEPTH(2**ADDR_WIDTH),
-        .WIDTH(DATA_WIDTH),
         .SYNC_READ(0),
+        .MEM_FILE(""),
         .ENDIANESS(0)       // assuming ram is Little endian
     ) ram (
         .rclk(),
