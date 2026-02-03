@@ -83,7 +83,7 @@ module mem #(
                 else
                     temp_rd = {MEMX[addr+3], MEMX[addr+2], MEMX[addr+1], MEMX[addr]};
             end// else temp_rd = {cell_width{1'b1}};
-            //$strobe("MEM-READ-OP: 0x%0h", temp_rd);
+            //$display("MEM-READ-OP: 0x%0h", temp_rd);
         end
     end else begin: sync_read
         always_ff @(posedge rclk) begin
@@ -94,6 +94,7 @@ module mem #(
                     temp_rd <= #`T_DELAY_FF {MEMX[addr+3], MEMX[addr+2], MEMX[addr+1], MEMX[addr]};
             end
         end
+        //$strobe("MEM-READ-OP: 0x%0h", temp_rd);
     end
 
     always_comb begin: set_read_sign_bit

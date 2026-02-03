@@ -32,7 +32,6 @@ module riscv_32i #(
 
     mem #(
         .DEPTH(2**8),       // 2**8/4 = 64 instructions
-        .SYNC_READ(0),
         .MEM_FILE(MEM_FILE),
         .ENDIANESS(1)       // Instructions are in big endian
     ) instruction_mem (
@@ -113,7 +112,6 @@ module riscv_32i #(
 
     mem #(
         .DEPTH(2**ADDR_WIDTH),
-        .SYNC_READ(0),
         .MEM_FILE(""),
         .ENDIANESS(0)       // assuming ram is Little endian
     ) ram (
