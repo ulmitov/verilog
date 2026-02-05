@@ -25,9 +25,9 @@ module riscv_32i #(
     logic [6:0] opcode;
     logic [6:0] funct7;
     logic [2:0] funct3;
-    op_alu_enum alu_op;
-    op_dmem_size dmem_size;
-    op_wr_data_sel rf_wr_data_sel;
+    op_enum_alu alu_op;
+    op_enum_dmem_size dmem_size;
+    op_enum_wr_data_sel rf_wr_data_sel;
 
 
     mem #(

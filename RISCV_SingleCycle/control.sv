@@ -13,12 +13,12 @@ module control (
     input logic u_type,
     input logic j_type,
 
-    output op_alu_enum alu_op,
+    output op_enum_alu alu_op,
     output logic pc_sel,
     output logic op1_sel,
     output logic op2_sel,
-    output op_wr_data_sel rf_wr_data_sel,
-    output op_dmem_size dmem_size,
+    output op_enum_wr_data_sel rf_wr_data_sel,
+    output op_enum_dmem_size dmem_size,
     output logic dmem_req,
     output logic dmem_wr,
     output logic dmem_zero_ex,
@@ -27,7 +27,7 @@ module control (
     logic funct5;
     logic [3:0] funct_r;
     logic [3:0] opcode_i;
-    op_alu_enum op_srai;
+    op_enum_alu op_srai;
 
     assign funct5   = funct7[5];
     assign funct_r  = {funct5, funct3};

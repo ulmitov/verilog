@@ -15,14 +15,14 @@ m="shift";
 yosys -p "read_verilog shift.v mux.v; hierarchy -check -top $m; proc; clean; stat; write_verilog -noattr synth/${m}_synth.v; show -format svg -prefix synth/${m} ${m}; show ${m}"
 */
 module shift #(parameter n = 4) (
-    input right_en, // 0- sh left, 1- sh right
+    input right_en,                 // 0- sh left, 1- sh right
     input sign,
     input [n-1:0] din,
-    input [$clog2(n):0] shift_n,
+    input [$clog2(n):0] shift_n,    // number of shifts
     output wire [n-1:0] out
 );
-    wire sign_in;
     wire [n-1:0] data, shifted;
+    wire sign_in;
     genvar k;
 
     shift_right #(n) shr (.sign(sign_in), .din(data), .shift_n(shift_n), .shifted(shifted));
@@ -33,7 +33,7 @@ module shift #(parameter n = 4) (
         // TODO: here also can use mux_2to1. This will add two more T_DELAY_PD levels for calc time.
         for (k = 0; k < n; k = k + 1) begin
             assign data[k] = right_en ? din[k] : din[n-k-1];
-            assign out[k] =  right_en ? shifted[k] : shifted[n-k-1];
+            assign out[k]  = right_en ? shifted[k] : shifted[n-k-1];
         end
     endgenerate
 endmodule

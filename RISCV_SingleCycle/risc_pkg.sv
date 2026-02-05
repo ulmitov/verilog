@@ -1,6 +1,17 @@
 package risc_pkg;
 
-`define FF_DELAY 1
+typedef enum logic [3:0] {
+    OP_ALU_ADD,
+    OP_ALU_SUB,
+    OP_ALU_SLL,
+    OP_ALU_SRL,
+    OP_ALU_SRA,
+    OP_ALU_XOR,
+    OP_ALU_AND,
+    OP_ALU_OR,
+    OP_ALU_SLT,
+    OP_ALU_SLTU
+} op_enum_alu;
 
 typedef enum logic [6:0] {
     OPCODE_R_TYPE       = 7'b0110011,   // R-type. Register to register arithmetic and logic
@@ -13,27 +24,21 @@ typedef enum logic [6:0] {
     OPCODE_I_TYPE_LOAD  = 7'b0000011,   // L-Type. load instructions
     OPCODE_I_TYPE_JALR  = 7'b1100111,   // L-Type. JALR
     OPCODE_SYSTEM       = 7'b0000111    // System calls (I type)
-} opcode_t;
-
-typedef enum logic [3:0] {
-    OP_ALU_ADD,
-    OP_ALU_SUB,
-    OP_ALU_SLL,
-    OP_ALU_SRL,
-    OP_ALU_SRA,
-    OP_ALU_XOR,
-    OP_ALU_AND,
-    OP_ALU_OR,
-    OP_ALU_SLT,
-    OP_ALU_SLTU
-} op_alu_enum;
+} op_enum_inst_opcodes;
 
 typedef enum logic [1:0] {
     OP_DMEM_BYTE = 2'b01,
     OP_DMEM_HALF = 2'b10,
     OP_DMEM_TRPL = 2'b11,
     OP_DMEM_WORD = 2'b00
-} op_dmem_size;
+} op_enum_dmem_size;
+
+typedef enum logic [1:0] {
+    OP_RF_SEL_ALU = 2'b00,
+    OP_RF_SEL_MEM = 2'b01,
+    OP_RF_SEL_IMM = 2'b10,
+    OP_RF_SEL_PC = 2'b11
+} op_enum_wr_data_sel;
 
 // B type inst
 typedef enum logic [2:0] {
@@ -43,7 +48,7 @@ typedef enum logic [2:0] {
     OP_B_TYPE_BGE = 3'h5,
     OP_B_TYPE_BLTU = 3'h6,
     OP_B_TYPE_BGEU = 3'h7
-} b_type_funct3_op;
+} op_enum_b_type_funct3;
 
 // R type inst
 typedef enum logic [3:0] {
@@ -57,7 +62,7 @@ typedef enum logic [3:0] {
     OP_R_TYPE_SRA = 4'hD,
     OP_R_TYPE_OR = 4'h6,
     OP_R_TYPE_AND = 4'h7
-} r_type_funct75_funct3_op;
+} op_enum_r_type_funct75_funct3;
 
 // I type inst
 typedef enum logic [3:0] {
@@ -74,20 +79,12 @@ typedef enum logic [3:0] {
     OP_I_TYPE_ANDI = 4'hF,
     OP_I_TYPE_SLLI = 4'h9,
     OP_I_TYPE_SRLI_SRAI = 4'hD
-} i_type_funct3_op;
+} op_enum_i_type_funct3;
 
 // S type inst
 typedef enum logic [2:0] {
     OP_S_TYPE_SB = 3'h0,
     OP_S_TYPE_SH = 3'h1,
     OP_S_TYPE_SW = 3'h2
-} s_type_funct3_op;
-
-typedef enum logic [1:0] {
-    OP_RF_SEL_ALU = 2'b00,
-    OP_RF_SEL_MEM = 2'b01,
-    OP_RF_SEL_IMM = 2'b10,
-    OP_RF_SEL_PC = 2'b11
-} op_wr_data_sel;
-
+} op_enum_s_type_funct3;
 endpackage

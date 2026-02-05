@@ -34,7 +34,7 @@ module mem #(
     input logic wen,
     input logic ren,
     input logic zero_ex,
-    input op_dmem_size mem_size,
+    input op_enum_dmem_size mem_size,
     input logic [$clog2(DEPTH)-1:0] addr,
     input logic [WIDTH-1:0] wr_data,
     output logic [WIDTH-1:0] rd_data
