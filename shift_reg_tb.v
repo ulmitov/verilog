@@ -38,6 +38,21 @@ module shift_reg_tb;
         #(`T_CYC) din = 1'b1;
         #(`T_CYC) din = 1'b0;
         #(N*`T_CYC);
+        $display("Load on");
+        load = 4'b1011;
+        load_en = 1'b1;
+        #(2*`T_CYC) load_en = 1'b0;
+        $display("Load off");
+        #(N*`T_CYC);
+        #(N*`T_CYC);
+        load = 4'b0101;
+        load_en = 1'b1;
+        $display("Load on");
+        #(2*`T_CYC) load_en = 1'b0;
+        $display("Load off");
+        din = 1'bx;
+        #(N*`T_CYC);
+        #(N*`T_CYC);
         #(`T_CYC) $finish;
     end
 endmodule

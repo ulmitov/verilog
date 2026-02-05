@@ -6,6 +6,7 @@ yosys -p "read_verilog ${f}.v; hierarchy -check -top $m; proc; opt; wreduce; cle
 */
 `include "consts.v"
 `include "flip_flop.v"
+//`define GATEFLOW 1
 
 
 module shift_reg #(parameter N = 4) (
@@ -19,15 +20,42 @@ module shift_reg #(parameter N = 4) (
     output wire dout_n          // Serial Out
     
 );
-    wire [N:0] load_mux;
-    genvar i;
-    generate
-        assign dout_n = dout[0];
-        assign load_mux[N] = din;
+    integer i;
+    reg [N-1:0] darr;
+    assign dout_n = dout[0];
 
-        for (i = 0; i < N; i = i + 1) begin
-            assign load_mux[i] = load_en ? load[i] : dout[i];
-            ff_d dff_i(.clk(clk), .res_n(res_n), .en(en), .din(load_mux[i+1]), .Q(dout[i]));
+    `ifdef GATEFLOW
+        always @(*) begin
+            for (i = 0; i < N; i = i + 1) begin
+                if (load_en)
+                    darr[i] = load[i];
+                else begin
+                    if (en)
+                        darr[i] = dout[i+1];
+                    else
+                        darr[i] = dout[i];
+                end
+            end
+            if (~load_en & en) darr[N-1] = din;
         end
-    endgenerate
+        genvar k;
+        generate
+            for (k = 0; k < N; k = k + 1) begin
+                ff_d dff_k ( .clk(clk), .res_n(res_n), .en(1'b1), .din(darr[k]), .Q(dout[k]) );
+            end
+        endgenerate
+    `else
+        assign dout = darr;
+        always @(posedge clk or negedge res_n) begin
+            if (!res_n)
+                darr <= 0;
+            else if (load_en)
+                darr <= load;
+            else if (en) begin
+                darr[N-1] <= din;
+                for (i = N - 2; i >= 0; i = i - 1)
+                    darr[i] <= darr[i+1];
+            end
+        end
+    `endif
 endmodule

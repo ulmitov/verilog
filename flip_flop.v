@@ -4,8 +4,8 @@
 `include "consts.v"
 
 
-/* posedge D flip flop with async neg reset and simple synchronizer - N bit register */
-module ff_d #(parameter N = 1, parameter SYNCHRONIZER = 0) (
+/* posedge D flip flop with async neg reset - N bit register */
+module ff_d #(parameter N = 1) (
     input clk,
     input res_n,
     input en,
@@ -15,14 +15,9 @@ module ff_d #(parameter N = 1, parameter SYNCHRONIZER = 0) (
     reg pipe_0;
     always @(posedge clk or negedge res_n) begin
         if (!res_n) begin
-            if (SYNCHRONIZER) pipe_0 <= 0;
             Q <= 0;
         end else if (en) begin
-            if (SYNCHRONIZER) begin
-                pipe_0 <= #`T_DELAY_FF din;
-                Q <= #`T_DELAY_FF pipe_0;
-            end else
-                Q <= #`T_DELAY_FF din;
+            Q <= #`T_DELAY_FF din;
         end
     end
 endmodule
