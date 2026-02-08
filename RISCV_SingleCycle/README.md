@@ -1,15 +1,6 @@
 # RISCV Single Cycle implementation
 
-- TBD: expand to 64 and 128 bits
-
-
-This architecture performs an instruction in one clock cycle.
-So the clock frequency should be calculated according to the longest data path.
-Which is the loading data from memory into register file.
-Additionally, depending on memory type, the store operation also can take long time.
-And finally the ALU unit add operation takes 3 gate delays per bit. So the path is:
-`tC > tIFetch + tRFetch + tALU+ tDMem + tRWB`
-
+ - TBD: expand to 64 and 128 bits
  - `asm` folder holds the assembly programs and their hex code mem files.
  - `vcd` folder holds the simulation results.
  - `riscv_tb.sv` performs an end to end test of the following asm code blocks.
@@ -46,3 +37,10 @@ Each instruction is 32 bits.
 - Branch control unit checks if the program has requested a branch jump of the PC.
 - Control block is the mind which decides according to the decoded instruction, how to perform it.
 - Lastly, in the high level we want to control the PC to point to the next instrucion and to control system reset.
+
+This architecture performs an instruction in one clock cycle.
+So the clock frequency should be calculated according to the longest data path.
+Which is the loading data from memory into register file.
+Additionally, depending on memory type, the store operation also can take long time.
+And finally the ALU unit add operation takes 3 gate delays per bit. So the path is:
+`tC > tIFetch + tRFetch + tALU+ tDMem + tRWB`
