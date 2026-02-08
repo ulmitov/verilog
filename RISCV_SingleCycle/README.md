@@ -3,7 +3,7 @@
 - TBD: expand to 64 and 128 bits
 
 
-This architecture performs an intruction in one clock cycle.
+This architecture performs an instruction in one clock cycle.
 So the clock frequency should be calculated according to the longest data path.
 Which is the loading data from memory into register file.
 Additionally, depending on memory type, the store operation also can take long time.
