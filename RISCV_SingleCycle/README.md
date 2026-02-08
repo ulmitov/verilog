@@ -2,23 +2,25 @@
 
 - TBD: expand to 64 and 128 bits
 
-`asm` folder holds the assembly programs and their hex code mem files.
-`vcd` folder holds the simulation results.
+ - `asm` folder holds the assembly programs and their hex code mem files.
+ - `vcd` folder holds the simulation results.
+ - `riscv_tb.sv` performs an end to end test of the following asm code blocks.
 
-riscv_tb.sv performs an end to end test of the following asm code blocks.
 
-
-bubble_sort.asm (see array values each rf_wr_en)
+## bubble_sort.asm
+See array values each rf_wr_en
 ![Bubble sort result](./vcd/bubble_sort_in.png)
 See sorted values in reg_file address 0x0B through 0x0E (x11-x14)
 ![Bubble sort result](./vcd/bubble_sort_out.png)
 
 
-fibonacci_sequence.asm (see values each ram.wen in ram.wr_data)
+## fibonacci_sequence.asm
+See values each ram.wen in ram.wr_data
 ![Fibonacci result](./vcd/fibonacci_out.png)
 
 
-find_max_in_array.asm (see array values each ram.wen)
+## find_max_in_array.asm
+See array values each ram.wen
 ![Find max result](./vcd/find_max_in_array_in.png)
 Wrote max value 2A to ram address 0x18:
 ![Find max result](./vcd/find_max_in_array_out.png)
