@@ -15,10 +15,10 @@ https://passlab.github.io/CSCE513/notes/lecture07_RISCV_Impl.pdf
 https://risc-v-cpu-visualizer.vercel.app/assembler
 
 
-iverilog -Wall -g2012 -I ../ -o vcd/riscv_tb.vvp -s riscv_32i_tb riscv_32i_tb.sv risc_pkg.sv riscv_32i.sv fetch.sv decode.sv register_file.sv branch_control.sv ../mem.sv alu.sv control.sv ../adder.v ../shift.v ../mux.v
+iverilog -Wall -g2012 -I ../ -o vcd/riscv_tb.vvp -s riscv_tb riscv_tb.sv risc_pkg.sv riscv.sv fetch.sv decode.sv register_file.sv branch_control.sv ../mem.sv alu.sv control.sv ../adder.v ../shift.v ../mux.v
 vvp vcd/riscv_tb.vvp
 */
-module riscv_32i_tb;
+module riscv_tb;
     //localparam mem_file = "fibonacci_sequence.mem";   // see values each dmem_wr in dmem_wr_data
     //localparam mem_file = "find_max_in_array.mem";    // see max value 2A in the end at dmem address d24 (h18)
     localparam mem_file = "bubble_sort.mem";            // see values in the end in reg_file wr_data at rd_addr=x11-x14
@@ -26,7 +26,7 @@ module riscv_32i_tb;
     logic clk = 1'b0;
     logic res_n = 1'b0;
     
-    riscv_32i #(
+    riscv #(
         .ADDR_WIDTH(8),
         .MEM_FILE({"asm/", mem_file})
     ) dut ( .clk(clk), .res_n(res_n) );
@@ -42,7 +42,7 @@ module riscv_32i_tb;
 
     initial begin
         $dumpfile({"vcd/", mem_file, ".vcd"});
-        $dumpvars(0, riscv_32i_tb);
+        $dumpvars(0, riscv_tb);
         $monitor("%0d: TB: INFO: res=%0b", $time, res_n);
         $display("START %s", mem_file);
         res_n = 1'b1;
@@ -53,7 +53,7 @@ endmodule
 
 
 /*
-iverilog -Wall -g2012 -o riscv_inst_tb.vvp -s instruction_mem_tb riscv_32i_tb.sv risc_pkg.sv instruction_mem.sv
+iverilog -Wall -g2012 -o riscv_inst_tb.vvp -s instruction_mem_tb riscv_tb.sv risc_pkg.sv instruction_mem.sv
 vvp riscv_inst_tb.vvp
 */
 module instruction_mem_tb;

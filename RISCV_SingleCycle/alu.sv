@@ -1,22 +1,20 @@
 import risc_pkg::*;
 
-`define GATEFLOW 1
 
-
-module alu (
+module alu #(parameter XLEN = 32) (
     input op_enum_alu alu_op,
-    input logic [31:0] alu_a,
-    input logic [31:0] alu_b,
-    output logic [31:0] alu_res
+    input logic [XLEN-1:0] alu_a,
+    input logic [XLEN-1:0] alu_b,
+    output logic [XLEN-1:0] alu_res
 );
     `ifdef GATEFLOW
         logic eq, lt, ltu;
         logic nadd_sub, right_en, sign_ext;
-        logic [31:0] sum, out_sh;
+        logic [XLEN-1:0] sum, out_sh;
         logic [5:0] shifts_num;
 
-        adder #(32) alu_fa (.Nadd_sub(nadd_sub), .X(alu_a), .Y(alu_b), .sum(sum), .carry(), .overflow(), .eq(eq), .lt(lt), .ltu(ltu));
-        shift #(32) alu_sh (.right_en(right_en), .sign(sign_ext), .din(alu_a), .shift_n(shifts_num), .out(out_sh));
+        adder #(XLEN) alu_fa (.Nadd_sub(nadd_sub), .X(alu_a), .Y(alu_b), .sum(sum), .carry(), .overflow(), .eq(eq), .lt(lt), .ltu(ltu));
+        shift #(XLEN) alu_sh (.right_en(right_en), .sign(sign_ext), .din(alu_a), .shift_n(shifts_num), .out(out_sh));
 
         assign shifts_num = {1'b0, alu_b[4:0]};
 
@@ -48,9 +46,9 @@ module alu (
                 OP_ALU_XOR:     alu_res = alu_a ^ alu_b;
                 OP_ALU_AND:     alu_res = alu_a & alu_b;
                 OP_ALU_OR:      alu_res = alu_a | alu_b;
-                OP_ALU_SLT:     alu_res = {32{lt}};
-                OP_ALU_SLTU:    alu_res = {32{ltu}};
-                default:        alu_res = {32{1'b0}};
+                OP_ALU_SLT:     alu_res = {XLEN{lt}};
+                OP_ALU_SLTU:    alu_res = {XLEN{ltu}};
+                default:        alu_res = {XLEN{1'b0}};
             endcase
         end
     `else
@@ -59,11 +57,11 @@ module alu (
 endmodule
 
 
-module alu_dataflow (
+module alu_dataflow #(parameter XLEN = 32) (
     input op_enum_alu alu_op,
-    input logic [31:0] alu_a,
-    input logic [31:0] alu_b,
-    output logic [31:0] alu_res
+    input logic [XLEN-1:0] alu_a,
+    input logic [XLEN-1:0] alu_b,
+    output logic [XLEN-1:0] alu_res
 );
     always_comb begin
         case (alu_op)
@@ -75,9 +73,9 @@ module alu_dataflow (
             OP_ALU_XOR: alu_res = alu_a ^ alu_b;
             OP_ALU_AND: alu_res = alu_a & alu_b;
             OP_ALU_OR:  alu_res = alu_a | alu_b;
-            OP_ALU_SLT: alu_res = $signed(alu_a) < $signed(alu_b) ? {32{1'b1}} : {32{1'b0}};
-            OP_ALU_SLTU:alu_res = alu_a < alu_b ? {32{1'b1}} : {32{1'b0}};
-            default:    alu_res = {32{1'b0}};
+            OP_ALU_SLT: alu_res = $signed(alu_a) < $signed(alu_b) ? {XLEN{1'b1}} : {XLEN{1'b0}};
+            OP_ALU_SLTU:alu_res = alu_a < alu_b ? {XLEN{1'b1}} : {XLEN{1'b0}};
+            default:    alu_res = {XLEN{1'b0}};
         endcase
     end
 endmodule

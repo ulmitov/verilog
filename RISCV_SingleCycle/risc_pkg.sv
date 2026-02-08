@@ -1,4 +1,10 @@
+`define DEBUG 1
+`define GATEFLOW 1
+
+
 package risc_pkg;
+
+parameter RISCV_XLEN = 32;
 
 typedef enum logic [3:0] {
     OP_ALU_ADD,
@@ -26,11 +32,13 @@ typedef enum logic [6:0] {
     OPCODE_SYSTEM       = 7'b0000111    // System calls (I type)
 } op_enum_inst_opcodes;
 
-typedef enum logic [1:0] {
-    OP_DMEM_BYTE = 2'b01,
-    OP_DMEM_HALF = 2'b10,
-    OP_DMEM_TRPL = 2'b11,
-    OP_DMEM_WORD = 2'b00
+typedef enum logic [2:0] {
+    OP_DMEM_BYTE = 3'b001,
+    OP_DMEM_HALF = 3'b010,
+    OP_DMEM_TRPL = 3'b011,
+    OP_DMEM_WORD = 3'b000
+    //OP_DMEM_DUBL
+    //OP_DMEM_QUAD
 } op_enum_dmem_size;
 
 typedef enum logic [1:0] {

@@ -31,6 +31,7 @@ module adder #(parameter n = 4) (
     output wire ltu
 );
     wire same_sign, cmp;
+
     `ifdef GATEFLOW
         // ripple carry adder
         wire [n:0] C;

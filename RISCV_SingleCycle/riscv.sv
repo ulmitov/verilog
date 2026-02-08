@@ -1,9 +1,8 @@
 import risc_pkg::*;
 
-`define DEBUG 1
 
-
-module riscv_32i #(
+module riscv #(
+    parameter XLEN = RISCV_XLEN,
     parameter RESET_PC = 32'h0,
     parameter ADDR_WIDTH = 16,
     parameter DATA_WIDTH = 8,
@@ -78,7 +77,7 @@ module riscv_32i #(
     );
 
 
-    register_file reg_file (
+    register_file #(XLEN) reg_file (
         .clk(clk),
         .res_n(res_n),
         .rf_wr_en(rf_wr_en),
@@ -111,6 +110,7 @@ module riscv_32i #(
 
 
     mem #(
+        .WIDTH(XLEN),
         .DEPTH(2**ADDR_WIDTH),
         .MEM_FILE(""),
         .ENDIANESS(0)       // assuming ram is Little endian
@@ -129,7 +129,7 @@ module riscv_32i #(
     );
 
 
-    alu alu_stage (
+    alu #(XLEN) alu_stage (
         .alu_op(alu_op),
         .alu_a(alu_a),
         .alu_b(alu_b),

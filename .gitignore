@@ -1,0 +1,30 @@
+# Specific files
+.DS_Store
+.log
+.dot
+.vvp
+
+# DsimStudio
+**/dsim_work/
+.env
+.db
+
+# Verilator
+**/obj_dir/
+
+# cocotb
+**/sim_build/
+
+# Quartus
+output_files/
+incremental_db/
+db/
+
+# Python
+*__pycache__*
+
+# Clangd
+.clangd/
+.cache/
+obj/
+mem_init/
