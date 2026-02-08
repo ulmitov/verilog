@@ -7,8 +7,8 @@ This architecture performs an instruction in one clock cycle.
 So the clock frequency should be calculated according to the longest data path.
 Which is the loading data from memory into register file.
 Additionally, depending on memory type, the store operation also can take long time.
-And finally the ALU unit add operation takes 3 gate delays per bit.
-
+And finally the ALU unit add operation takes 3 gate delays per bit. So the path is:
+`tC > tIFetch + tRFetch + tALU+ tDMem + tRWB`
 
  - `asm` folder holds the assembly programs and their hex code mem files.
  - `vcd` folder holds the simulation results.
