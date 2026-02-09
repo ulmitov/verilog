@@ -1,0 +1,47 @@
+---
+# Note: The contents of this file are automatically generated.
+# Any changes made by hand may be overwritten.
+version: '0.2'
+work_dir: .
+design_root_dir: ../
+simulations:
+  - name: tb_run
+    options: >-
+      -top work.top_tb -build-all -cs-randc-max 31 +acc+b -code-cov a -waves
+      waves.mxd
+source_files:
+  - language: verilog
+    path: ../RISCV_SingleCycle/risc_pkg.sv
+  - language: verilog
+    path: ../mux.v
+    options: '-incdir ../'
+  - language: verilog
+    path: ../shift.v
+  - language: verilog
+    path: ../adder.v
+    options: '-incdir ../'
+  - language: verilog
+    path: ../RISCV_SingleCycle/alu.sv
+    options: '-incdir ../'
+  - language: verilog
+    path: intf.sv
+  - language: verilog
+    path: transaction.sv
+  - language: verilog
+    path: generator.sv
+  - language: verilog
+    path: driver.sv
+    options: '-incdir ../'
+  - language: verilog
+    path: monitor.sv
+  - language: verilog
+    path: scoreboard.sv
+  - language: verilog
+    path: environment.sv
+    options: '-incdir ../'
+  - language: verilog
+    path: top_tb.sv
+    options: '-incdir ../'
+library_search_paths:
+  - $STD_LIBS/ieee93
+  - ''
