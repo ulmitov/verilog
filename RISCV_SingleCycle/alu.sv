@@ -1,3 +1,4 @@
+`include "consts.v"
 import risc_pkg::*;
 
 
@@ -15,6 +16,8 @@ module alu #(parameter XLEN = 32) (
 
         adder #(XLEN) alu_fa (.Nadd_sub(nadd_sub), .X(alu_a), .Y(alu_b), .sum(sum), .carry(), .overflow(), .eq(eq), .lt(lt), .ltu(ltu));
         shift #(XLEN) alu_sh (.right_en(right_en), .sign(sign_ext), .din(alu_a), .shift_n(shifts_num), .out(out_sh));
+
+        initial $display("+++ RUNNING GATEFLOW ALU");
 
         assign shifts_num = {1'b0, alu_b[4:0]};
 
@@ -52,7 +55,8 @@ module alu #(parameter XLEN = 32) (
             endcase
         end
     `else
-        alu_dataflow (.a(alu_op), .alu_a(alu_a), .alu_b(alu_b), .alu_res(alu_res));
+        initial $display("--- RUNNING DATAFLOW ALU");
+        alu_dataflow alu_df (.alu_op(alu_op), .alu_a(alu_a), .alu_b(alu_b), .alu_res(alu_res));
     `endif
 endmodule
 

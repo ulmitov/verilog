@@ -1,23 +1,10 @@
-`timescale 1ns / 100ps
 `include "consts.v"
+`timescale 1ns / 100ps
 
-`define T_CLK (`T_DELAY_PD * (32*4)) // TODO: calc exact delay. change to verilog 2005?
+`define T_CLK (`T_DELAY_PD * (32*4)) // TODO: calc exact delay
 `define T_CYC (`T_CLK * 2)
 
-/*
-// https://risc-v-cpu-visualizer.vercel.app/assembler bugs in lw and sw funct3 and rs1 !!!
-https://risc-v-cpu-visualizer.vercel.app/help
-https://www.cs.cornell.edu/courses/cs3410/2019sp/riscv/interpreter/#
 
-tC > tIFetch + tRFetch + tALU+ tDMem+ tRWB
-https://docs.riscv.org/reference/isa/_attachments/riscv-unprivileged.pdf
-https://passlab.github.io/CSCE513/notes/lecture07_RISCV_Impl.pdf
-https://risc-v-cpu-visualizer.vercel.app/assembler
-
-
-iverilog -Wall -g2012 -I ../ -o vcd/riscv_tb.vvp -s riscv_tb riscv_tb.sv risc_pkg.sv riscv.sv fetch.sv decode.sv register_file.sv branch_control.sv ../mem.sv alu.sv control.sv ../adder.v ../shift.v ../mux.v
-vvp vcd/riscv_tb.vvp
-*/
 module riscv_tb;
     //localparam mem_file = "fibonacci_sequence.mem";   // see values each dmem_wr in dmem_wr_data
     //localparam mem_file = "find_max_in_array.mem";    // see max value 2A in the end at dmem address d24 (h18)

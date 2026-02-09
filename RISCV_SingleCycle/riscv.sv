@@ -1,3 +1,5 @@
+`include "consts.v"
+
 import risc_pkg::*;
 
 

@@ -1,12 +1,39 @@
 /*
 Synchronous FIFO with parallel read-write
 
+Core Output Flags (Essential)
+
+    Empty (empty): Asserted when the FIFO contains no data. Read operations should be halted when this flag is high.
+    Full (full): Asserted when the FIFO is completely full. Write operations should be halted when this flag is high to prevent data loss. 
+
+Status & Management Flags (Common)
+
+    Almost Empty (almost_empty): Indicates the FIFO is nearly empty (e.g., only one word remains). Used to signal that a read operation should cease soon.
+    Almost Full (almost_full): Indicates the FIFO is nearly full (e.g., one more write can be accepted). Used to warn the producer to stop writing.
+    Data Valid (data_valid / valid): In standard mode, indicates that the data on the output bus (dout) is valid for sampling.
+    Write Acknowledge (wr_ack): Asserted to indicate that a write request was successful. 
+
+Error & Programmable Flags
+
+    Underflow (underflow): Asserted if a read request is made while the FIFO is empty. Usually indicates an error in control logic.
+    Overflow (overflow): Asserted if a write request is made while the FIFO is full.
+    Programmable Full (prog_full): A user-defined threshold flag that asserts when the fill level exceeds a set limit.
+    Programmable Empty (prog_empty): A user-defined threshold flag that asserts when the fill level falls below a set limit. 
+
+Clock Domain Behaviors
+
+    Synchronous/Common Clock: All flags are synchronized to the single system clock.
+    Asynchronous/Independent Clocks: empty, almost_empty, and data_valid are typically synchronized to the read clock (rd_clk), while full, almost_full, and wr_ack are synchronized to the write clock (wr_clk). 
+
+FIFO Read Modes
+
+    Standard Mode: Read latency is higher; data appears on the output bus after a read enable is issued.
+    First-Word Fall-Through (FWFT): The first word is available immediately on the output bus when the FIFO is not empty, reducing latenc
+
+
 f="fifo"; m="fifo";
 yosys -p "read_verilog ${f}.v; hierarchy -check -top $m; proc; opt; simplemap; clean; show -format svg -prefix synth/${m} ${m}; show ${m}"
 */
-//`define COUNTER_LOGIC
-
-
 module fifo #(
     parameter ADDR_WIDTH = 3,           // how much addresses, so depth is 2**ADDR_WIDTH
     parameter WORD_WIDTH = 8
@@ -17,7 +44,6 @@ module fifo #(
     input pull,
     input wire [WORD_WIDTH-1:0] din,    // pushes a value into fifo
     output wire [WORD_WIDTH-1:0] dout,  // pulls a value from fifo
-    output reg [ADDR_WIDTH:0] count,    // items counter. if this logic is required then uncomment the define line
     output wire empty,
     output wire full
 );
@@ -46,7 +72,6 @@ module fifo #(
 
     assign dout  = mem[r_ptr];      // for now always setting current mem value even if x
 
-    `ifndef COUNTER_LOGIC
         reg pushed;
         wire ptmet;
 
@@ -64,7 +89,7 @@ module fifo #(
                 pushed <= 1'b0;
             end
         end
-    `else
+    /*
         reg [ADDR_WIDTH:0] count_add;
 
         assign full  = count[ADDR_WIDTH];   // if MSB is set then we got to the max count of items
@@ -87,5 +112,5 @@ module fifo #(
                 count <= count + count_add;
             end
         end
-    `endif
+    */
 endmodule

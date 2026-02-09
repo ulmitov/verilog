@@ -1,7 +1,3 @@
-`define DEBUG 1
-`define GATEFLOW 1
-
-
 package risc_pkg;
 
 parameter RISCV_XLEN = 32;
