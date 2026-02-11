@@ -1,0 +1,58 @@
+---
+# Note: The contents of this file are automatically generated.
+# Any changes made by hand may be overwritten.
+version: '0.2'
+work_dir: .
+design_root_dir: .
+simulations:
+  - name: Elab
+    options: '-top work.top_tb -genimage image -uvm 1.2 +acc+b'
+  - name: Sim
+    options: >-
+      -image image -waves waves.mxd -uvm 1.2 +UVM_NO_RELNOTES
+      +UVM_TESTNAME=fifo_test
+source_files:
+  - language: verilog
+    path: sequencer.sv
+    options: '-uvm 1.2'
+  - language: verilog
+    path: fifo_interface.sv
+    options: '-uvm 1.2'
+  - language: verilog
+    path: fifo_transaction.sv
+    options: '-uvm 1.2'
+  - language: verilog
+    path: fifo_sequence.sv
+    options: '-uvm 1.2'
+  - language: verilog
+    path: driver.sv
+    options: '-uvm 1.2'
+  - language: verilog
+    path: monitor.sv
+    options: '-uvm 1.2'
+  - language: verilog
+    path: agent.sv
+    options: '-uvm 1.2'
+  - language: verilog
+    path: environment.sv
+    options: '-uvm 1.2'
+  - language: verilog
+    path: scoreboard.sv
+    options: '-uvm 1.2'
+  - language: verilog
+    path: fifo_test.sv
+    options: '-uvm 1.2'
+  - language: verilog
+    path: test_wr.sv
+    options: '-uvm 1.2'
+  - language: verilog
+    path: test_wr_rd.sv
+    options: '-uvm 1.2'
+  - language: verilog
+    path: ../fifo.v
+    options: '-incdir ../'
+  - language: verilog
+    path: top_tb.sv
+    options: '-uvm 1.2'
+library_search_paths:
+  - $STD_LIBS/ieee93

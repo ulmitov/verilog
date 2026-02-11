@@ -34,6 +34,9 @@ FIFO Read Modes
 f="fifo"; m="fifo";
 yosys -p "read_verilog ${f}.v; hierarchy -check -top $m; proc; opt; simplemap; clean; show -format svg -prefix synth/${m} ${m}; show ${m}"
 */
+`include "consts.v"
+
+
 module fifo #(
     parameter ADDR_WIDTH = 3,           // how much addresses, so depth is 2**ADDR_WIDTH
     parameter WORD_WIDTH = 8
@@ -58,9 +61,12 @@ module fifo #(
             w_ptr <= w_ptr + 1;
             mem[w_ptr] <= din;
         end
+        `ifdef DEBUG $display("FIFO: w_ptr=%0d push=%0b din=%0h", w_ptr, push, din);
     end
 
     // read op
+    assign dout  = mem[r_ptr];      // for now always setting current mem value even if x
+
     always @(posedge clk) begin
         if (res) begin
             r_ptr <= 0;
@@ -68,27 +74,35 @@ module fifo #(
             //dout <= mem[r_ptr];   // instead of FFs, using the assign below
             r_ptr <= r_ptr + 1;
         end
+        `ifdef DEBUG $display("FIFO: r_ptr=%0d pull=%0b dout=%0h", r_ptr, pull, dout);
     end
 
-    assign dout  = mem[r_ptr];      // for now always setting current mem value even if x
+    
 
-        reg pushed;
-        wire ptmet;
+    reg pushed;
+    wire ptmet;
+    integer i;
 
-        assign ptmet = &(r_ptr ~^ w_ptr);   // pointers met - not using, replaced by checking the counter
-        assign full  = ptmet & pushed;      // if MSB is set then we got to the max count of items
-        assign empty = ptmet & ~pushed;     // at least one item was pushed
-        always @(posedge clk) begin
-            if (res) begin
-                pushed <= 1'b0;
-            end else if (push & ~full & ~pull) begin
-                // push
-                pushed <= 1'b1;
-            end else if (pull & ~empty) begin // even if push and pull in parallel
-                // pull
-                pushed <= 1'b0;
-            end
+    assign ptmet = &(r_ptr ~^ w_ptr);   // pointers met - not using, replaced by checking the counter
+    assign full  = ptmet & pushed;      // if MSB is set then we got to the max count of items
+    assign empty = ptmet & ~pushed;     // at least one item was pushed
+
+    always @(posedge clk) begin
+        if (res) begin
+            pushed <= 1'b0;
+        end else if (push & ~full & ~pull) begin
+            // push
+            pushed <= 1'b1;
+        end else if (pull & ~empty) begin // even if push and pull in parallel
+            // pull
+            pushed <= 1'b0;
         end
+        `ifdef DEBUG
+            $display("Current FIFO state:");
+            for (i = 0; i < 2**ADDR_WIDTH; i = i + 1)
+                $display("mem[%0d] = 0x%h", i, mem[i]); 
+        `endif
+    end
     /*
         reg [ADDR_WIDTH:0] count_add;
 
