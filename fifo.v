@@ -39,18 +39,18 @@ yosys -p "read_verilog ${f}.v; hierarchy -check -top $m; proc; opt; simplemap; c
 
 module fifo #(
     parameter ADDR_WIDTH = 3,           // how much addresses, so depth is 2**ADDR_WIDTH
-    parameter WORD_WIDTH = 8
+    parameter DATA_WIDTH = 8
 ) (
     input res,
     input clk,
     input push,
     input pull,
-    input wire [WORD_WIDTH-1:0] din,    // pushes a value into fifo
-    output wire [WORD_WIDTH-1:0] dout,  // pulls a value from fifo
+    input wire [DATA_WIDTH-1:0] din,    // pushes a value into fifo
+    output wire [DATA_WIDTH-1:0] dout,  // pulls a value from fifo
     output wire empty,
     output wire full
 );
-    reg [WORD_WIDTH-1:0] mem [2**ADDR_WIDTH-1:0];
+    reg [DATA_WIDTH-1:0] mem [2**ADDR_WIDTH-1:0];
     reg [ADDR_WIDTH-1:0] w_ptr, r_ptr;
 
     // write op
@@ -58,21 +58,21 @@ module fifo #(
         if (res)
             w_ptr <= 0;
         else if (push & ~full) begin
-            w_ptr <= w_ptr + 1;
-            mem[w_ptr] <= din;
+            w_ptr <= #`T_DELAY_FF w_ptr + 1;
+            mem[w_ptr] <= #`T_DELAY_FF din;
         end
         `ifdef DEBUG $display("FIFO: w_ptr=%0d push=%0b din=%0h", w_ptr, push, din);
     end
 
     // read op
-    assign dout  = mem[r_ptr];      // for now always setting current mem value even if x
+    assign #`T_DELAY_PD dout = mem[r_ptr];      // for now always setting current mem value even if x
 
     always @(posedge clk) begin
         if (res) begin
             r_ptr <= 0;
         end else if (pull & ~empty) begin
             //dout <= mem[r_ptr];   // instead of FFs, using the assign below
-            r_ptr <= r_ptr + 1;
+            r_ptr <= #`T_DELAY_FF r_ptr + 1;
         end
         `ifdef DEBUG $display("FIFO: r_ptr=%0d pull=%0b dout=%0h", r_ptr, pull, dout);
     end

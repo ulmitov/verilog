@@ -1,7 +1,7 @@
 
 `timescale 1ns / 100ps
 
-`define WORD_WIDTH 8
+`define DATA_WIDTH 8
 `define ADDR_WIDTH 3
 
 `define T_WR 5
@@ -12,14 +12,14 @@
 module fifo_tb;
     reg clk = 1'b0;
     reg wen, ren, res;
-    reg [`WORD_WIDTH-1:0] data;
-    wire [`WORD_WIDTH-1:0] out;
+    reg [`DATA_WIDTH-1:0] data;
+    wire [`DATA_WIDTH-1:0] out;
     wire [`ADDR_WIDTH:0] count;
     wire full, empty;
     integer i;
-    reg [`WORD_WIDTH-1:0] exp_fifo [2**`ADDR_WIDTH-1:0];
+    reg [`DATA_WIDTH-1:0] exp_fifo [2**`ADDR_WIDTH-1:0];
 
-    fifo #( .WORD_WIDTH(`WORD_WIDTH), .ADDR_WIDTH(`ADDR_WIDTH) ) UUT(
+    fifo #( .DATA_WIDTH(`DATA_WIDTH), .ADDR_WIDTH(`ADDR_WIDTH) ) UUT(
         .res(res),
         .clk(clk),
         .push(wen),

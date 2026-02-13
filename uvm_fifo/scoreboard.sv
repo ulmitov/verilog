@@ -2,16 +2,16 @@
 import uvm_pkg::*;
 
 
-class scoreboard #(parameter WORD_WIDTH = 8, parameter ADDR_WIDTH = 3) extends uvm_scoreboard;
+class scoreboard extends uvm_scoreboard;
     `uvm_component_utils(scoreboard)
 
     uvm_analysis_imp #(fifo_transaction, scoreboard) scb_port;
 
     fifo_transaction Q [$];
 
-    bit [WORD_WIDTH-1:0] mem [$];
-    bit [WORD_WIDTH-1:0] tx_dout;
-    int count = 0;
+    bit [fifo_config::DATA_WIDTH-1:0] mem [$];
+    bit [fifo_config::DATA_WIDTH-1:0] tx_dout;
+    int count;
 
     function new(string name, uvm_component parent);
         super.new(name, parent);
@@ -22,54 +22,80 @@ class scoreboard #(parameter WORD_WIDTH = 8, parameter ADDR_WIDTH = 3) extends u
         scb_port = new("scb_port", this);
     endfunction
 
-    function write(fifo_transaction tr);
-        Q.push_back(tr);
-        tr.print("SCB got item");
+    function write(fifo_transaction ftr);
+        Q.push_back(ftr);
+        uvm_report_info("SCB got item", ftr.convert2string());
     endfunction
 
     task run_phase(uvm_phase ph);
-        fifo_transaction tr;
-        int memsize;
+        fifo_transaction ftr;
+        int msize;
+        int i;
+        string strvar;
         forever begin
             wait (Q.size() > 0);
-            tr = Q.pop_front();
-            uvm_report_info(get_name(), $sformatf("Q popped packet push=%0b pull=%0b din=%0h:", tr.push, tr.pull, tr.din), UVM_MEDIUM);
-            if (!tr.pull && !tr.push) continue;
+            ftr = Q.pop_front();
+            uvm_report_info(get_name(), $sformatf("Q popped packet push=%0b pull=%0b din=%0h:", ftr.push, ftr.pull, ftr.din), UVM_MEDIUM);
+            if (!ftr.pull && !ftr.push) continue;
             this.count++;
-            memsize = mem.size();
+            msize = mem.size();
 
-            if (!memsize) begin
-                assert(tr.empty)
-                    uvm_report_info(get_name(), $sformatf("Pull request recieved but FIFO is empty, nothing to do, waiting for next request"), UVM_MEDIUM);
+            // check empty sig
+            if (!msize) begin
+                assert(ftr.empty)
+                    uvm_report_info(get_name(), $sformatf("Pull request recieved but FIFO is empty as expected, not pulling, waiting for next request"), UVM_MEDIUM);
                 else
                     uvm_report_error(get_name(), $sformatf("EMPTY sig not raised"));
-            end else if (memsize == 2**ADDR_WIDTH) begin
-                assert(tr.full)
-                    uvm_report_info(get_name(), $sformatf("Push request recieved but FIFO is full, nothing to do, waiting for next request"), UVM_MEDIUM);
+            end else begin
+                assert(!ftr.empty)
+                else uvm_report_error(get_name(), $sformatf("EMPTY sig was raised but looks like fifo is not empty"));
+            end
+
+            // check full sig
+            if (msize < fifo_config::FIFO_DEPTH) begin
+                assert(!ftr.full)
+                else uvm_report_error(get_name(), $sformatf("FULL sig was raised but looks like fifo is not full"));
+            end else begin
+                assert(ftr.full)
+                    uvm_report_info(get_name(), $sformatf("Push request recieved but FIFO is full as expected, not pushing, waiting for next request"), UVM_MEDIUM);
                 else
                     uvm_report_error(get_name(), $sformatf("FULL sig not raised"));
             end
 
+            // print mem status before any actions
+            strvar = "";
+            foreach (mem[i]) strvar = { strvar, $sformatf("0x%0h ,", mem[i]) };
+            uvm_report_info(get_name(), $sformatf("Current scb mem: %s", strvar));
 
-            if (tr.pull && memsize) begin
-                tx_dout = mem.pop_front();
-
-                assert(tx_dout == tr.dout) begin
-                    uvm_report_info(get_name(), $sformatf("-------------------"), UVM_MEDIUM);
-                    uvm_report_info(get_name(), $sformatf("--- EXPECTED MATCH"), UVM_MEDIUM);
-                    uvm_report_info(get_name(), $sformatf("Exp=%0h, Receieved %0h", tx_dout, tr.dout), UVM_MEDIUM);
-                    uvm_report_info(get_name(), $sformatf("-------------------"), UVM_MEDIUM);
-                end else begin
-                    uvm_report_info(get_name(), $sformatf("-------------------"), UVM_MEDIUM);
-                    uvm_report_info(get_name(), $sformatf("--- FAILED MATCH"), UVM_MEDIUM);
-                    uvm_report_error(get_name(), $sformatf("Exp=%0h, Receieved %0h", tx_dout, tr.dout));
-                    uvm_report_info(get_name(), $sformatf("-------------------"), UVM_MEDIUM);
-                end
+            // since pull pops mem, then if both are 1 we should push first
+            if (ftr.push) begin
+                if (mem.size() < fifo_config::FIFO_DEPTH) mem.push_back(ftr.din);
             end
-            if (tr.push && memsize < 2**ADDR_WIDTH) mem.push_back(tr.din);
-            uvm_report_info(get_name(), $sformatf("Current scb mem:"), UVM_MEDIUM);
-            uvm_report_info(get_name(), $sformatf("%p", mem), UVM_MEDIUM);
+
+            // check pull operation
+            if (ftr.pull && msize) begin
+                tx_dout = mem.pop_front();
+                assert(tx_dout == ftr.dout)
+                    this.passed(tx_dout, ftr.dout);
+                else
+                    this.failed(tx_dout, ftr.dout);
+            end
         end
     endtask
+
+    function passed(int exp, int rec);
+        this.log(exp, rec, "PASSED");
+    endfunction
+
+    function failed(int exp, int rec);
+        this.log(exp, rec, "FAILED", UVM_ERROR);
+    endfunction
+
+    function void log(int exp, int rec, string status, uvm_severity sev = UVM_INFO);
+        uvm_report_info(get_name(), $sformatf("-------------------"));
+        uvm_report_info(get_name(), $sformatf("--- %s MATCH", status));
+        uvm_report(sev, get_name(), $sformatf("Exp=0x%0h | Rec=0x%0h", exp, rec));
+        uvm_report_info(get_name(), $sformatf("-------------------"));
+    endfunction
 endclass
     

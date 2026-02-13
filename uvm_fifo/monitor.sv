@@ -19,16 +19,16 @@ class monitor extends uvm_monitor;
     virtual function void build_phase(uvm_phase phase);
         super.build_phase(phase);
         if (!uvm_config_db#(virtual fifo_interface)::get(this, "", "vif", vif))
-            uvm_report_fatal("MON", {"build_phase: virtual fifo interface was not set for ", get_name()});
+            uvm_report_fatal(get_name(), "build_phase: virtual fifo interface was not set");
     endfunction
 
     virtual task run_phase(uvm_phase phase);
         super.run_phase(phase);
 
-        ftr = fifo_transaction#()::type_id::create("ftr");
+        ftr = fifo_transaction::type_id::create("ftr");
 
         forever begin
-            @(posedge vif.MONITOR_MP.clk);
+            @(vif.MONITOR_MP.cb_mon);
             ftr.pull = vif.MONITOR_MP.cb_mon.pull;
             ftr.push = vif.MONITOR_MP.cb_mon.push;
             if (ftr.pull || ftr.push) begin
@@ -36,7 +36,8 @@ class monitor extends uvm_monitor;
                 ftr.dout = vif.MONITOR_MP.cb_mon.dout;
                 ftr.empty = vif.MONITOR_MP.cb_mon.empty;
                 ftr.full = vif.MONITOR_MP.cb_mon.full;
-                ftr.print("MON got item");
+                uvm_report_info("MON got item", ftr.convert2string());
+                //`uvm_info( "MON", ftr.sprint( uvm_default_line_printer ), UVM_NONE )
                 mon_port.write(ftr);
             end
         end

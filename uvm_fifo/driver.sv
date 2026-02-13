@@ -16,7 +16,7 @@ class driver extends uvm_driver#(fifo_transaction);
     virtual function void build_phase(uvm_phase phase);
         super.build_phase(phase);
         if (!uvm_config_db#(virtual fifo_interface)::get(this, "", "vif", vif))
-            uvm_report_fatal("MON", {"build_phase: virtual fifo interface was not set for ", get_name()});
+            uvm_report_fatal(get_name(), "build_phase: virtual fifo interface was not set");
     endfunction
 
     virtual task run_phase(uvm_phase phase);
@@ -29,13 +29,13 @@ class driver extends uvm_driver#(fifo_transaction);
 
     virtual task drive_task();
         wait(!vif.DRIVER_MP.res);
-        @(posedge vif.DRIVER_MP.clk);
+        @(vif.DRIVER_MP.cb_drv);
         vif.DRIVER_MP.cb_drv.push <= ftr.push;
         vif.DRIVER_MP.cb_drv.pull <= ftr.pull;
         if (ftr.push)
             vif.DRIVER_MP.cb_drv.din <= ftr.din;
         if (ftr.push || ftr.pull) this.count++;
-        ftr.print("DRV sent item");
+        uvm_report_info("DRV sent item", ftr.convert2string());
     endtask
 endclass
 

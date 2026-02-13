@@ -10,8 +10,14 @@ simulations:
   - name: Sim
     options: >-
       -image image -waves waves.mxd -uvm 1.2 +UVM_NO_RELNOTES
-      +UVM_TESTNAME=fifo_test
+      +UVM_TESTNAME=test_wr_rd
 source_files:
+  - language: verilog
+    path: ../fifo.v
+    options: '-incdir ../ -vlog_sv2012'
+  - language: verilog
+    path: fifo_config.sv
+    options: '-uvm 1.2'
   - language: verilog
     path: sequencer.sv
     options: '-uvm 1.2'
@@ -40,6 +46,9 @@ source_files:
     path: scoreboard.sv
     options: '-uvm 1.2'
   - language: verilog
+    path: top_tb.sv
+    options: '-uvm 1.2'
+  - language: verilog
     path: fifo_test.sv
     options: '-uvm 1.2'
   - language: verilog
@@ -49,10 +58,7 @@ source_files:
     path: test_wr_rd.sv
     options: '-uvm 1.2'
   - language: verilog
-    path: ../fifo.v
-    options: '-incdir ../'
-  - language: verilog
-    path: top_tb.sv
+    path: test_rand.sv
     options: '-uvm 1.2'
 library_search_paths:
   - $STD_LIBS/ieee93
