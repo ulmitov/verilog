@@ -39,8 +39,10 @@ module top_tb;
         .full(IF.full)
     );
 
-    always #fifo_config::T_CLK clk = ~clk;
+    always  #fifo_config::T_CLK clk = ~clk;
     initial #(fifo_config::T_CLK*2) res = 0;
-    initial uvm_config_db#(virtual fifo_interface)::set(null, "*", "vif", IF);
-    initial run_test("fifo_test");
+    initial begin
+        uvm_config_db #(virtual fifo_interface)::set(null, "*", "vif", IF);
+        run_test("fifo_test");
+    end
 endmodule

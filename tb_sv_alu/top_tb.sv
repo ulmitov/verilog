@@ -34,7 +34,7 @@ program test(intf itf);
     initial begin
         env = new(itf);
         env.pre_test();
-        env.test_manual_vals();
+        env.test_manual_val();
         env.test_bit_by_bit(32);
         env.test_random_bit(10*32);
         env.test_random_val(100);

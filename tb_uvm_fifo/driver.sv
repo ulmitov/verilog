@@ -15,7 +15,7 @@ class driver extends uvm_driver#(fifo_transaction);
 
     virtual function void build_phase(uvm_phase phase);
         super.build_phase(phase);
-        if (!uvm_config_db#(virtual fifo_interface)::get(this, "", "vif", vif))
+        if (!uvm_config_db #(virtual fifo_interface)::get(this, "", "vif", vif))
             uvm_report_fatal(get_name(), "build_phase: virtual fifo interface was not set");
     endfunction
 

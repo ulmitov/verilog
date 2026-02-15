@@ -10,11 +10,11 @@ class test_wr_rd extends fifo_test;
 
     function new(string name = "test_wr_rd", uvm_component parent = null);
         super.new(name, parent);
+        seq_single = 2 * fifo_config::FIFO_DEPTH;
+        uvm_config_db #(int)::set(null, "*", "seq_single", seq_single);
     endfunction
 
     task run_phase(uvm_phase phase);
-        int seq_single = 2 * fifo_config::FIFO_DEPTH;
-        uvm_config_db#(int)::set(null, "*", "seq_single", seq_single);
         seq_wr_rd_multiple = fifo_sequence_wr_rd_completely::type_id::create("SEQ");
         phase.raise_objection(this);
         seq_wr_rd_multiple.start(env.agt.sqr);

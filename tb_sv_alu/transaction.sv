@@ -2,7 +2,7 @@ import risc_pkg::*;
 
 
 class transaction;
-    randc op_enum_alu alu_op;
+    rand op_enum_alu alu_op;
     rand bit [31:0] alu_a;
     rand bit [31:0] alu_b;
     logic [31:0] alu_res;

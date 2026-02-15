@@ -57,15 +57,15 @@ class fifo_sequence_wr extends uvm_sequence#(fifo_transaction);
     `uvm_object_utils(fifo_sequence_wr)
 
     int count;
+    int seq_single;
 
     function new(string name = "fifo_sequence_wr");
         super.new(name);
+        if (!uvm_config_db #(int)::get(null, "", "seq_single", seq_single))
+            uvm_report_fatal(get_name(), "seq_single is not in db");
     endfunction
 
     virtual task body();
-        int seq_single;
-        if (!uvm_config_db#(int)::get(null, "", "seq_single", seq_single))
-            uvm_report_fatal(get_name(), "seq_single is not in db");
         uvm_report_info(get_name(), "----- STARTING WRITE ONLY TRANSACTIONS -------");
         req = fifo_transaction::type_id::create("req");
         repeat(seq_single) begin
@@ -84,15 +84,15 @@ class fifo_sequence_rd extends uvm_sequence#(fifo_transaction);
     `uvm_object_utils(fifo_sequence_rd)
 
     int count;
+    int seq_single;
 
     function new(string name = "fifo_sequence_rd");
         super.new(name);
+        if (!uvm_config_db #(int)::get(null, "", "seq_single", seq_single))
+            uvm_report_fatal(get_name(), "seq_single is not in db");
     endfunction
 
     virtual task body();
-        int seq_single;
-        if (!uvm_config_db#(int)::get(null, "", "seq_single", seq_single))
-            uvm_report_fatal(get_name(), "seq_single is not in db");
         uvm_report_info(get_name(), "----- STARTING READ ONLY TRANSACTIONS -------");
         req = fifo_transaction::type_id::create("req");
         repeat(seq_single) begin

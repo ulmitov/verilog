@@ -21,9 +21,9 @@ class environment;
         this.gen2drv_mail = new();
         this.mon2scb_mail = new();
         this.gen = new(this.gen2drv_mail);
+        this.scb = new(this.mon2scb_mail);
         this.drv = new(vif_init, this.gen2drv_mail);
         this.mon = new(vif_init, this.mon2scb_mail);
-        this.scb = new(this.mon2scb_mail);
     endfunction
 
     task test_random_val(int num);
@@ -56,16 +56,16 @@ class environment;
         join
     endtask
 
-    task test_manual_vals();
+    task test_manual_val();
         int i;
         int num = 10; // as amount of opcodes
-        $display("Testing manual inputs - checking stuck at 1's or 0's and also boundary values");
+        $display("Testing manual inputs - checking stuck at 1's or 0's, crosstalk and boundary values");
         fork
             for (i = 0; i < num; i = i + 1) begin
                 this.gen.set(0, 0);
                 this.gen.set({32{1'b1}}, {32{1'b1}});
-                this.gen.set({16{1'b1}}, {15{1'b1}});
-                this.gen.set({{16{1'b1}}, {16{1'b0}}}, {{15{1'b1}}, {16{1'b0}}});
+                this.gen.set({{16{1'b0}}, {16{1'b1}}}, {{17{1'b0}}, {15{1'b1}}});
+                this.gen.set({{16{1'b1}}, {16{1'b0}}}, {1'b0, {15{1'b1}}, {16{1'b0}}});
             end
             num = num * 4;
             this.drv.main(num);

@@ -16,7 +16,7 @@ vvp vcd/riscv_tb.vvp
 
 ##  Testbench files:
  - The end to end assembly test is a Verilog testbench in `riscv_tb.sv`
- - `alu.sv` unit has a **SystemVerilog** testbench in `sv_tb_alu` folder
+ - `alu.sv` unit has a **SystemVerilog** testbench in `tb_sv_alu` folder
  - `instruction_mem.sv` unit has a Verilog testbench in `risc_tb.sv`
  - `mem.sv` unit has a Verilog testbench in `mem_tb.v` (in upper dir)
  - `adder.v` and `shift.v` and `mux.v` - all have Verilog testbenches in the upper folder
