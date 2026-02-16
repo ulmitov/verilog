@@ -24,7 +24,6 @@ class monitor extends uvm_monitor;
 
     virtual task run_phase(uvm_phase phase);
         super.run_phase(phase);
-
         ftr = fifo_transaction::type_id::create("ftr");
 
         forever begin

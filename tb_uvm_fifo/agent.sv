@@ -5,9 +5,9 @@ import uvm_pkg::*;
 class agent extends uvm_agent;
     `uvm_component_utils(agent)
 
-    sequencer sqr;
     driver drv;
     monitor mon;
+    sequencer sqr;
 
     function new(string name, uvm_component parent);
         super.new(name, parent);
@@ -20,8 +20,8 @@ class agent extends uvm_agent;
         sqr = sequencer::type_id::create("SQR", this);
     endfunction
 
-    function void connect_phase(uvm_phase ph);
-        super.connect_phase(ph);
+    virtual function void connect_phase(uvm_phase phase);
+        super.connect_phase(phase);
         drv.seq_item_port.connect(sqr.seq_item_export);
     endfunction
 endclass

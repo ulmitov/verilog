@@ -58,3 +58,31 @@ module ff_jk (
         endcase
     end
 endmodule
+
+
+/*
+    Simple single synchronizer of two stage shift register FF's
+    with an edge detector
+    Assuming din is 1-1.5 phases longer than clk, it can be used for clock crossing the din signal
+*/
+module synchroniser #(parameter n = 1) (
+    input clk,
+    input res,
+    input [n-1:0] din,
+    output wire [n-1:0] q,
+    output wire [n-1:0] edges   // din edge detector
+);
+    reg [n-1:0] q0, q1;
+    assign q = q1;
+    always @(posedge clk) begin
+        if (res) begin
+            q0 <= 0;
+            q1 <= 0;
+            edges <= 0;
+        end else begin
+            q0 <= din;
+            q1 <= q0;
+            edges <= edges ^ q1;
+        end
+    end
+endmodule

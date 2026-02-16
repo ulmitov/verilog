@@ -18,8 +18,8 @@ class environment extends uvm_env;
         scb = scoreboard::type_id::create("SCB", this);
     endfunction
 
-    function void connect_phase(uvm_phase ph);
-        super.connect_phase(ph);
+    virtual function void connect_phase(uvm_phase phase);
+        super.connect_phase(phase);
         agt.mon.mon_port.connect(scb.scb_port);
         uvm_report_info("FIFO_ENV", "Connected ports of MON and SCB successfully", UVM_MEDIUM);
     endfunction

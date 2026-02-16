@@ -1,8 +1,8 @@
 # Contents:
 
- - Top folder includes different verilog modules
+ - Top folder includes different verilog modules and their verilog testbenches
  - RISCV implementation
  - SystemVerilog testbench for ALU
  - UVM testbench for FIFO
- - Synth results
- - Vcd results folder. Install VSCOde extensions: "DsimStudio", "WaveTrace"
+ - Vcd results folder (install VSCode extensions: "DsimStudio", "WaveTrace")
+ - Synthesys results

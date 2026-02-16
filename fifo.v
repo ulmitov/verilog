@@ -1,40 +1,39 @@
 /*
 Synchronous FIFO with parallel read-write
 
-Core Output Flags (Essential)
+Design:
 
-    Empty (empty): Asserted when the FIFO contains no data. Read operations should be halted when this flag is high.
-    Full (full): Asserted when the FIFO is completely full. Write operations should be halted when this flag is high to prevent data loss. 
+All flags are synchronized to the single system clock
+First-Word Fall-Through (FWFT): The first word is available immediately on the output bus when the FIFO is not empty, reducing latenc
 
+Because of metastablity it would be safer to indicate ptmet when there is one cell left.
+So full is the meeting of next wr and current rd pointers.
+And empty is the meeting of next wr and next rd (or current wr and rd).
+If there are two clocks, then wr pointer moves at one speed and rd pointer moves another speed.
+Then to get a stable ptmet it would be much safer to use gray code.
+So using gray code and checking equivalence of next pointers, highly guarantees a stable operation in two clock domains.
+But if there is a need for items counter ouput, then design should be more sophisticated.
+
+TODO:
+    Asynchronous/Independent Clocks: empty, almost_empty, and data_valid are typically synchronized to the read clock (rd_clk), while full, almost_full, and wr_ack are synchronized to the write clock (wr_clk). 
 Status & Management Flags (Common)
-
     Almost Empty (almost_empty): Indicates the FIFO is nearly empty (e.g., only one word remains). Used to signal that a read operation should cease soon.
     Almost Full (almost_full): Indicates the FIFO is nearly full (e.g., one more write can be accepted). Used to warn the producer to stop writing.
     Data Valid (data_valid / valid): In standard mode, indicates that the data on the output bus (dout) is valid for sampling.
     Write Acknowledge (wr_ack): Asserted to indicate that a write request was successful. 
 
 Error & Programmable Flags
-
     Underflow (underflow): Asserted if a read request is made while the FIFO is empty. Usually indicates an error in control logic.
     Overflow (overflow): Asserted if a write request is made while the FIFO is full.
     Programmable Full (prog_full): A user-defined threshold flag that asserts when the fill level exceeds a set limit.
     Programmable Empty (prog_empty): A user-defined threshold flag that asserts when the fill level falls below a set limit. 
 
-Clock Domain Behaviors
-
-    Synchronous/Common Clock: All flags are synchronized to the single system clock.
-    Asynchronous/Independent Clocks: empty, almost_empty, and data_valid are typically synchronized to the read clock (rd_clk), while full, almost_full, and wr_ack are synchronized to the write clock (wr_clk). 
-
-FIFO Read Modes
-
-    Standard Mode: Read latency is higher; data appears on the output bus after a read enable is issued.
-    First-Word Fall-Through (FWFT): The first word is available immediately on the output bus when the FIFO is not empty, reducing latenc
-
-
 f="fifo"; m="fifo";
 yosys -p "read_verilog ${f}.v; hierarchy -check -top $m; proc; opt; simplemap; clean; show -format svg -prefix synth/${m} ${m}; show ${m}"
 */
 `include "consts.v"
+
+//`define COUNTER_LOGIC
 
 
 module fifo #(
@@ -49,82 +48,94 @@ module fifo #(
     output wire [DATA_WIDTH-1:0] dout,  // pulls a value from fifo
     output wire empty,
     output wire full
+`ifdef COUNTER_LOGIC
+    ,output reg [ADDR_WIDTH-1:0] count,    // items counter. if this logic is required then uncomment the define line
+`endif
 );
     reg [DATA_WIDTH-1:0] mem [2**ADDR_WIDTH-1:0];
     reg [ADDR_WIDTH-1:0] w_ptr, r_ptr;
+    reg [ADDR_WIDTH-1:0] next_w, next_r;
+    wire ren, wen;
 
     // write op
+    assign wen = push & ~full;
+    always @(posedge clk) begin
+        if (res)
+            next_w <= 1'b1;
+        else if (wen)
+            next_w <= #`T_DELAY_FF next_w + 1;
+    end
     always @(posedge clk) begin
         if (res)
             w_ptr <= 0;
-        else if (push & ~full) begin
-            w_ptr <= #`T_DELAY_FF w_ptr + 1;
+        else if (wen) begin
+            w_ptr <= #`T_DELAY_FF next_w;
             mem[w_ptr] <= #`T_DELAY_FF din;
         end
-        `ifdef DEBUG $display("FIFO: w_ptr=%0d push=%0b din=%0h", w_ptr, push, din);
+        `ifdef DEBUG $display("FIFO: w_ptr=%0d next_w=%0d, push=%0b din=%0h", w_ptr, next_w, push, din);
     end
 
     // read op
     assign #`T_DELAY_PD dout = mem[r_ptr];      // for now always setting current mem value even if x
+    assign ren = pull & ~empty;
 
     always @(posedge clk) begin
-        if (res) begin
+        if (res)
+            next_r <= 1'b1;
+        else if (ren)
+            next_r <= #`T_DELAY_FF next_r + 1;
+    end
+    always @(posedge clk) begin
+        if (res)
             r_ptr <= 0;
-        end else if (pull & ~empty) begin
-            //dout <= mem[r_ptr];   // instead of FFs, using the assign below
-            r_ptr <= #`T_DELAY_FF r_ptr + 1;
-        end
-        `ifdef DEBUG $display("FIFO: r_ptr=%0d pull=%0b dout=%0h", r_ptr, pull, dout);
+        else if (ren)
+            r_ptr <= #`T_DELAY_FF next_r;
+        `ifdef DEBUG $display("FIFO: r_ptr=%0d next_r=%0d, pull=%0b dout=%0h", r_ptr, next_r, pull, dout);
     end
 
-    
+    `ifndef COUNTER_LOGIC
+        reg pushed;
+        wire ptmet;
+        integer i;
 
-    reg pushed;
-    wire ptmet;
-    integer i;
+        assign ptmet = &(r_ptr ~^ next_w); // pointers met
+        assign full  = &(r_ptr ~^ next_w) & pushed;      // if pointers met and there was a push means we are full
+        assign empty = &(r_ptr ~^ w_ptr) & ~pushed;     // if pointers met but there was no push then we are empty
 
-    assign ptmet = &(r_ptr ~^ w_ptr);   // pointers met - not using, replaced by checking the counter
-    assign full  = ptmet & pushed;      // if MSB is set then we got to the max count of items
-    assign empty = ptmet & ~pushed;     // at least one item was pushed
-
-    always @(posedge clk) begin
-        if (res) begin
-            pushed <= 1'b0;
-        end else if (push & ~full & ~pull) begin
-            // push
-            pushed <= 1'b1;
-        end else if (pull & ~empty) begin // even if push and pull in parallel
-            // pull
-            pushed <= 1'b0;
+        always @(posedge clk) begin
+            if (res)
+                pushed <= 1'b0;
+            else if (wen & ~pull)
+                pushed <= 1'b1;
+            else if (ren)           // also when push and pull both set
+                pushed <= 1'b0;
+            `ifdef DEBUG
+                $display("Current FIFO state:");
+                for (i = 0; i < 2**ADDR_WIDTH; i = i + 1)
+                    $display("mem[%0d] = 0x%h", i, mem[i]); 
+            `endif
         end
-        `ifdef DEBUG
-            $display("Current FIFO state:");
-            for (i = 0; i < 2**ADDR_WIDTH; i = i + 1)
-                $display("mem[%0d] = 0x%h", i, mem[i]); 
-        `endif
-    end
-    /*
-        reg [ADDR_WIDTH:0] count_add;
+    `else
+        reg [ADDR_WIDTH-1:0] count_add;
 
-        assign full  = count[ADDR_WIDTH];   // if MSB is set then we got to the max count of items
-        assign empty = ~|count;             // at least one item was pushed
+        // if only one cell empty left then sig raised
+        assign full  = &count[ADDR_WIDTH-1:1] & ~count[0];
+        assign empty = ~|count;
 
-        // looks like if the casez is in separate combinational logic the synth has less elements, though not a big differrence
         always @(*) begin
             // 4to1 mux
             casez ({pull, push, empty, full})
                 4'b100?: count_add = -1;
                 4'b01?0: count_add = 1;
-                default: count_add = 0;
+                default: count_add = 0; // if pull and push are set then also no change
             endcase
         end
 
         always @(posedge clk) begin
             if (res)
                 count <= 0;
-            else begin
+            else
                 count <= count + count_add;
-            end
         end
-    */
+    `endif
 endmodule

@@ -27,9 +27,9 @@ Run the simulation:
 
 ## Testplan:
  - Boundary values testing for verifying cyclic values of registers (for all ALU operations)
- - Stuck at 1's, stuck at 0's, crosstalk testing
- - Toggling single bits to verify each stage's FF (for all ALU operations)
- - Toggling single random bits to verify each FF (for all ALU operations)
+ - Stuck at 1's, stuck at 0's, crosstalk testing (for all ALU operations)
+ - Toggling each bit to verify each stage's FF (only for ADD operation)
+ - Toggling single random bits to verify each FF (for all ALU operations except ADD)
  - Random transactions to verify functionality (for all ALU operations)
  
  ## Design:
@@ -40,5 +40,6 @@ Run the simulation:
 
 
 # Results:
-`waves.mxd` snapshot:
+![ALU log](./dsim.log)
+`waves.mxd`
 ![ALU tb](./waves.png)

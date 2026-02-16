@@ -17,8 +17,8 @@ class scoreboard extends uvm_scoreboard;
         super.new(name, parent);
     endfunction
 
-    function void build_phase(uvm_phase ph);
-        super.build_phase(ph);
+    virtual function void build_phase(uvm_phase phase);
+        super.build_phase(phase);
         scb_port = new("scb_port", this);
     endfunction
 
@@ -27,15 +27,15 @@ class scoreboard extends uvm_scoreboard;
         uvm_report_info("SCB got item", ftr.convert2string());
     endfunction
 
-    task run_phase(uvm_phase ph);
+    virtual task run_phase(uvm_phase phase);
         fifo_transaction ftr;
-        int msize;
-        int i;
+        int i, msize, exp_full;
         string strvar;
         forever begin
             wait (Q.size() > 0);
             ftr = Q.pop_front();
-            uvm_report_info(get_name(), $sformatf("Q popped packet push=%0b pull=%0b din=%0h:", ftr.push, ftr.pull, ftr.din), UVM_MEDIUM);
+            strvar = $sformatf("Q popped packet push=%0b pull=%0b din=%0h:", ftr.push, ftr.pull, ftr.din);
+            uvm_report_info(get_name(), strvar);
             if (!ftr.pull && !ftr.push) continue;
             this.count++;
             msize = mem.size();
@@ -43,23 +43,24 @@ class scoreboard extends uvm_scoreboard;
             // check empty sig
             if (!msize) begin
                 assert(ftr.empty)
-                    uvm_report_info(get_name(), $sformatf("Pull request recieved but FIFO is empty as expected, not pulling, waiting for next request"), UVM_MEDIUM);
+                    uvm_report_info(get_name(), $sformatf("Pull recieved but FIFO is empty as expected, not pulling. Mem size=%0d", msize));
                 else
-                    uvm_report_error(get_name(), $sformatf("EMPTY sig not raised"));
+                    uvm_report_error(get_name(), $sformatf("EMPTY sig not raised. Mem size=%0d", msize));
             end else begin
                 assert(!ftr.empty)
-                else uvm_report_error(get_name(), $sformatf("EMPTY sig was raised but looks like fifo is not empty"));
+                else uvm_report_error(get_name(), $sformatf("EMPTY sig was raised but looks like fifo is not empty. Mem size=%0d", msize));
             end
 
             // check full sig
-            if (msize < fifo_config::FIFO_DEPTH) begin
+            exp_full = fifo_config::FIFO_DEPTH - 1;
+            if (msize < exp_full) begin
                 assert(!ftr.full)
-                else uvm_report_error(get_name(), $sformatf("FULL sig was raised but looks like fifo is not full"));
+                else uvm_report_error(get_name(), $sformatf("FULL sig was raised but looks like fifo is not full. Mem size=%0d", msize));
             end else begin
                 assert(ftr.full)
-                    uvm_report_info(get_name(), $sformatf("Push request recieved but FIFO is full as expected, not pushing, waiting for next request"), UVM_MEDIUM);
+                    uvm_report_info(get_name(), $sformatf("Push recieved but FIFO is full as expected, not pushing. Mem size=%0d", msize));
                 else
-                    uvm_report_error(get_name(), $sformatf("FULL sig not raised"));
+                    uvm_report_error(get_name(), $sformatf("FULL sig not raised. Mem size=%0d", msize));
             end
 
             // print mem status before any actions
@@ -69,7 +70,7 @@ class scoreboard extends uvm_scoreboard;
 
             // since pull pops mem, then if both are 1 we should push first
             if (ftr.push) begin
-                if (mem.size() < fifo_config::FIFO_DEPTH) mem.push_back(ftr.din);
+                if (mem.size() < exp_full) mem.push_back(ftr.din);
             end
 
             // check pull operation

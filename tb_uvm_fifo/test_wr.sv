@@ -5,7 +5,7 @@ Do write+read one after another
 import uvm_pkg::*;
 
 
-class test_wr extends fifo_test;
+class test_wr extends test_full;
     `uvm_component_utils(test_wr)
 
     function new(string name, uvm_component parent);

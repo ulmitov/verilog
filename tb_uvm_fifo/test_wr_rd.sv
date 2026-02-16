@@ -5,7 +5,7 @@ Make many writes, then many reads
 import uvm_pkg::*;
 
 
-class test_wr_rd extends fifo_test;
+class test_wr_rd extends test_full;
     `uvm_component_utils(test_wr_rd)
 
     function new(string name = "test_wr_rd", uvm_component parent = null);
