@@ -5,8 +5,8 @@ Main test which runs all tests
 import uvm_pkg::*;
 
 
-class fifo_test extends uvm_test;
-    `uvm_component_utils(fifo_test)
+class test_full extends uvm_test;
+    `uvm_component_utils(test_full)
 
     environment env;
     fifo_sequence seq_wr_rd_rand;
@@ -35,7 +35,7 @@ class fifo_test extends uvm_test;
 
     virtual function void end_of_elaboration();
         print();
-        uvm_report_info(get_name(), "::: CONFIG CLASS :::");
+        uvm_report_info(get_name(), "::: CONFIG :::");
         cfg.print();
         uvm_report_info(get_name(), "::: FACTORY :::");
         factory = uvm_factory::get();
