@@ -5,9 +5,7 @@ import uvm_pkg::*;
 class scoreboard extends uvm_scoreboard;
     `uvm_component_utils(scoreboard)
 
-    uvm_analysis_imp #(fifo_transaction, scoreboard) scb_port;
-
-    fifo_transaction Q [$];
+    uvm_tlm_analysis_fifo #(fifo_transaction) scb_fifo;
 
     bit [fifo_config::DATA_WIDTH-1:0] mem [$];
     bit [fifo_config::DATA_WIDTH-1:0] tx_dout;
@@ -19,12 +17,7 @@ class scoreboard extends uvm_scoreboard;
 
     virtual function void build_phase(uvm_phase phase);
         super.build_phase(phase);
-        scb_port = new("scb_port", this);
-    endfunction
-
-    function write(fifo_transaction ftr);
-        Q.push_back(ftr);
-        uvm_report_info("SCB got item", ftr.convert2string());
+        scb_fifo = new("scb_fifo", this);
     endfunction
 
     virtual task run_phase(uvm_phase phase);
@@ -32,10 +25,9 @@ class scoreboard extends uvm_scoreboard;
         int i, msize, exp_full;
         string strvar;
         forever begin
-            wait (Q.size() > 0);
-            ftr = Q.pop_front();
-            strvar = $sformatf("Q popped packet push=%0b pull=%0b din=%0h:", ftr.push, ftr.pull, ftr.din);
-            uvm_report_info(get_name(), strvar);
+            scb_fifo.get(ftr);
+            strvar = $sformatf("push=%0b pull=%0b din=%0h dout=%0h", ftr.push, ftr.pull, ftr.din, ftr.dout);
+            uvm_report_info("SCB_FIFO_PORT", strvar);
             if (!ftr.pull && !ftr.push) continue;
             this.count++;
             msize = mem.size();
@@ -70,7 +62,8 @@ class scoreboard extends uvm_scoreboard;
 
             // since pull pops mem, then if both are 1 we should push first
             if (ftr.push) begin
-                if (mem.size() < exp_full) mem.push_back(ftr.din);
+                if (mem.size() < exp_full)
+                    mem.push_back(ftr.din);
             end
 
             // check pull operation

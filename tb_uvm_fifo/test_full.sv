@@ -12,6 +12,7 @@ class test_full extends uvm_test;
     fifo_sequence seq_wr_rd_rand;
     fifo_sequence_wr_rd seq_wr_rd_single;
     fifo_sequence_wr_rd_completely seq_wr_rd_multiple;
+    fifo_sequence_manual seq_manual;
     fifo_config cfg;
     uvm_factory factory;
     int seq_single;
@@ -43,22 +44,24 @@ class test_full extends uvm_test;
     endfunction
 
     virtual task run_phase(uvm_phase phase);
+        seq_manual = fifo_sequence_manual::type_id::create("seq_manual");
         seq_wr_rd_rand = fifo_sequence::type_id::create("seq_wr_rd_rand");
         seq_wr_rd_single = fifo_sequence_wr_rd::type_id::create("seq_wr_rd_single");
         seq_wr_rd_multiple = fifo_sequence_wr_rd_completely::type_id::create("seq_wr_rd_multiple");
         phase.raise_objection(this);
-        seq_wr_rd_rand.start(env.agt.sqr);
+        seq_manual.start(env.agt.sqr);
         seq_wr_rd_single.start(env.agt.sqr);
         seq_wr_rd_multiple.start(env.agt.sqr);
+        seq_wr_rd_rand.start(env.agt.sqr);
         phase.drop_objection(this);
-        phase.phase_done.set_drain_time(this, 20);
+        phase.phase_done.set_drain_time(this, fifo_config::T_CLK * 4);
     endtask
 
     virtual function void check_phase(uvm_phase phase);
         super.check_phase(phase);
         assert(env.agt.drv.count == env.scb.count)
-            uvm_report_info(get_name(), $sformatf("SCB got all %0d transactions", env.scb.count), UVM_MEDIUM);
+            uvm_report_info(get_name(), $sformatf("PASSED: SCB got all %0d transactions sent by DRV", env.scb.count));
         else
-            uvm_report_error(get_name(), $sformatf("SCB got %0d transactions but DRV sent %0d", env.scb.count, env.agt.drv.count));
+            uvm_report_error(get_name(), $sformatf("FAILED: SCB got %0d transactions but DRV sent %0d", env.scb.count, env.agt.drv.count));
     endfunction
 endclass

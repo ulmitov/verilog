@@ -6,20 +6,17 @@
 `include "driver.sv"
 `include "monitor.sv"
 `include "agent.sv"
+`include "coverage.sv"
 `include "scoreboard.sv"
 `include "environment.sv"
 `include "test_full.sv"
 `include "test_wr.sv"
 `include "test_wr_rd.sv"
 `include "test_rand.sv"
-
 `include "uvm_macros.svh"
 import uvm_pkg::*;
-/*
-dvlcom -uvm 1.2 top_tb.sv 
-dsim -top work.top_tb -genimage image -uvm 1.2 +acc+b
-dsim -image image -uvm 1.2 -waves waves.mxd +UVM_NO_RELNOTES +UVM_TESTNAME=test_full
-*/
+
+
 module top_tb;
     timeunit 1ns;
     timeprecision 1ns;

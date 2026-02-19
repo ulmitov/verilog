@@ -1,19 +1,33 @@
 # FIFO UVM testbench
 
-Single agent enviroment with configuration class
+The implemented FIFO ![module](../fifo.v) is a synchronous type (single clock).
+So TB has a single interface and a single agent enviroment with a configuration class.
+Monitor broadcasts transactions to Scoreboard analysis FIFO export
+and also to Coverage Collector's analysis export.
 
-Run via Dsim studio
 
+Run via Dsim studio (Compile -> Elab -> Sim): ![project dpf](./UVM_FIFO.dpf)
+
+Process coverage metrics:
 ```
-dsim -top work.top_tb -genimage image -uvm 1.2 +acc+b
-dsim -image image -waves waves.mxd -uvm 1.2 +UVM_NO_RELNOTES +UVM_CONFIG_DB_TRACE +UVM_TESTNAME=test_full
+dcreport -out_dir dir metrics.db
 ```
 
 ## Test plan:
- - Random push and pull (including parallel push+pull)
- - Consecutive single push + pull
+ - Boundary values transactions for data memory lines
+ - Consecutive single push + pull while only one bit of data in is set
  - Push until full then pull until empty
-
+ - Random push and pull (including parallel push+pull)
+ 
 
 ## Results:
-![log](./dsim.log)
+![dsim log](./dir/dsim.log)
+
+![coverage html](./dir/index.html)
+
+![coverage png](./dir/coverage.png)
+
+
+`./dir/waves.mxd:`
+
+![waves.mxd](./dir/waves.png)

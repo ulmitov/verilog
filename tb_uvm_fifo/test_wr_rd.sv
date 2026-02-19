@@ -19,6 +19,6 @@ class test_wr_rd extends test_full;
         phase.raise_objection(this);
         seq_wr_rd_multiple.start(env.agt.sqr);
         phase.drop_objection(this);
-        phase.phase_done.set_drain_time(this, 20);
+        phase.phase_done.set_drain_time(this, fifo_config::T_CLK * 4);
     endtask
 endclass

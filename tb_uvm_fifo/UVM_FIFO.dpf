@@ -9,17 +9,17 @@ simulations:
     options: '-top work.top_tb -genimage image -uvm 1.2 +acc+b'
   - name: Sim
     options: >-
-      -image image -waves waves.mxd -uvm 1.2 +UVM_NO_RELNOTES
-      +UVM_CONFIG_DB_TRACE +UVM_TESTNAME=test_full
+      -image image -code-cov a -waves dir/waves.mxd -uvm 1.2 +UVM_NO_RELNOTES
+      +UVM_CONFIG_DB_TRACE +UVM_VERBOSITY=UVM_HIGH +UVM_TESTNAME=test_full
 source_files:
   - language: verilog
     path: ../fifo.v
     options: '-incdir ../ -vlog_sv2012'
   - language: verilog
-    path: fifo_config.sv
+    path: sequencer.sv
     options: '-uvm 1.2'
   - language: verilog
-    path: sequencer.sv
+    path: fifo_config.sv
     options: '-uvm 1.2'
   - language: verilog
     path: fifo_interface.sv
@@ -29,6 +29,9 @@ source_files:
     options: '-uvm 1.2'
   - language: verilog
     path: fifo_sequence.sv
+    options: '-uvm 1.2'
+  - language: verilog
+    path: coverage.sv
     options: '-uvm 1.2'
   - language: verilog
     path: driver.sv

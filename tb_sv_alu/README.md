@@ -38,8 +38,10 @@ Run the simulation:
  The monitor passes each transaction to scoreboard.
  Scoreboard compares the received result from ALU with a Reference model ALU result.
 
+![ALU log](./syssv_tb.png)
 
 # Results:
 ![ALU log](./dsim.log)
+
 `waves.mxd`
 ![ALU tb](./waves.png)

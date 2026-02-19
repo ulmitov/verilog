@@ -5,11 +5,9 @@ import uvm_pkg::*;
 class monitor extends uvm_monitor;
     `uvm_component_utils(monitor)
 
+    uvm_analysis_port #(fifo_transaction) mon_port;
     virtual fifo_interface vif;
     fifo_transaction ftr;
-    int count;
-
-    uvm_analysis_port #(fifo_transaction) mon_port;
 
     function new(string name, uvm_component parent);
         super.new(name, parent);
@@ -35,7 +33,7 @@ class monitor extends uvm_monitor;
                 ftr.dout = vif.MONITOR_MP.cb_mon.dout;
                 ftr.empty = vif.MONITOR_MP.cb_mon.empty;
                 ftr.full = vif.MONITOR_MP.cb_mon.full;
-                uvm_report_info("MON got item", ftr.convert2string());
+                uvm_report_info("MON got item", ftr.convert2string(), UVM_HIGH);
                 //`uvm_info( "MON", ftr.sprint( uvm_default_line_printer ), UVM_NONE )
                 mon_port.write(ftr);
             end

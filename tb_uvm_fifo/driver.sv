@@ -29,6 +29,7 @@ class driver extends uvm_driver#(fifo_transaction);
     endtask
 
     virtual task drive_task();
+        // reset was done in top_tb
         wait(!vif.DRIVER_MP.res);
         @(vif.DRIVER_MP.cb_drv);
         vif.DRIVER_MP.cb_drv.push <= ftr.push;

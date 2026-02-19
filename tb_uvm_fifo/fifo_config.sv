@@ -8,10 +8,11 @@ class fifo_config extends uvm_object;
     parameter DATA_WIDTH    = 8;
     parameter HOLD_TIME     = 1;
 	parameter SETUP_TIME    = 2;
+    parameter FIFO_DEPTH    = 2**ADDR_WIDTH;
     
     // For printer:
     static int data_width   = DATA_WIDTH;
-    static int FIFO_DEPTH   = 2**ADDR_WIDTH;
+    static int data_depth   = FIFO_DEPTH;
 
     // TEST params
     static int FREQ         = 100;              // Mhz
@@ -22,7 +23,7 @@ class fifo_config extends uvm_object;
 
     `uvm_object_utils_begin(fifo_config)
         `uvm_field_int(data_width, UVM_DEFAULT | UVM_DEC)
-        `uvm_field_int(FIFO_DEPTH, UVM_DEFAULT | UVM_DEC)
+        `uvm_field_int(data_depth, UVM_DEFAULT | UVM_DEC)
         `uvm_field_int(FREQ, UVM_DEFAULT | UVM_DEC)
         `uvm_field_int(T_CLK, UVM_DEFAULT | UVM_DEC)
         `uvm_field_int(SEQ_REPEAT, UVM_DEFAULT | UVM_DEC)

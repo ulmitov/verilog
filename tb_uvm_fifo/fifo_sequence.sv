@@ -14,13 +14,10 @@ class fifo_sequence extends uvm_sequence#(fifo_transaction);
     endfunction
 
     virtual task body();
-        int count;
         uvm_report_info(get_name(), "----- STARTING RANDOM TRANSACTIONS -------");
         req = fifo_transaction::type_id::create("req");
         repeat(fifo_config::SEQ_REPEAT) begin
-            count++;
             wait_for_grant(); // from driver
-            uvm_report_info(get_name(), $sformatf("***** SEQUENCE # %0d *****", count));
             assert(req.randomize() with {req.push dist { 1 := 6, 0 := 4 };});
             send_request(req);
             wait_for_item_done();
@@ -29,11 +26,30 @@ class fifo_sequence extends uvm_sequence#(fifo_transaction);
 endclass
 
 
+class fifo_sequence_manual extends uvm_sequence#(fifo_transaction);
+    `uvm_object_utils(fifo_sequence_manual)
+
+    function new(string name = "fifo_sequence_manual");
+        super.new(name);
+    endfunction
+
+    virtual task body();
+        uvm_report_info(get_name(), "----- STARTING MANUAL TRANSACTIONS -------");
+        req = fifo_transaction::type_id::create("req");
+        `uvm_do_with(req, { req.push == 0; req.pull == 1; })
+        `uvm_do_with(req, { req.push == 1; req.pull == 0; din == {fifo_config::FIFO_DEPTH{1'b1}}; })
+        `uvm_do_with(req, { req.push == 1; req.pull == 0; din == 0; })
+        `uvm_do_with(req, { req.push == 1; req.pull == 0; din == {fifo_config::FIFO_DEPTH{1'b1}}; })
+        `uvm_do_with(req, { req.push == 0; req.pull == 1; })
+        `uvm_do_with(req, { req.push == 0; req.pull == 1; })
+        `uvm_do_with(req, { req.push == 0; req.pull == 1; })
+    endtask
+endclass
+
+
 // write then read
 class fifo_sequence_wr_rd extends uvm_sequence#(fifo_transaction);
     `uvm_object_utils(fifo_sequence_wr_rd)
-
-    int count;
 
     function new(string name = "fifo_sequence_wr_rd");
         super.new(name);
@@ -43,8 +59,6 @@ class fifo_sequence_wr_rd extends uvm_sequence#(fifo_transaction);
         uvm_report_info(get_name(), "----- STARTING WRITE THEN READ TRANSACTIONS -------");
         req = fifo_transaction::type_id::create("req");
         repeat(fifo_config::SEQ_REPEAT) begin
-            count = count + 2;
-            uvm_report_info(get_name(), $sformatf("***** SEQUENCE # %0d *****", count));
             `uvm_do_with(req, {req.push == 1; req.pull == 0;})
             `uvm_do_with(req, {req.push == 0; req.pull == 1;})
         end
@@ -56,7 +70,6 @@ endclass
 class fifo_sequence_wr extends uvm_sequence#(fifo_transaction);
     `uvm_object_utils(fifo_sequence_wr)
 
-    int count;
     int seq_single;
 
     function new(string name = "fifo_sequence_wr");
@@ -69,10 +82,12 @@ class fifo_sequence_wr extends uvm_sequence#(fifo_transaction);
         uvm_report_info(get_name(), "----- STARTING WRITE ONLY TRANSACTIONS -------");
         req = fifo_transaction::type_id::create("req");
         repeat(seq_single) begin
-            count++;
-            uvm_report_info(get_name(), $sformatf("***** SEQUENCE # %0d *****", count));
-            start_item(req); // from driver
-            assert(req.randomize() with { req.pull == 0; req.push dist { 1 := 7, 0 := 3 }; });
+            start_item(req);
+            assert(req.randomize() with { 
+                req.pull == 0;
+                req.push == 1;
+                $countones(req.din) == 1 || req.din == 0 || req.din == {fifo_config::DATA_WIDTH{1'b1}};
+            });
             finish_item(req);
         end
     endtask
@@ -83,7 +98,6 @@ endclass
 class fifo_sequence_rd extends uvm_sequence#(fifo_transaction);
     `uvm_object_utils(fifo_sequence_rd)
 
-    int count;
     int seq_single;
 
     function new(string name = "fifo_sequence_rd");
@@ -95,13 +109,8 @@ class fifo_sequence_rd extends uvm_sequence#(fifo_transaction);
     virtual task body();
         uvm_report_info(get_name(), "----- STARTING READ ONLY TRANSACTIONS -------");
         req = fifo_transaction::type_id::create("req");
-        repeat(seq_single) begin
-            count++;
-            uvm_report_info(get_name(), $sformatf("***** SEQUENCE # %0d *****", count));
-            start_item(req); // from driver
-            assert(req.randomize() with { req.push == 0; req.pull dist { 1 := 7, 0 := 3 }; });
-            finish_item(req);
-        end
+        repeat(seq_single)
+            `uvm_do_with(req, { req.push == 0; req.pull == 1; })
     endtask
 endclass
 
@@ -120,12 +129,10 @@ class fifo_sequence_wr_rd_completely extends uvm_sequence#(fifo_transaction);
     endfunction
 
     virtual task body();
-        int count;
         uvm_report_info(get_name(), "----- STARTING MULTIPLE WRITE THEN READ TRANSACTIONS -------");
         repeat(fifo_config::SEQ_REPEAT) begin
             `uvm_do_with(wrs, {})
             `uvm_do_with(rds, {})
-            count += wrs.count + rds.count;
         end
     endtask
 endclass
