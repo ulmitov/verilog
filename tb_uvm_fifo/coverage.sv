@@ -2,10 +2,10 @@
 import uvm_pkg::*;
 
 //Coverage Collector class
-class coverage extends uvm_subscriber #(fifo_transaction);
+class coverage extends uvm_subscriber #(transaction);
     `uvm_component_utils(coverage)
 
-    fifo_transaction req;
+    transaction req;
 
     covergroup control_cg;
         option.per_instance = 1;
@@ -56,7 +56,7 @@ class coverage extends uvm_subscriber #(fifo_transaction);
         data_bits_cg = new();
     endfunction: new
 
-    function void write(fifo_transaction t);
+    function void write(transaction t);
         req = t;
         control_cg.sample();
         data_bits_cg.sample();

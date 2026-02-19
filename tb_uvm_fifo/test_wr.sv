@@ -13,7 +13,7 @@ class test_wr extends test_full;
     endfunction
 
     task run_phase(uvm_phase phase);
-        seq_wr_rd_single = fifo_sequence_wr_rd::type_id::create("SEQ");
+        seq_wr_rd_single = sequence_wr_rd::type_id::create("SEQ");
         phase.raise_objection(this);
         seq_wr_rd_single.start(env.agt.sqr);
         phase.drop_objection(this);

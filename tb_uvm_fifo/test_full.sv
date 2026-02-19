@@ -9,10 +9,10 @@ class test_full extends uvm_test;
     `uvm_component_utils(test_full)
 
     environment env;
-    fifo_sequence seq_wr_rd_rand;
-    fifo_sequence_wr_rd seq_wr_rd_single;
-    fifo_sequence_wr_rd_completely seq_wr_rd_multiple;
-    fifo_sequence_manual seq_manual;
+    sequence_rand seq_wr_rd_rand;
+    sequence_wr_rd seq_wr_rd_single;
+    sequence_wr_rd_mult seq_wr_rd_multiple;
+    sequence_manual seq_manual;
     fifo_config cfg;
     uvm_factory factory;
     int seq_single;
@@ -44,10 +44,10 @@ class test_full extends uvm_test;
     endfunction
 
     virtual task run_phase(uvm_phase phase);
-        seq_manual = fifo_sequence_manual::type_id::create("seq_manual");
-        seq_wr_rd_rand = fifo_sequence::type_id::create("seq_wr_rd_rand");
-        seq_wr_rd_single = fifo_sequence_wr_rd::type_id::create("seq_wr_rd_single");
-        seq_wr_rd_multiple = fifo_sequence_wr_rd_completely::type_id::create("seq_wr_rd_multiple");
+        seq_manual = sequence_manual::type_id::create("seq_manual");
+        seq_wr_rd_rand = sequence_rand::type_id::create("seq_wr_rd_rand");
+        seq_wr_rd_single = sequence_wr_rd::type_id::create("seq_wr_rd_single");
+        seq_wr_rd_multiple = sequence_wr_rd_mult::type_id::create("seq_wr_rd_multiple");
         phase.raise_objection(this);
         seq_manual.start(env.agt.sqr);
         seq_wr_rd_single.start(env.agt.sqr);

@@ -2,11 +2,11 @@
 import uvm_pkg::*;
 
 
-class driver extends uvm_driver#(fifo_transaction);
+class driver extends uvm_driver#(transaction);
     `uvm_component_utils(driver)
 
     virtual fifo_interface vif;
-    fifo_transaction ftr;
+    transaction ftr;
     int count;
 
     function new(string name, uvm_component parent);

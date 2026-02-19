@@ -5,9 +5,9 @@ import uvm_pkg::*;
 class monitor extends uvm_monitor;
     `uvm_component_utils(monitor)
 
-    uvm_analysis_port #(fifo_transaction) mon_port;
+    uvm_analysis_port #(transaction) mon_port;
     virtual fifo_interface vif;
-    fifo_transaction ftr;
+    transaction ftr;
 
     function new(string name, uvm_component parent);
         super.new(name, parent);
@@ -22,7 +22,7 @@ class monitor extends uvm_monitor;
 
     virtual task run_phase(uvm_phase phase);
         super.run_phase(phase);
-        ftr = fifo_transaction::type_id::create("ftr");
+        ftr = transaction::type_id::create("ftr");
 
         forever begin
             @(vif.MONITOR_MP.cb_mon);

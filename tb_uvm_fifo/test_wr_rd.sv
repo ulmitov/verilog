@@ -15,7 +15,7 @@ class test_wr_rd extends test_full;
     endfunction
 
     task run_phase(uvm_phase phase);
-        seq_wr_rd_multiple = fifo_sequence_wr_rd_completely::type_id::create("SEQ");
+        seq_wr_rd_multiple = sequence_wr_rd_mult::type_id::create("SEQ");
         phase.raise_objection(this);
         seq_wr_rd_multiple.start(env.agt.sqr);
         phase.drop_objection(this);

@@ -5,7 +5,7 @@ import uvm_pkg::*;
 class scoreboard extends uvm_scoreboard;
     `uvm_component_utils(scoreboard)
 
-    uvm_tlm_analysis_fifo #(fifo_transaction) scb_fifo;
+    uvm_tlm_analysis_fifo #(transaction) scb_fifo;
 
     bit [fifo_config::DATA_WIDTH-1:0] mem [$];
     bit [fifo_config::DATA_WIDTH-1:0] tx_dout;
@@ -21,7 +21,7 @@ class scoreboard extends uvm_scoreboard;
     endfunction
 
     virtual task run_phase(uvm_phase phase);
-        fifo_transaction ftr;
+        transaction ftr;
         int i, msize, exp_full;
         string strvar;
         forever begin

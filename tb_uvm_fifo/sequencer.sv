@@ -2,7 +2,7 @@
 import uvm_pkg::*;
 
 
-class sequencer extends uvm_sequencer#(fifo_transaction);
+class sequencer extends uvm_sequencer#(transaction);
     `uvm_component_utils(sequencer)
 
     function new(string name, uvm_component parent);

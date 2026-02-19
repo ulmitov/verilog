@@ -1,8 +1,8 @@
 `include "fifo_config.sv"
-`include "fifo_transaction.sv"
-`include "sequencer.sv"
-`include "fifo_sequence.sv"
 `include "fifo_interface.sv"
+`include "transaction.sv"
+`include "sequencer.sv"
+`include "sequences.sv"
 `include "driver.sv"
 `include "monitor.sv"
 `include "agent.sv"
@@ -37,7 +37,10 @@ module top_tb;
     );
 
     always  #fifo_config::T_CLK clk = ~clk;
-    initial #(fifo_config::T_CLK*2) res = 0;
+    initial begin
+        res = 1'b1;
+        #(fifo_config::T_CLK*2) res = 1'b0;
+    end
     initial begin
         uvm_config_db #(virtual fifo_interface)::set(null, "*", "vif", IF);
         run_test("test_full");

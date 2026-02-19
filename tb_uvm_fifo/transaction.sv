@@ -2,7 +2,7 @@
 import uvm_pkg::*;
 
 
-class fifo_transaction extends uvm_sequence_item;
+class transaction extends uvm_sequence_item;
 
     rand bit push;
     rand bit pull;
@@ -11,7 +11,7 @@ class fifo_transaction extends uvm_sequence_item;
     bit empty;
     bit full;
 
-    `uvm_object_utils_begin (fifo_transaction)
+    `uvm_object_utils_begin (transaction)
         `uvm_field_int (push, UVM_DEFAULT)
         `uvm_field_int (pull, UVM_DEFAULT)
         `uvm_field_int (din, UVM_DEFAULT)
