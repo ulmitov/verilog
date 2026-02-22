@@ -6,7 +6,6 @@ yosys -p "read_verilog ${f}.v; hierarchy -check -top $m; proc; opt; wreduce; cle
 */
 `include "consts.v"
 `include "flip_flop.v"
-//`define GATEFLOW 1
 
 
 module shift_reg #(parameter N = 4) (
@@ -18,7 +17,6 @@ module shift_reg #(parameter N = 4) (
     input [N-1:0] load,         // Parallel load value
     output wire [N-1:0] dout,   // Parallel Out
     output wire dout_n          // Serial Out
-    
 );
     integer i;
     reg [N-1:0] darr;
