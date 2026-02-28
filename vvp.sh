@@ -55,7 +55,7 @@ else
     rc=$?
     if [[ $rc -eq 0 ]]; then
         echo -e "\nverilator --lint-only -Wall -cc --timing ${dut_file}"
-        verilator --lint-only -Wall -cc --timing ${dut_file}
+        verilator --lint-only -Wall -Wno-IMPORTSTAR -cc --timing ${dut_file}
         echo -e "\nvvp ${simdir}${vvpfile}.vvp";
         vvp ${simdir}${vvpfile}.vvp
     else

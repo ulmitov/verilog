@@ -1,3 +1,6 @@
+/*
+./vvp.sh memory_tb memory_tb.v ./consts.v ./RISCV_SingleCycle/risc_pkg.sv memory.sv 
+*/
 `include "consts.v"
 
 `timescale 1ns / 1ns
@@ -6,14 +9,13 @@
 `define T_RD 10
 `define T_CLK (`T_WR * 2)
 
-`define OP_DMEM_WORD 2'b00
-`define OP_DMEM_BYTE 2'b01
+`define OP_DMEM_BYTE 3'b000
 `define D_WIDTH 8   // Memory data word width
 `define D_DEPTH 4   // Memory depth
 // TODO: simultaneous read\write test? two clocks test? minimum f test? `define RO_DELAY (`T_DELAY_FF + `T_WR)
 
 
-module mem_tb;
+module memory_tb;
     reg clk, rclk, we, re, res;
     reg [$clog2(`D_DEPTH)-1:0] addr;
     reg [`D_WIDTH-1:0] data, exp;
@@ -22,7 +24,7 @@ module mem_tb;
     wire done_flag;
     integer i, j, a;
 
-    mem #( .WIDTH(`D_WIDTH), .DEPTH(`D_DEPTH) ) uut (
+    memory #( .DATA_WIDTH(`D_WIDTH), .ADDR_WIDTH($clog2(`D_DEPTH)), .DEPTH(`D_DEPTH) ) uut (
         .wclk(clk),
         .rclk(rclk),
         .req(1'b1),
@@ -48,9 +50,6 @@ module mem_tb;
             addr = address;
             we = 1'b1;
             data = din;
-            //wait (done_flag == 1);
-            //@(done_flag);
-            //we = 0;
             #`T_CLK we = 1'b0;
             exp_ram[address] = din;
         end
@@ -65,7 +64,7 @@ module mem_tb;
             we = 1'b0;
             re = 1'b1;
             if (uut.SYNC_READ == 0)
-                #`T_CLK re = 1'b0; // if async then wait only flip flop delay ?
+                #`T_CLK re = 1'b0; // if async then wait flip flop delay ?
             else
                 #`T_CLK re = 1'b0;
             if (out !== din) $display("%0d: ERROR: addr=%0h: out=%0h not as expected %0h", $time, addr, out, din);

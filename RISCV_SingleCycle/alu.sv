@@ -9,15 +9,31 @@ module alu #(parameter XLEN = 32) (
     output logic [XLEN-1:0] alu_res
 );
     `ifdef GATEFLOW
-        logic eq, lt, ltu;
+        logic lt, ltu;
         logic nadd_sub, right_en, sign_ext;
         logic [XLEN-1:0] sum, out_sh;
         logic [5:0] shifts_num;
 
-        adder #(XLEN) alu_fa (.Nadd_sub(nadd_sub), .X(alu_a), .Y(alu_b), .sum(sum), .carry(), .overflow(), .eq(eq), .lt(lt), .ltu(ltu));
-        shift #(XLEN) alu_sh (.right_en(right_en), .sign(sign_ext), .din(alu_a), .shift_n(shifts_num), .out(out_sh));
+        adder #(XLEN) alu_fa (
+            .Nadd_sub(nadd_sub),
+            .X(alu_a),
+            .Y(alu_b),
+            .sum(sum),
+            .carry(), .overflow(),
+            .eq(),
+            .lt(lt),
+            .ltu(ltu)
+        );
 
-        initial $display("+++ RUNNING GATEFLOW ALU");
+        shift #(XLEN) alu_sh (
+            .right_en(right_en),
+            .sign(sign_ext),
+            .din(alu_a),
+            .shift_n(shifts_num),
+            .out(out_sh)
+        );
+
+        initial $display("*** SYNTHESISED GATEFLOW ALU ***");
 
         assign shifts_num = {1'b0, alu_b[4:0]};
 
@@ -55,7 +71,7 @@ module alu #(parameter XLEN = 32) (
             endcase
         end
     `else
-        initial $display("--- RUNNING DATAFLOW ALU");
+        initial $display("*** SYNTHESISED DATAFLOW ALU ***");
         alu_dataflow alu_df (.alu_op(alu_op), .alu_a(alu_a), .alu_b(alu_b), .alu_res(alu_res));
     `endif
 endmodule

@@ -1,26 +1,28 @@
-# RISCV Single Cycle implementation
+# RISCV RV32I single cycle implementation
 
- - TBD: expand to 64 and 128 bits
  - `asm` folder holds the assembly programs and their hex code mem files.
  - `vcd` folder holds the simulation results.
- - `riscv_tb.sv` performs an end to end test of the asm code shown below.
-
 
 
 ## Run:
 ```
-iverilog -Wall -g2012 -I ../ -o vcd/riscv_tb.vvp -s riscv_tb riscv_tb.sv risc_pkg.sv riscv.sv fetch.sv decode.sv register_file.sv branch_control.sv ../mem.sv alu.sv control.sv ../adder.v ../shift.v ../mux.v
+src="riscv_tb.sv risc_pkg.sv riscv.sv fetch.sv decode.sv register_file.sv branch_control.sv control.sv alu.sv ../memory.sv ../adder.v ../shift.v ../mux.v"
+
+iverilog -Wall -g2012 -I ../ -o vcd/riscv_tb.vvp -s riscv_tb ${src};
 vvp vcd/riscv_tb.vvp
+
+# or via Verilator:
+ignore="-Wno-IMPORTSTAR -Wno-PINCONNECTEMPTY -Wno-DECLFILENAME -Wno-UNUSEDSIGNAL -Wno-WIDTHTRUNC -Wno-CASEINCOMPLETE"
+verilator -Wall ${ignore} --trace-vcd --binary --timing -I../ --top riscv_tb --cc ${src}
+./obj_dir/Vriscv_tb
 ```
 
 
 ##  Testbench files:
- - The end to end assembly test is a Verilog testbench in `riscv_tb.sv`
  - `alu.sv` unit has a **SystemVerilog** testbench in `tb_sv_alu` folder
- - `instruction_mem.sv` unit has a Verilog testbench in `risc_tb.sv`
- - `mem.sv` unit has a Verilog testbench in `mem_tb.v` (in upper dir)
- - `adder.v` and `shift.v` and `mux.v` - all have Verilog testbenches in the upper folder
- - Other RiscV units in this folder do not have dedicated testbenches (for now... TBD)
+ - `memory.sv` unit has a Verilog testbench in `memory_tb.v` (in upper folder)
+ - `adder.v` and `shift.v` and `mux.v` - have Verilog testbenches in the upper folder
+ - `riscv_tb.sv` is a Verilog end to end testbench which runs the following assembly programs:
 
 
 
@@ -47,7 +49,8 @@ Wrote max value 2A to ram address 0x18:
 
 
 ## Design:
-- Instruction memory acts as a ROM, loading asm code from a file and stores it. Each instruction is 32 bits.
+- Separate memories for instructions and data (Harvard architecture)
+- Instruction memory loads asm code from a hex file and stores it. Each instruction is 32 bits.
 - Fetch unit reads the current instruction according to the current program counter pointer (PC).
 - Decode unit decodes the fields from the instruction bits and passes them to Control block and Register File.
 - Register File is the register space of 32x registers, while x0 is the zero reg and all the rest are general purpose.

@@ -24,17 +24,17 @@ module register_file #(parameter XLEN = 32) (
     output logic [XLEN-1:0] rs1_data,
     output logic [XLEN-1:0] rs2_data
 );
-    logic [XLEN-1:0] reg_file [0:31];
+    logic [XLEN-1:0] reg_mem [0:31];
     integer i;
 
-    assign rs1_data = reg_file[rs1_addr];
-    assign rs2_data = reg_file[rs2_addr];
+    assign rs1_data = reg_mem[rs1_addr];
+    assign rs2_data = reg_mem[rs2_addr];
 
     always_ff @(posedge clk or negedge res_n) begin
         if (!res_n) begin
             for (i = 0; i < XLEN; i = i + 1)
-                reg_file[i] <= {XLEN{1'b0}};
+                reg_mem[i] <= {XLEN{1'b0}};
         end else if (rf_wr_en && rd_addr != 5'b0)
-            reg_file[rd_addr] <= wr_data;
+            reg_mem[rd_addr] <= wr_data;
     end
 endmodule

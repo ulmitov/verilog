@@ -16,16 +16,17 @@ module shift_reg_tb;
     reg en_cyclic = 1'b0;
     reg din_serial;
     reg [N-1:0] load;
+    wire [N-1:0] out_parallel;
     wire out_serial, out_cyclic;
 
     shift_reg #(.N(N)) dut_serial (
         .clk(clk), .res_n(res_n), .load_en(load_en), .load(load),
-        .en(en_serial), .din(din_serial), .dout(out_serial)
+        .en(en_serial), .din(din_serial), .dout_n(out_serial)
     );
 
     shift_reg #(.N(N)) dut_cyclic (
         .clk(clk), .res_n(res_n), .load_en(load_en), .load(load),
-        .en(en_cyclic), .din(out_cyclic), .dout(out_cyclic)
+        .en(en_cyclic), .din(out_cyclic), .dout_n(out_cyclic), .dout(out_parallel)
     );
 
     always #`T_CLK clk = ~clk;
@@ -141,6 +142,15 @@ module shift_reg_tb;
         expect_cyclic(N*3, 4'b1010);
         expect_cyclic(N*3, 4'b1011);
         expect_cyclic(N*3, 4'b0101);
+        en_cyclic = 1'b0;
+        // check that value persists in the register
+        repeat(N) @(posedge clk);
+        if (out_parallel != load) begin
+            $display("%0t: ERROR: dout parallel %0b is not as expected %0b", $time, out_parallel, load);
+            err = err + 1;
+        end else
+            $display("%0t: Register test passed", $time,);
+
         @(posedge clk) if (err)
             $display("TEST FAILED: %0d error occured", err);
         else

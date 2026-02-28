@@ -11,7 +11,16 @@ module branch_control (
 );
     `ifdef GATEFLOW
         wire eq, lt, ltu;
-        adder #(32) comparator_unit (.Nadd_sub(1'b1), .X(rs1_data), .Y(rs2_data), .sum(), .carry(), .overflow(), .eq(eq), .lt(lt), .ltu(ltu));
+
+        adder #(32) branch_comparator (
+            .Nadd_sub(1'b1),
+            .X(rs1_data),
+            .Y(rs2_data),
+            .sum(), .carry(), .overflow(),
+            .eq(eq),
+            .lt(lt),
+            .ltu(ltu)
+        );
         
         always_comb begin
             if (b_type) begin
