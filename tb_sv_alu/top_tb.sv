@@ -23,7 +23,7 @@ module top_tb;
 
     initial begin
         $dumpfile("top_tb.vcd");
-        $dumpvars();
+        $dumpvars(0, top_tb);
     end
 endmodule
 

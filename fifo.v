@@ -72,7 +72,7 @@ module fifo #(
             w_ptr <= #`T_DELAY_FF next_w;
             mem[w_ptr] <= #`T_DELAY_FF din;
         end
-        `ifdef DEBUG $display("FIFO: w_ptr=%0d next_w=%0d, push=%0b din=%0h", w_ptr, next_w, push, din);
+        `ifdef DEBUG $display("FIFO: w_ptr=%0d next_w=%0d, push=%0b din=%0h, full=%0b", w_ptr, next_w, push, din, full);
     end
 
     // read op
@@ -90,7 +90,7 @@ module fifo #(
             r_ptr <= 0;
         else if (ren)
             r_ptr <= #`T_DELAY_FF next_r;
-        `ifdef DEBUG $display("FIFO: r_ptr=%0d next_r=%0d, pull=%0b dout=%0h", r_ptr, next_r, pull, dout);
+        `ifdef DEBUG $display("FIFO: r_ptr=%0d next_r=%0d, pull=%0b dout=%0h, empty=%0b", r_ptr, next_r, pull, dout, empty);
     end
 
     `ifndef COUNTER_LOGIC
@@ -98,8 +98,8 @@ module fifo #(
         wire ptmet;
         integer i;
 
-        assign ptmet = &(r_ptr ~^ next_w); // pointers met
-        assign full  = &(r_ptr ~^ next_w) & pushed;      // if pointers met and there was a push means we are full
+        assign ptmet = &(r_ptr ~^ next_w);              // pointers met
+        assign full  = &(r_ptr ~^ next_w) & pushed;     // if pointers met and there was a push means we are full
         assign empty = &(r_ptr ~^ w_ptr) & ~pushed;     // if pointers met but there was no push then we are empty
 
         always @(posedge clk) begin

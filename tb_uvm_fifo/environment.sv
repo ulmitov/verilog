@@ -24,6 +24,6 @@ class environment extends uvm_env;
         super.connect_phase(phase);
         agt.mon.mon_port.connect(scb.scb_fifo.analysis_export); // Broadcast monitor to scoreboard fifo
         agt.mon.mon_port.connect(cvg.analysis_export);          // Broadcast monitor to coverage
-        uvm_report_info("ENV", "Connected ports of MON and SCB successfully", UVM_MEDIUM);
+        uvm_report_info("ENV", "Connected ports of MON and SCB successfully", UVM_HIGH);
     endfunction
 endclass

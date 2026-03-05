@@ -9,10 +9,8 @@
 `include "coverage.sv"
 `include "scoreboard.sv"
 `include "environment.sv"
-`include "test_full.sv"
-`include "test_wr.sv"
-`include "test_wr_rd.sv"
-`include "test_rand.sv"
+`include "test_base.sv"
+`include "tests.sv"
 `include "uvm_macros.svh"
 import uvm_pkg::*;
 
@@ -38,11 +36,12 @@ module top_tb;
 
     always  #fifo_config::T_CLK clk = ~clk;
     initial begin
-        res = 1'b1;
+        uvm_config_db#(virtual fifo_interface)::set(null, "*", "vif", IF);
+        $dumpfile("top_tb.vcd");
+        $dumpvars(0, top_tb);
+        uvm_report_info("TOP", "RESET STARTED");
         #(fifo_config::T_CLK*2) res = 1'b0;
+        uvm_report_info("TOP", "RESET FINISHED");
     end
-    initial begin
-        uvm_config_db #(virtual fifo_interface)::set(null, "*", "vif", IF);
-        run_test("test_full");
-    end
+    initial run_test("test_full");
 endmodule

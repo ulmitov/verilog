@@ -5,12 +5,23 @@ version: '0.2'
 work_dir: .
 design_root_dir: .
 simulations:
-  - name: Elab
-    options: '-top work.top_tb -genimage image -uvm 1.2 +acc+b'
-  - name: Sim
+  - name: Elaborate
+    options: '-top work.top_tb -genimage image -uvm 1.2 -dump-agg +acc+b'
+  - name: Sim DEBUG
     options: >-
-      -image image -code-cov a -waves dir/waves.mxd -uvm 1.2 +UVM_NO_RELNOTES
-      +UVM_CONFIG_DB_TRACE +UVM_VERBOSITY=UVM_HIGH +UVM_TESTNAME=test_full
+      -image image -code-cov a -waves dir/waves.vcd -dump-agg +acc+b -uvm 1.2
+      +UVM_NO_RELNOTES +UVM_CONFIG_DB_TRACE +UVM_VERBOSITY=UVM_HIGH
+      +UVM_TESTNAME=test_regression
+  - name: Sim Vcd
+    options: >-
+      -image image -code-cov a -waves dir/waves.vcd +acc+b -dump-agg -uvm 1.2
+      +UVM_NO_RELNOTES +UVM_TESTNAME=test_regression
+  - name: Sim Mxd
+    options: >-
+      -image image -code-cov a -waves dir/waves.mxd -dump-agg +acc+b -uvm 1.2
+      +UVM_NO_RELNOTES +UVM_TESTNAME=test_random
+  - name: Sim no waves
+    options: '-image image -code-cov a -uvm 1.2 +UVM_NO_RELNOTES +UVM_TESTNAME=test_push_pull_while_empty'
 source_files:
   - language: verilog
     path: ../fifo.v
@@ -49,19 +60,13 @@ source_files:
     path: scoreboard.sv
     options: '-uvm 1.2'
   - language: verilog
+    path: test_base.sv
+    options: '-uvm 1.2'
+  - language: verilog
+    path: tests.sv
+    options: '-uvm 1.2'
+  - language: verilog
     path: top_tb.sv
-    options: '-uvm 1.2'
-  - language: verilog
-    path: test_full.sv
-    options: '-uvm 1.2'
-  - language: verilog
-    path: test_wr.sv
-    options: '-uvm 1.2'
-  - language: verilog
-    path: test_wr_rd.sv
-    options: '-uvm 1.2'
-  - language: verilog
-    path: test_rand.sv
     options: '-uvm 1.2'
 library_search_paths:
   - $STD_LIBS/ieee93

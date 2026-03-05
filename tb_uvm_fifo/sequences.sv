@@ -1,138 +1,231 @@
 /*
-    Sequences (Sequencer generator to driver)
+    Transaction Sequences sent by Sequencer generator to driver
 */
 `include "uvm_macros.svh"
 import uvm_pkg::*;
 
 
-class sequence_manual extends uvm_sequence#(transaction);
-    `uvm_object_utils(sequence_manual)
+/* Base class with all kinds of sequences */
+class sequences extends uvm_sequence#(transaction);
+    `uvm_object_utils(sequences)
 
-    function new(string name = "sequence_manual");
+    transaction req;
+    int num_to_full;
+    int default_repeats;
+
+    function new(string name = "SEQ_BASE");
         super.new(name);
+        default_repeats = fifo_config::SEQ_REPEAT;
     endfunction
 
-    virtual task body();
-        uvm_report_info(get_name(), "----- STARTING MANUAL TRANSACTIONS -------");
-        req = transaction::type_id::create("req");
-        `uvm_do_with(req, { req.push == 0; req.pull == 1; })
-        `uvm_do_with(req, { req.push == 1; req.pull == 0; din == {fifo_config::FIFO_DEPTH{1'b1}}; })
-        `uvm_do_with(req, { req.push == 1; req.pull == 0; din == 0; })
-        `uvm_do_with(req, { req.push == 1; req.pull == 0; din == {fifo_config::FIFO_DEPTH{1'b1}}; })
-        `uvm_do_with(req, { req.push == 0; req.pull == 1; })
-        `uvm_do_with(req, { req.push == 0; req.pull == 1; })
-        `uvm_do_with(req, { req.push == 0; req.pull == 1; })
+    virtual task pre_start();
+        super.pre_start();
+		req = transaction::type_id::create();
+        if (!uvm_config_db#(int)::get(null, "", "num_to_full", num_to_full))
+            uvm_report_fatal(get_name(), "num_to_full is not in db");
+	endtask
+
+    function void header(string txt, int num);
+        if (num > 1)
+            uvm_report_info(get_name(),
+                $sformatf("--- STARTING TRANSACTIONS: %s (%0d total) ---", txt, num));
+    endfunction
+    virtual task seq_pull(input int repeats = 1);
+        // uvm_do macros are not recommended to use
+        header("pull only", repeats);
+        repeat(repeats)
+            `uvm_do_with(req, { push == 0; pull == 1; })
     endtask
-endclass
 
-
-// random transactions
-class sequence_rand extends uvm_sequence#(transaction);
-    `uvm_object_utils(sequence_rand)
-
-    function new(string name = "sequence_rand");
-        super.new(name);
-    endfunction
-
-    virtual task body();
-        uvm_report_info(get_name(), "----- STARTING RANDOM TRANSACTIONS -------");
-        req = transaction::type_id::create("req");
-        repeat(fifo_config::SEQ_REPEAT) begin
-            wait_for_grant();   // from driver
-            assert(req.randomize() with {req.push dist { 1 := 7, 0 := 3 };});
-            send_request(req);
-            wait_for_item_done();
-        end
-    endtask
-endclass
-
-
-// write then read
-class sequence_wr_rd extends uvm_sequence#(transaction);
-    `uvm_object_utils(sequence_wr_rd)
-
-    function new(string name = "sequence_wr_rd");
-        super.new(name);
-    endfunction
-
-    virtual task body();
-        uvm_report_info(get_name(), "----- STARTING WRITE THEN READ TRANSACTIONS -------");
-        req = transaction::type_id::create("req");
-        repeat(fifo_config::SEQ_REPEAT) begin
-            `uvm_do_with(req, {req.push == 1; req.pull == 0;})
-            `uvm_do_with(req, {req.push == 0; req.pull == 1;})
-        end
-    endtask
-endclass
-
-
-// write only
-class sequence_wr extends uvm_sequence#(transaction);
-    `uvm_object_utils(sequence_wr)
-
-    int seq_single;
-
-    function new(string name = "sequence_wr");
-        super.new(name);
-        if (!uvm_config_db #(int)::get(null, "", "seq_single", seq_single))
-            uvm_report_fatal(get_name(), "seq_single is not in db");
-    endfunction
-
-    virtual task body();
-        uvm_report_info(get_name(), "----- STARTING WRITE ONLY TRANSACTIONS -------");
-        req = transaction::type_id::create("req");
-        repeat(seq_single) begin
+    virtual task seq_push_00(input int repeats = 1);
+        header("push 0x00", repeats);
+        repeat(repeats) begin
             start_item(req);
-            assert(req.randomize() with { 
-                req.pull == 0;
-                req.push == 1;
-                $countones(req.din) == 1 || req.din == 0 || req.din == {fifo_config::DATA_WIDTH{1'b1}};
-            });
+            if (!req.randomize() with { pull == 0; push == 1; din == 0; })
+                uvm_report_error(get_name(), "Failed to randomize");
             finish_item(req);
         end
     endtask
-endclass
 
+    virtual task seq_push_ff(input int repeats = 1);
+        header("push 0xFF", repeats);
+        repeat(repeats) begin
+            start_item(req);
+            if (!req.randomize() with { 
+                pull == 0; push == 1; din == {fifo_config::DATA_WIDTH{1'b1}}; 
+            })
+                uvm_report_error(get_name(), "Failed to randomize");
+            finish_item(req);
+        end
+    endtask
 
-// read only
-class sequence_rd extends uvm_sequence#(transaction);
-    `uvm_object_utils(sequence_rd)
+    virtual task seq_push_bits(input int repeats = 1);
+        header("push single bits", repeats);
+        repeat(repeats) begin
+            start_item(req);
+            if (!req.randomize() with { pull == 0; push == 1; $countones(din) == 1; })
+                uvm_report_error(get_name(), "Failed to randomize");
+            finish_item(req);
+        end
+    endtask
 
-    int seq_single;
+    virtual task seq_push_random(input int repeats = 1);
+        header("push random data", repeats);
+        repeat(repeats) begin
+            start_item(req);
+            if (!req.randomize() with { pull == 0; push == 1; })
+                uvm_report_error(get_name(), "Failed to randomize");
+            finish_item(req);
+        end
+    endtask
 
-    function new(string name = "sequence_rd");
-        super.new(name);
-        if (!uvm_config_db #(int)::get(null, "", "seq_single", seq_single))
-            uvm_report_fatal(get_name(), "seq_single is not in db");
-    endfunction
+    virtual task seq_random(input int repeats = 1);
+        header("fully random", repeats);
+        repeat(repeats)
+            `uvm_do_with(req, { push dist { 1 := 7, 0 := 3 }; })
+    endtask
 
-    virtual task body();
-        uvm_report_info(get_name(), "----- STARTING READ ONLY TRANSACTIONS -------");
-        req = transaction::type_id::create("req");
-        repeat(seq_single)
-            `uvm_do_with(req, { req.push == 0; req.pull == 1; })
+    virtual task seq_parallel(input int repeats = 1);
+        bit [fifo_config::DATA_WIDTH-1:0] data = 0;
+        header("push+pull in parallel", repeats);
+        repeat(repeats) begin
+            data = ~data;
+            `uvm_do_with(req, { req.push == 1; req.pull == 1; req.din == data; })
+        end
     endtask
 endclass
 
 
-// multiple writes then multiple reads
-class sequence_wr_rd_mult extends uvm_sequence#(transaction);
-    `uvm_object_utils(sequence_wr_rd_mult)
-
-    sequence_rd rds;
-    sequence_wr wrs;
-
-    function new(string name = "sequence_wr_rd_mult");
+class seq_lib extends uvm_sequence_library #(transaction);
+    `uvm_object_utils(seq_lib)
+    `uvm_sequence_library_utils(seq_lib)
+    function new(string name = "SEQ_LIB");
         super.new(name);
-        wrs = sequence_wr::type_id::create("WRS");
-        rds = sequence_rd::type_id::create("RDS");
+        selection_mode = UVM_SEQ_LIB_USER;
+        min_random_count = 1;
+        max_random_count = 7;
+        add_sequence(sequence_push_pull_00::get_type());
+        add_sequence(sequence_push_pull_ff::get_type());
+        add_sequence(sequence_consecutives_while_empty::get_type());
+        add_sequence(sequence_consecutives_while_full::get_type());
+        add_sequence(sequence_parallel::get_type());
+        add_sequence(sequence_rand::get_type());
+        init_sequence_library();
     endfunction
+    function int unsigned select_sequence(int unsigned max);
+        // Overriding, since for some reason uvm 1.2 passes max minus 1, so last index will never run!
+        static int unsigned counter = 0;
+        select_sequence = counter;
+        counter++;
+        if (counter > max) counter = 0;
+    endfunction
+endclass
 
-    virtual task body();
-        uvm_report_info(get_name(), "----- STARTING MULTIPLE WRITE THEN READ TRANSACTIONS -------");
-        repeat(fifo_config::SEQ_REPEAT) begin
-            `uvm_do_with(wrs, {})
-            `uvm_do_with(rds, {})
+
+class sequence_rand extends sequences;
+    `uvm_object_utils(sequence_rand)
+    function new(string name = "SEQ_random");
+        super.new(name);
+    endfunction
+    task body;
+        seq_random(default_repeats);
+    endtask
+endclass
+
+
+class sequence_parallel extends sequences;
+    `uvm_object_utils(sequence_parallel)
+    function new(string name = "SEQpar");
+        super.new(name);
+    endfunction
+    task body;
+        seq_pull(fifo_config::FIFO_DEPTH);
+        seq_parallel();
+        repeat(fifo_config::FIFO_DEPTH / 2) begin
+            seq_push_00();
+            seq_push_ff();
+        end
+        seq_parallel(fifo_config::FIFO_DEPTH * 2);
+    endtask
+endclass
+
+
+class sequence_consecutives_while_empty extends sequences;
+    `uvm_object_utils(sequence_consecutives_while_empty)
+    function new(string name = "SEQ_consecutives");
+        super.new(name);
+    endfunction
+    task body;
+        seq_pull(fifo_config::FIFO_DEPTH);
+        header("consecutive push-pull while empty", num_to_full);
+        repeat(num_to_full) begin
+            seq_push_bits();
+            seq_pull();
+        end
+    endtask
+endclass
+
+
+class sequence_consecutives_while_full extends sequences;
+    `uvm_object_utils(sequence_consecutives_while_full)
+    function new(string name = "SEQ_consecutives");
+        super.new(name);
+    endfunction
+    task body;
+        seq_push_bits(fifo_config::FIFO_DEPTH);
+        header("consecutive push-pull while full", num_to_full);
+        repeat(num_to_full) begin
+            seq_push_bits();
+            seq_pull();
+        end
+    endtask
+endclass
+
+
+class sequence_push_pull_00 extends sequences;
+    `uvm_object_utils(sequence_push_pull_00)
+    function new(string name = "SEQ_00");
+        super.new(name);
+    endfunction
+    task body;
+        default_repeats = 2;
+        header($sformatf("push 00 and pull %0d times", num_to_full), default_repeats);
+        repeat(default_repeats) begin
+            seq_push_00(num_to_full);
+            seq_pull(num_to_full);
+        end
+    endtask
+endclass
+
+
+class sequence_push_pull_ff extends sequences;
+    `uvm_object_utils(sequence_push_pull_ff)
+    function new(string name = "SEQ_FF");
+        super.new(name);
+    endfunction
+    task body;
+        default_repeats = 2;
+        header($sformatf("push FF and pull %0d times", num_to_full), default_repeats);
+        repeat(default_repeats) begin
+            seq_push_ff(num_to_full);
+            seq_pull(num_to_full);
+        end
+    endtask
+endclass
+
+
+class sequence_push_pull_FF_00 extends sequences;
+    `uvm_object_utils(sequence_push_pull_FF_00)
+    function new(string name = "SEQ_FF_00");
+        super.new(name);
+    endfunction
+    task body;
+        header("push-pull 00 and FF", num_to_full);
+        repeat(num_to_full) begin
+            seq_push_ff();
+            seq_pull();
+            seq_push_00();
+            seq_pull();
         end
     endtask
 endclass
