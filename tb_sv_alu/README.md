@@ -14,13 +14,14 @@ dcreport -out_dir dir metrics.db
 ```
 
 
-## Run with Verilator:
+## Run with Verilator (after fix of https://github.com/verilator/verilator/issues/5116):
 ```
-Compile:
-verilator -Wall -Wno-UNDRIVEN -Wno-UNUSEDPARAM -Wno-IGNOREDRETURN -Wno-UNUSEDSIGNAL -Wno-WIDTHTRUNC -Wno-IMPORTSTAR -Wno-TIMESCALEMOD -Wno-DECLFILENAME -Wno-PINCONNECTEMPTY -Wno-REDEFMACRO --trace --binary --timing -I../ --top top_tb --cc adder.v shift.v mux.v ../RISCV_SingleCycle/risc_pkg.sv ../RISCV_SingleCycle/alu.sv top_tb.sv
+# Compile:
+ignore="-Wno-UNUSEDPARAM -Wno-IGNOREDRETURN -Wno-UNUSEDSIGNAL -Wno-WIDTHTRUNC -Wno-IMPORTSTAR -Wno-TIMESCALEMOD -Wno-DECLFILENAME -Wno-PINCONNECTEMPTY -Wno-REDEFMACRO"
+src="adder.v shift.v mux.v ../RISCV_SingleCycle/risc_pkg.sv ../RISCV_SingleCycle/alu.sv top_tb.sv"
+verilator -Wall ${ignore} --trace --binary --timing -I../ --top top_tb --cc ${src}
 
-
-Run the simulation:
+# Run:
 ./obj_dir/Vtop_tb
 ```
 

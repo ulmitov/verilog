@@ -85,4 +85,3 @@ class scoreboard extends uvm_scoreboard;
         uvm_report_info(get_name(), $sformatf("-------------------"));
     endfunction
 endclass
-    

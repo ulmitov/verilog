@@ -28,12 +28,16 @@ module shift_reg #(parameter N = 4) (
                 if (load_en)
                     darr[i] = load[i];
                 else begin
+                    // mux on inputs
                     if (en)
+                        // each FF input is the output of the preceding FF
                         darr[i] = dout[i+1];
                     else
+                        // each FF input is the output of current FF
                         darr[i] = dout[i];
                 end
             end
+            // MSB FF input to be din
             if (~load_en & en) darr[N-1] = din;
         end
         genvar k;

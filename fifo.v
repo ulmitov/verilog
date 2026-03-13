@@ -38,7 +38,8 @@ yosys -p "read_verilog ${f}.v; hierarchy -check -top $m; proc; opt; simplemap; c
 
 module fifo #(
     parameter ADDR_WIDTH = 3,           // how much addresses, so depth is 2**ADDR_WIDTH
-    parameter DATA_WIDTH = 8
+    parameter DATA_WIDTH = 8,
+    parameter name="FIFO"
 ) (
     input res,
     input clk,
@@ -57,22 +58,35 @@ module fifo #(
     reg [ADDR_WIDTH-1:0] next_w, next_r;
     wire ren, wen;
 
+    task print;
+        integer i;
+        begin
+            $strobe("Previous %s state:", name);
+            for (i = 0; i < 2**ADDR_WIDTH; i = i + 1)
+                $strobe("mem[%0d] = 0x%h", i, mem[i]);
+        end
+    endtask
+
     // write op
     assign wen = push & ~full;
     always @(posedge clk) begin
         if (res)
-            next_w <= 1'b1;
+            next_w <= {{(ADDR_WIDTH-1){1'b0}}, 1'b1};
         else if (wen)
             next_w <= #`T_DELAY_FF next_w + 1;
     end
     always @(posedge clk) begin
         if (res)
             w_ptr <= 0;
-        else if (wen) begin
+        else if (wen)
             w_ptr <= #`T_DELAY_FF next_w;
-            mem[w_ptr] <= #`T_DELAY_FF din;
-        end
-        `ifdef DEBUG $display("FIFO: w_ptr=%0d next_w=%0d, push=%0b din=%0h, full=%0b", w_ptr, next_w, push, din, full);
+    end
+    always @(posedge clk) begin
+        if (~res & wen) mem[w_ptr] <= #`T_DELAY_FF din;
+        `ifdef DEBUG
+            if (push)
+                $display("%s PUSH:  w_ptr=%0d  next_w=%0d  din=%0h  full=%0b", name, w_ptr, next_w, din, full);
+        `endif
     end
 
     // read op
@@ -81,7 +95,7 @@ module fifo #(
 
     always @(posedge clk) begin
         if (res)
-            next_r <= 1'b1;
+            next_r <= {{(ADDR_WIDTH-1){1'b0}}, 1'b1};
         else if (ren)
             next_r <= #`T_DELAY_FF next_r + 1;
     end
@@ -90,15 +104,17 @@ module fifo #(
             r_ptr <= 0;
         else if (ren)
             r_ptr <= #`T_DELAY_FF next_r;
-        `ifdef DEBUG $display("FIFO: r_ptr=%0d next_r=%0d, pull=%0b dout=%0h, empty=%0b", r_ptr, next_r, pull, dout, empty);
+        `ifdef DEBUG
+            if (pull & ~empty)
+                $display("%s PULL:  r_ptr=%0d  next_r=%0d  dout=%0h  empty=%0b", name, r_ptr, next_r, dout, empty);
+                //print();
+        `endif
     end
 
     `ifndef COUNTER_LOGIC
         reg pushed;
-        wire ptmet;
-        integer i;
-
-        assign ptmet = &(r_ptr ~^ next_w);              // pointers met
+        //wire ptmet;
+        //assign ptmet = &(r_ptr ~^ next_w);              // pointers met
         assign full  = &(r_ptr ~^ next_w) & pushed;     // if pointers met and there was a push means we are full
         assign empty = &(r_ptr ~^ w_ptr) & ~pushed;     // if pointers met but there was no push then we are empty
 
@@ -109,11 +125,6 @@ module fifo #(
                 pushed <= 1'b1;
             else if (ren)           // also when push and pull both set
                 pushed <= 1'b0;
-            `ifdef DEBUG
-                $display("Current FIFO state:");
-                for (i = 0; i < 2**ADDR_WIDTH; i = i + 1)
-                    $display("mem[%0d] = 0x%h", i, mem[i]); 
-            `endif
         end
     `else
         reg [ADDR_WIDTH-1:0] count_add;

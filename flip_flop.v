@@ -12,7 +12,6 @@ module ff_d #(parameter N = 1) (
     input [N-1:0] din,
     output reg [N-1:0] Q
 );
-    reg pipe_0;
     always @(posedge clk or negedge res_n) begin
         if (!res_n) begin
             Q <= 0;
@@ -70,7 +69,7 @@ module synchroniser #(parameter n = 1) (
     input res,
     input [n-1:0] din,
     output wire [n-1:0] q,
-    output wire [n-1:0] edges   // din edge detector
+    output reg [n-1:0] edges   // din edge detector
 );
     reg [n-1:0] q0, q1;
     assign q = q1;

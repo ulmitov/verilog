@@ -1,3 +1,8 @@
+/*
+UVM_HOME="$(pwd)/../UVM1.2/src"
+verilator -Wall -Wno-COVERIGN -Wno-DECLFILENAME -Wno-TIMESCALEMOD -Wno-IMPORTSTAR -I../ --binary --top-module top_tb \
++incdir+$UVM_HOME +define+UVM_NO_DPI +incdir+$(pwd) $UVM_HOME/uvm_pkg.sv ../fifo.v top_tb.sv
+*/
 `include "fifo_config.sv"
 `include "fifo_interface.sv"
 `include "transaction.sv"
@@ -34,7 +39,7 @@ module top_tb;
         .full(IF.full)
     );
 
-    always  #fifo_config::T_CLK clk = ~clk;
+    always  #(fifo_config::T_CLK) clk = ~clk;
     initial begin
         uvm_config_db#(virtual fifo_interface)::set(null, "*", "vif", IF);
         $dumpfile("top_tb.vcd");
