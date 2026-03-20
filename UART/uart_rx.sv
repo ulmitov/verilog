@@ -2,30 +2,33 @@
     UART Receiver
 */
 //`define DEBUG 1
+`include "regmap.vh"
+
 
 module uart_rx #(parameter DATA_WIDTH = 8, parameter TICKS_NUM = 16) (
     input clk,
     input res_n,
     input rx_baud,
     input rx_din,
-    output logic [DATA_WIDTH-1:0] rx_out,
-    output logic rx_ready,
-    output logic err_par,   // parity error
-    output logic err_fr     // framing error (invalid stop bit)
+    input [DATA_WIDTH-1:0] lcreg,
+    output logic [DATA_WIDTH+1:0] rx_out,
+    output logic rx_ready
 );
     localparam TICK_BW = $clog2(TICKS_NUM)-1;
     localparam TICK_DELTA = TICKS_NUM > 8 ? 2 : 1;
     localparam TICK_SAMPLE_A = TICKS_NUM / 2 - TICK_DELTA;
     localparam TICK_SAMPLE_B = TICKS_NUM / 2;
     localparam TICK_SAMPLE_C = TICKS_NUM / 2 + TICK_DELTA;
+    localparam TICK_SAMPLE_D = TICK_SAMPLE_C + 1;
 
     typedef enum logic [2:0] { IDLE, START, DATA, PARITY, STOP } op_states;
     op_states state, next_state;
 
     logic sreg_en;
-    logic parity;
+    logic parity_val;
     logic parity_bit;
     logic first_tick;
+    logic last_tick;
     logic init_ct;
     logic cb_incr;
     logic voted_din;
@@ -34,22 +37,26 @@ module uart_rx #(parameter DATA_WIDTH = 8, parameter TICKS_NUM = 16) (
     logic ct_restart;
     logic [TICK_BW:0] count_ticks, ct_nextval;
     logic [$clog2(DATA_WIDTH)-1:0] count_bits, cb_next;
-    logic [2:0] PARITY_REG;
+    logic [DATA_WIDTH:0] sreg_out;
+    logic [2:0] parity_reg;
+    logic last_bit;
+    logic err_par, err_fr;
 
-    shift_reg #(.N(DATA_WIDTH)) rx_reg (
+    // pushing also parity bit
+    shift_reg #(.N(DATA_WIDTH+1)) rsr (
         .clk(first_tick),
         .res_n(res_n),
         .en(sreg_en),
         .din(voted_din),
-        .dout(rx_out),
+        .dout(sreg_out),
         .load_en(),
         .load(),
         .dout_n()
     );
 
     // Same as tx_ready in Tx. rx_done width is baud width, but fifo needs clk width
-    always_ff@(posedge clk) rx_done_set <= rx_done;
-    always_ff@(posedge clk) rx_ready <= rx_done & ~rx_done_set;
+    always_ff @(posedge clk) rx_done_set <= rx_done;
+    always_ff @(posedge clk) rx_ready <= rx_done & ~rx_done_set;
 
     // 3-stage synchronizer to prevent metastability and glitches shorter than system clock
     logic [2:0] rx_sync_reg;
@@ -63,7 +70,7 @@ module uart_rx #(parameter DATA_WIDTH = 8, parameter TICKS_NUM = 16) (
             rx_sync_reg <= {rx_sync_reg[1:0], rx_din};
     end
     // Majority voting for each bit, at least 2 samples with same value needed
-    // For 16 or 32 ticks need more samples?
+    // For 32 ticks need more samples?
     always_ff @(posedge rx_baud) begin
         if (count_ticks == TICK_SAMPLE_A) s0 <= rx_sync;
         if (count_ticks == TICK_SAMPLE_B) s1 <= rx_sync;
@@ -79,16 +86,20 @@ module uart_rx #(parameter DATA_WIDTH = 8, parameter TICKS_NUM = 16) (
     count_ticks should be 0 during 1 tick only.
     */
     assign first_tick = ~|count_ticks;
+    assign last_tick = &count_ticks;
     assign ct_nextval = count_ticks + 1;
     assign ct_restart = init_ct & |count_ticks;
+
     always_ff @(posedge rx_baud or negedge res_n) begin
-        if (~res_n | ct_restart)
+        if (~res_n)
+            count_ticks <= 0;
+        else if (ct_restart)
             count_ticks <= 0;
         else
             count_ticks <= ct_nextval;
     end
-    // can remove negedge rx_sync here but it will slighlty slower the rate
-    always_ff @(posedge rx_baud or negedge rx_sync) begin
+
+    always_ff @(posedge rx_baud) begin
         if (state == IDLE & ~rx_sync)
             init_ct <= 1'b1;
         else
@@ -96,6 +107,7 @@ module uart_rx #(parameter DATA_WIDTH = 8, parameter TICKS_NUM = 16) (
     end
 
     // count bits only on DATA and STOP states
+    assign last_bit = count_bits[2] & count_bits[1:0] == lcreg[`UART_LCR_WLS];    // 4 to 7
     assign cb_next = count_bits + cb_incr;
     always_ff @(posedge first_tick) begin
         if (~cb_incr)
@@ -104,32 +116,47 @@ module uart_rx #(parameter DATA_WIDTH = 8, parameter TICKS_NUM = 16) (
             count_bits <= cb_next;
     end
 
-    // parity bit. for even data width better to set even parity
-    // so if external peripheral reset occurs and device sends 0XFF we know if it's valid or not
-    assign parity = ^rx_out;
-    assign PARITY_REG = 3;
-    always_comb begin
-        case ({PARITY_REG[2:1]})
-            2'b00: parity_bit = ~parity;
-            2'b01: parity_bit = parity;
+    // for even data width better to set even parity
+    // so if external peripheral reset occurs and device sends 0xFF we know if it's valid or not
+    assign parity_reg = lcreg[`UART_LCR_PS];
+
+    // Even Parity: parity bit is set to 1 if the number of 1s in the data frame is odd making the total count even
+    // Odd  Parity: parity bit is set to 1 if the number of 1s in the data frame is even making the total count odd
+    // alternative is to move the parity and stop bit checks to upper level
+    // and check them when cpu makes a read
+    // Same as: assign parity_bit = ^parity_reg[2:1];
+    always_latch begin
+        case ({parity_reg[2:1]})
+            2'b00: parity_bit = 1'b0;
+            2'b01: parity_bit = 1'b1;
             2'b10: parity_bit = 1'b1;
             2'b11: parity_bit = 1'b0;
         endcase
     end
 
-    // Error flags
-    always_ff @(posedge first_tick) begin
-        if (state == PARITY && voted_din != parity_bit)
-            err_par <= 1'b1;
-        else
-            err_par <= 1'b0;
-
-        if (state == STOP && voted_din != 1'b1)
-            err_fr <= 1'b1;
-        else
-            err_fr <= 1'b0;
+    always_comb begin
+        case (lcreg[`UART_LCR_WLS])
+            2'b00: parity_val = ^sreg_out[5:0];
+            2'b01: parity_val = ^sreg_out[6:0];
+            2'b10: parity_val = ^sreg_out[7:0];
+            2'b11: parity_val = ^sreg_out[8:0];
+        endcase
     end
+
+    // Error flags
+    assign err_par = parity_reg[0] & (parity_val ^ parity_bit);
+    assign err_fr = state == STOP && ~voted_din;
     
+    // Apply output. For 5, 6 and 7 bit words padding zeros. While msb in sreg is parity.
+    always_comb begin
+        case (lcreg[`UART_LCR_WLS])
+            2'b00: rx_out = {err_fr, err_par, 2'b0, sreg_out[5:0]};
+            2'b01: rx_out = {err_fr, err_par, 1'b0, sreg_out[6:0]};
+            2'b10: rx_out = {err_fr, err_par, sreg_out[7:0]};
+            2'b11: rx_out = {err_fr, err_par, sreg_out[7:0]};
+        endcase
+    end
+
     // Demux
     always_comb begin
         case (state)
@@ -143,12 +170,15 @@ module uart_rx #(parameter DATA_WIDTH = 8, parameter TICKS_NUM = 16) (
             end
             PARITY: begin
                 cb_incr = 1'b0;
-                sreg_en = 1'b0;
+                sreg_en = 1'b1;
             end
             STOP: begin
                 cb_incr = 1'b1;
                 sreg_en = 1'b0;
-                rx_done = 1'b1;
+                if (count_ticks == TICK_SAMPLE_D)
+                    rx_done = 1'b1; // starting from this tick rx_out is settled
+                else
+                    rx_done = 1'b0; // one tick length is enough for rx_done to be 1
             end
             default: begin
                 cb_incr = 1'b0;
@@ -159,7 +189,7 @@ module uart_rx #(parameter DATA_WIDTH = 8, parameter TICKS_NUM = 16) (
     end
 
     // FSM logic
-    always_comb begin
+    always_latch begin
         case (state)
             START: begin
                 if (voted_din == 1'b0)
@@ -168,8 +198,8 @@ module uart_rx #(parameter DATA_WIDTH = 8, parameter TICKS_NUM = 16) (
                     next_state = IDLE;
             end
             DATA: begin
-                if (&count_bits) begin
-                    if (PARITY_REG[0])
+                if (last_bit) begin
+                    if (parity_reg[0])
                         next_state = PARITY;
                     else
                         next_state = STOP;

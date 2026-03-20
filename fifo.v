@@ -4,15 +4,7 @@ Synchronous FIFO with parallel read-write
 Design:
 
 All flags are synchronized to the single system clock
-First-Word Fall-Through (FWFT): The first word is available immediately on the output bus when the FIFO is not empty, reducing latenc
-
-Because of metastablity it would be safer to indicate ptmet when there is one cell left.
-So full is the meeting of next wr and current rd pointers.
-And empty is the meeting of next wr and next rd (or current wr and rd).
-If there are two clocks, then wr pointer moves at one speed and rd pointer moves another speed.
-Then to get a stable ptmet it would be much safer to use gray code.
-So using gray code and checking equivalence of next pointers, highly guarantees a stable operation in two clock domains.
-But if there is a need for items counter ouput, then design should be more sophisticated.
+First-Word Fall-Through (FWFT): The first word is available immediately on the output bus when the FIFO is not empty, reducing latency
 
 TODO:
     Asynchronous/Independent Clocks: empty, almost_empty, and data_valid are typically synchronized to the read clock (rd_clk), while full, almost_full, and wr_ack are synchronized to the write clock (wr_clk). 
@@ -43,6 +35,7 @@ module fifo #(
 ) (
     input res,
     input clk,
+    input en,                           // if not en then fifo is just a static register
     input push,
     input pull,
     input wire [DATA_WIDTH-1:0] din,    // pushes a value into fifo
@@ -72,13 +65,13 @@ module fifo #(
     always @(posedge clk) begin
         if (res)
             next_w <= {{(ADDR_WIDTH-1){1'b0}}, 1'b1};
-        else if (wen)
+        else if (wen & en)
             next_w <= #`T_DELAY_FF next_w + 1;
     end
     always @(posedge clk) begin
         if (res)
             w_ptr <= 0;
-        else if (wen)
+        else if (wen & en)
             w_ptr <= #`T_DELAY_FF next_w;
     end
     always @(posedge clk) begin
@@ -96,13 +89,13 @@ module fifo #(
     always @(posedge clk) begin
         if (res)
             next_r <= {{(ADDR_WIDTH-1){1'b0}}, 1'b1};
-        else if (ren)
+        else if (ren & en)
             next_r <= #`T_DELAY_FF next_r + 1;
     end
     always @(posedge clk) begin
         if (res)
             r_ptr <= 0;
-        else if (ren)
+        else if (ren & en)
             r_ptr <= #`T_DELAY_FF next_r;
         `ifdef DEBUG
             if (pull & ~empty)
@@ -115,7 +108,7 @@ module fifo #(
         reg pushed;
         //wire ptmet;
         //assign ptmet = &(r_ptr ~^ next_w);              // pointers met
-        assign full  = &(r_ptr ~^ next_w) & pushed;     // if pointers met and there was a push means we are full
+        assign full  = (&(r_ptr ~^ w_ptr) | ~en) & pushed;     // if pointers met and there was a push means we are full
         assign empty = &(r_ptr ~^ w_ptr) & ~pushed;     // if pointers met but there was no push then we are empty
 
         always @(posedge clk) begin
