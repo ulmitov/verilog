@@ -8,6 +8,7 @@ interface fifo_interface (
     logic pull;
     logic empty;
     logic full;
+    logic en;
 
     clocking cb_drv @(posedge clk);
         /*

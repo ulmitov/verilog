@@ -1,5 +1,7 @@
+`include "regmap.vh"
 `define TCLK 5  // 100Mhz
 `timescale 1ns / 1ns
+
 
 /*
 src="testbench.sv clock_divider.sv"
@@ -8,7 +10,7 @@ vvp dir/baud_tb.vvp
 */
 module baud_tb;
     logic clk;
-    logic res_n = 1'b0;
+    logic res_n;
     logic clk_out2, clk_out3, clk_out4, clk_out5, clk_out6, clk_out7, clk_out8, clk_out9, clk_out10;
 
     clock_divider uut2 (.clk_in(clk), .res_n(res_n), .div(16'd2), .clk_out(clk_out2));
@@ -49,24 +51,25 @@ module uart_rx_tb;
     logic b_tick;
     logic err_par;
     logic err_fr;
-    logic [DATA_WIDTH-1:0] uart_rx_out;
+    logic [DATA_WIDTH+1:0] uart_rx_out;
     localparam DIV = 16'h4;
     localparam baud_wait = `TCLK*2*16*DIV;
 
     clock_divider rx_baud (.clk_in(clk), .res_n(res_n), .div(DIV), .clk_out(b_tick));
 
-    uart_rx #(DATA_WIDTH) dut (
+    uart_rx dut (
         .clk(clk),
         .res_n(res_n),
         .rx_baud(b_tick),
         .rx_din(din),
+        .lcreg(8'b00011111),
         .rx_out(uart_rx_out),
-        .rx_ready(valid),
-        .err_par(err_par),
-        .err_fr(err_fr)
+        .rx_ready(valid)
     );
 
     always #`TCLK clk  = ~clk;
+    assign err_par = uart_rx_out[8];
+    assign err_fr = uart_rx_out[9];
 
     task driver(input logic [DATA_WIDTH-1:0] tx_data);
         int i;
@@ -90,7 +93,7 @@ module uart_rx_tb;
     initial begin
         $dumpfile("dir/uart_rx_tb.vcd");
         $dumpvars(0);
-        $monitor("%t RX: din=%0b dout=%0b, rx_ready=%0b, err_par=%0b, err_fr=%0b", $time, din, uart_rx_out, valid, err_par, err_fr);
+        $monitor("%t RX: din=%0b dout=%10b, rx_ready=%0b, err_par=%0b, err_fr=%0b", $time, din, uart_rx_out, valid, err_par, err_fr);
         clk = 1'b1;
         res_n = 1'b1;
         @(posedge clk) res_n = 1'b0;
@@ -118,18 +121,20 @@ module uart_tx_tb;
     logic valid;
     logic b_tick;
     logic [7:0] din;
-    localparam DIV = 4;
+    localparam DIV = 16'd4;
 
     clock_divider tx_baud (.clk_in(clk), .res_n(res_n), .div(DIV), .clk_out(b_tick));
 
-    uart_tx #(8) dut (
+    uart_tx dut (
         .clk(clk),
         .res_n(res_n),
         .tx_baud(b_tick),
         .tx_start(en),
         .tx_din(din),
+        .lcreg(8'b0001_1111),
         .tx_dout(uart_tx_out),
-        .tx_ready(valid)
+        .tx_ready(valid),
+        .tsr_data()
     );
 
     always #`TCLK clk  = ~clk;
@@ -162,17 +167,24 @@ iverilog -Wall -g2012 -I ../ -o dir/uart_tb.vvp -s uart_tb ${src};
 vvp dir/uart_tb.vvp
 */
 module uart_tb;
-    localparam DATA_WIDTH = 8;
+    localparam DWIDTH = 8;
+    int byte_wait;
     logic clk;
     logic res_n;
-    logic [11:0] divisor;
+    logic [15:0] divisor;
     logic rd_uart;
     logic wr_uart;
     logic tx_ext;
     logic rx_empty;
     logic tx_full;
-    logic [DATA_WIDTH-1:0] rd_data, wr_data;
-    int byte_wait;
+    logic [DWIDTH-1:0] wr_data;
+    logic [DWIDTH-1:0] tsr_data;
+    logic [DWIDTH-1:0] lcreg;
+    logic [DWIDTH+1:0] rd_data;
+    logic rx_ready;
+    logic rx_full;
+    logic tx_empty;
+    logic tx_ready;
 
     uart uut (
         .clk(clk),
@@ -185,10 +197,17 @@ module uart_tb;
         .tx_ext(tx_ext),
         .rx_empty(rx_empty),
         .tx_full(tx_full),
-        .rd_data(rd_data)
+        .rd_data(rd_data),
+        .tsr_data(tsr_data),
+        .rx_ready(rx_ready),
+        .rx_full(rx_full),
+        .tx_empty(tx_empty),
+        .tx_ready(tx_ready),
+        .lcreg(lcreg),
+        .fcreg(8'b0000_0001)
     );
     
-    always #5 clk = ~clk;
+    always #`TCLK clk = ~clk;
     assign rd_uart = ~rx_empty;
 
     initial begin
@@ -201,12 +220,16 @@ module uart_tb;
         byte_wait = divisor * 16 * 12;
         @(posedge clk) res_n = 0;
         @(posedge clk) res_n = 1;
-
+        lcreg = 8'b0001_1111;  // even parity
         @(negedge clk) wr_uart = 1;
         wr_data = 'hAB;
         @(negedge clk) wr_uart = 0;
         wait(rd_data == 'hAB);
-        repeat(byte_wait) @(negedge clk); // some pause before proceeding
+
+        $display("Pausing before next tx");
+        repeat(byte_wait) @(negedge clk);
+        $display("Proceeding");
+        lcreg = 8'b0000_1111; // odd parity
 
         @(negedge clk) wr_uart = 1;
         wr_data = 'hDA;
@@ -214,9 +237,57 @@ module uart_tb;
         @(negedge clk) wr_data = 'hB9;
         @(negedge clk) wr_data = 'hB2;
         @(negedge clk) wr_uart = 0;
-        repeat(byte_wait*5) @(posedge clk);
 
+        repeat(byte_wait * 5) @(posedge clk);
         $display("UART TB FINISH");
         $finish;
+    end
+endmodule
+
+
+/*
+src="testbench.sv uart_top.sv uart.sv clock_divider.sv uart_tx.sv uart_rx.sv ../fifo.v ../shift_reg.v"
+iverilog -Wall -g2012 -I ../ -o dir/uart_top_tb.vvp -s uart_top_tb ${src};
+vvp dir/uart_top_tb.vvp
+*/
+module uart_top_tb;
+    logic clk = 1'b1;
+    logic res = 1'b1;
+    logic wr, rd, ddis;
+    logic [`UART_ADDR_WIDTH-1:0] addr;
+    wire [`UART_DATA_WIDTH-1:0] data_bus;
+    logic [`UART_DATA_WIDTH-1:0] dutin, dutout;
+
+    uart_top dut (
+        .clk(clk),              // system clock pin
+        .cs(1'b1),             // rx baud pin
+        .res(res),              // master reset pin
+        .wr(wr),               // write enable pin
+        .rd(rd),               // read enable pin
+        .ddis(ddis),             // Driver disable high when cpu is writing
+        .addr(addr),
+        .data_bus(data_bus)
+    );
+    assign data_bus = ddis ? dutin : {`UART_DATA_WIDTH{1'bZ}};
+    assign dutout = data_bus;
+
+    always #`TCLK clk = ~clk;
+    initial begin
+        $dumpfile("uart_top_tb.vcd");
+        $dumpvars();
+        $monitor("%t BUS=0x%0h", $time, dutout);
+        @(posedge clk) res = 0;
+        @(negedge clk);
+        ddis = 1;
+        wr = 1;
+        addr = 3;   // lcr
+        dutin = 128;
+        @(negedge clk) addr = 0; dutin = 64; // dll
+        @(negedge clk) ddis = 0;
+        wr = 0;
+        rd = 1;
+        //@(posedge clk);
+        addr = 3;
+        @(negedge clk) $finish;
     end
 endmodule

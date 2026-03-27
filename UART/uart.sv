@@ -1,58 +1,68 @@
-/*
-uart_tb.cpp 
+`include "regmap.vh"
 
-src="uart.sv uart_rx.sv uart_tx.sv clock_divider.sv ../shift_reg.v"
-ignore="-Wno-SYNCASYNCNET -Wno-WIDTHTRUNC -Wno-LATCH -Wno-UNUSEDSIGNAL -Wno-UNUSEDPARAM -Wno-WIDTHEXPAND -Wno-DECLFILENAME -Wno-PINCONNECTEMPTY -Wno-MULTITOP -Wno-TIMESCALEMOD"
-verilator -I../ -Wall ${ignore} --trace-vcd --timing --top uart --binary ${src}
-*/
+
 module uart #(
-    parameter DATA_WIDTH = 8,
-    parameter DIV_WIDTH = 12,
-    parameter TICKS_NUM = 16,
-    parameter FIFO_ADDR_W = 3
+    parameter LOOPBACK = 1,
+    parameter DWIDTH = `UART_DATA_WIDTH,
+    parameter DIV_BITS = `UART_DIV_WIDTH,
+    parameter TICKS_NUM = `UART_TICKS_NUM,
+    parameter FIFO_ADDR_W = `UART_FIFO_ADDR_W
 ) (
     input clk,
+    input clk_rx,
     input res_n,
-    input [DIV_WIDTH-1:0] divisor,
-    input [DATA_WIDTH-1:0] wr_data,
-    input rd_uart,          // cpu asks to read from uart
-    input wr_uart,          // cpu asks to write to uart
+    input rd_uart,
+    input wr_uart,
     input rx_ext,           // from external device
+    input [DIV_BITS-1:0] divisor,
+    input [DWIDTH-1:0] wr_data,
+    input [DWIDTH-1:0] lcreg,
+    input [DWIDTH-1:0] fcreg,
+    output logic [DWIDTH-1:0] tsr_data,
+    output logic [DWIDTH+1:0] rd_data,
+    output logic tx_baud,
     output logic tx_ext,    // to external device
-    output logic rx_empty,  // uart to cpu: no rd_data to read
-    output logic tx_full,   // uart to cpu: stop pushing wr_data
-    output logic [DATA_WIDTH-1:0] rd_data
+    output logic rx_empty,
+    output logic tx_full,
+    output logic rx_ready,
+    output logic rx_full,
+    output logic tx_empty,
+    output logic tx_ready
 );
-    logic tx_ready;
-    logic rx_ready;
-    logic rx_full;
-    logic tx_empty;
-    logic rx_baud;
-    logic tx_baud;
-    logic err_par;
-    logic err_fr;
-    logic [DATA_WIDTH-1:0] rx_out;
-    logic [DATA_WIDTH-1:0] tx_data;
-    logic [DATA_WIDTH-1:0] tx_fifo_out;
-    logic [DATA_WIDTH-1:0] rx_fifo_out;
+    logic [DWIDTH-1:0] tx_data;
+    logic [DWIDTH-1:0] tx_fifo_out;
+    logic [DWIDTH+1:0] rx_fifo_out;
+    logic [DWIDTH+1:0] rx_out;
+    logic rx_din;
+    logic rx_clk;
+    logic res_frx;
+    logic res_ftx;
+    logic fifo_en;
+    logic rx_pull;
+
+    clock_divider #(DIV_BITS) baud_gen (
+        .clk_in(clk),
+        .res_n(res_n),
+        .div(divisor),
+        .clk_out(tx_baud)
+    );
 
     // Rx: rx_ext -> RxUUT push rx_out to RxFifo when rx_ready and not full
     // -> RxFifo outputs rd_data -> CPU reads it when ~rx_empty
-    clock_divider #(DIV_WIDTH) Rx_baud (.clk_in(clk), .res_n(res_n), .div(divisor), .clk_out(rx_baud));
-    uart_rx #(.DATA_WIDTH(DATA_WIDTH), .TICKS_NUM(TICKS_NUM)) Rx_uut (
+    uart_rx #(.TICKS_NUM(TICKS_NUM)) Rx_uut (
         .clk(clk),
         .res_n(res_n),
-        .rx_baud(rx_baud),
-        .rx_din(rx_ext),
+        .rx_baud(rx_clk),
+        .rx_din(rx_din),
+        .lcreg(lcreg),
         .rx_out(rx_out),
-        .rx_ready(rx_ready),
-        .err_par(err_par),
-        .err_fr(err_fr)
+        .rx_ready(rx_ready)
     );
-    fifo #(.ADDR_WIDTH(FIFO_ADDR_W), .DATA_WIDTH(DATA_WIDTH), .name("Rx_fifo")) Rx_fifo (
+    fifo #(.ADDR_WIDTH(FIFO_ADDR_W), .DATA_WIDTH(DWIDTH+2), .name("Rx_fifo")) Rx_fifo (
         .clk(clk),
-        .res(~res_n),
-        .push(rx_ready),
+        .res(res_frx),
+        .en(fcreg[`UART_FCR_FIFOEN]),
+        .push(rx_ready), // The character in the shift register is overwritten, but it is not transferred to the FIFO.
         .pull(rd_uart),
         .din(rx_out),
         .dout(rx_fifo_out),
@@ -62,19 +72,21 @@ module uart #(
 
     // Tx: CPU push wr_data when ~tx_full -> TxFIFO outputs tx_data to TxUUT
     // -> TxUUT pulls it when ~tx_empty -> tx_ext
-    clock_divider #(DIV_WIDTH) Tx_baud (.clk_in(clk), .res_n(res_n), .div(divisor), .clk_out(tx_baud));
-    uart_tx #(.DATA_WIDTH(DATA_WIDTH), .STOP_BITS(1), .TICKS_NUM(TICKS_NUM)) Tx_uut (
+    uart_tx #(.TICKS_NUM(TICKS_NUM)) Tx_uut (
         .clk(clk),
         .res_n(res_n),
         .tx_baud(tx_baud),
         .tx_start(~tx_empty),
         .tx_din(tx_data),
         .tx_dout(tx_ext),
-        .tx_ready(tx_ready)
+        .tx_ready(tx_ready),
+        .lcreg(lcreg),
+        .tsr_data(tsr_data)
     );
-    fifo #(.ADDR_WIDTH(FIFO_ADDR_W), .DATA_WIDTH(DATA_WIDTH), .name("Tx_fifo")) Tx_fifo (
+    fifo #(.ADDR_WIDTH(FIFO_ADDR_W), .DATA_WIDTH(DWIDTH), .name("Tx_fifo")) Tx_fifo (
         .clk(clk),
-        .res(~res_n),
+        .res(res_ftx),
+        .en(fcreg[`UART_FCR_FIFOEN]),
         .push(wr_uart),
         .pull(tx_ready),
         .din(wr_data),
@@ -83,15 +95,12 @@ module uart #(
         .full(tx_full)
     );
 
-    // Store fifo out, suppose we dont know if fifo dout can change on the next clock
-    always_ff @(posedge clk) if (~rx_empty) rd_data <= rx_fifo_out;
-    always_ff @(posedge clk) if (tx_ready)  tx_data <= tx_fifo_out;
-
-    logic err_overrun;
-    always_comb begin
-        if (rx_full & rx_ready)
-            err_overrun = 1'b1;
-        else
-            err_overrun = 1'b0;
-    end
+    assign rx_din = LOOPBACK ? tx_ext : rx_ext;
+    assign rx_clk = LOOPBACK ? tx_baud : clk_rx;
+    assign fifo_en = fcreg[`UART_FCR_FIFOEN];
+    assign res_frx = ~res_n | (fifo_en & fcreg[`UART_FCR_RXCLR]);
+    assign res_ftx = ~res_n | (fifo_en & fcreg[`UART_FCR_TXCLR]);
+    // Storing fifo out, since it changes after pull
+    always_ff @(posedge clk) if (tx_ready) tx_data <= tx_fifo_out;
+    always_ff @(posedge clk) if (rd_uart) rd_data <= rx_fifo_out;
 endmodule

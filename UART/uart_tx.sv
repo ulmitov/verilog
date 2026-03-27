@@ -1,18 +1,25 @@
 /*
     UART Transceiver
 */
-module uart_tx #(parameter DATA_WIDTH = 8, parameter STOP_BITS = 2, parameter TICKS_NUM = 16) (
+`include "regmap.vh"
+
+
+module uart_tx #(parameter DATA_WIDTH = 8, parameter TICKS_NUM = 16) (
     input clk,
     input res_n,
     input tx_baud,
     input tx_start,
+    input [DATA_WIDTH-1:0] lcreg,
     input [DATA_WIDTH-1:0] tx_din,
     output logic tx_dout,
-    output logic tx_ready
+    output logic tx_ready,
+    output logic [DATA_WIDTH-1:0] tsr_data
 );
     localparam TICK_BW = $clog2(TICKS_NUM)-1;
+    localparam HALF_TICKS = (TICKS_NUM - 1) >> 1;
+    localparam HALF_CYCLE = HALF_TICKS;
 
-    typedef enum logic [2:0] { IDLE, START, DATA, PARITY, STOP } op_states;
+    typedef enum logic [2:0] { IDLE, START, DATA, PARITY, STOP, STOP_HALF } op_states;
     op_states state, next_state;
 
     logic sreg_en;
@@ -25,13 +32,17 @@ module uart_tx #(parameter DATA_WIDTH = 8, parameter STOP_BITS = 2, parameter TI
     logic cb_incr;
     logic [TICK_BW:0] count_ticks;
     logic [$clog2(DATA_WIDTH)-1:0] count_bits, cb_next;
+    logic [2:0] parity_reg;
+    logic last_bit;
+    logic stop_bits;
+    logic half_parity;
 
-    shift_reg #(.N(DATA_WIDTH)) tx_reg (
+    shift_reg #(.N(DATA_WIDTH)) tsr (
         .clk(last_tick),
         .res_n(res_n),
         .en(sreg_en),
-        .din(reg_out),
-        .dout(),
+        .din(),
+        .dout(tsr_data),
         .load_en(load_en),
         .load(tx_din),
         .dout_n(reg_out)
@@ -60,13 +71,18 @@ module uart_tx #(parameter DATA_WIDTH = 8, parameter STOP_BITS = 2, parameter TI
     always_ff @(posedge clk) tx_pulled <= load_en;
     always_ff @(posedge clk) tx_ready <= load_en & ~tx_pulled;
 
-    assign parity = ^tx_din;
-    logic [2:0] PARITY_REG;
-    assign PARITY_REG = 3;
+    assign last_bit     = count_bits[2] & count_bits[1:0] == lcreg[`UART_LCR_WLS];    // 4 to 7
+    assign stop_bits    = lcreg[`UART_LCR_STB];
+    assign parity_reg   = lcreg[`UART_LCR_PS];
+    assign half_parity  = ~|lcreg[`UART_LCR_WLS] & stop_bits;
+    assign parity       = ^tx_din;
+
+    // Even Parity: parity bit is set to 1 if the number of 1s in the data frame is odd
+    // Odd  Parity: parity bit is set to 1 if the number of 1s in the data frame is even
     always_comb begin
-        case ({PARITY_REG[2:1]})
-            2'b00: parity_bit = ~parity; //0 is odd, 1 is even parity=1? 0:1
-            2'b01: parity_bit = parity; 
+        case ({parity_reg[2:1]})
+            2'b00: parity_bit = parity; // 00 is odd, 01 is even
+            2'b01: parity_bit = ~parity;
             2'b10: parity_bit = 1'b1;
             2'b11: parity_bit = 1'b0;
         endcase
@@ -107,14 +123,14 @@ module uart_tx #(parameter DATA_WIDTH = 8, parameter STOP_BITS = 2, parameter TI
     end
 
     // FSM logic
-    always_comb begin
+    always_latch begin
         case (state)
             START: begin
                 next_state = DATA;
             end
             DATA: begin
-                if (&count_bits) begin
-                    if (PARITY_REG[0])
+                if (last_bit) begin
+                    if (parity_reg[0])
                         next_state = PARITY;
                     else
                         next_state = STOP;
@@ -124,7 +140,18 @@ module uart_tx #(parameter DATA_WIDTH = 8, parameter STOP_BITS = 2, parameter TI
                 next_state = STOP;
             end
             STOP: begin
-                if (count_bits == STOP_BITS - 1) begin
+                if (half_parity)
+                    next_state = STOP_HALF;
+                else if (count_bits == stop_bits) begin
+                    if (tx_start)
+                        next_state = START;
+                    else
+                        next_state = IDLE;
+                end
+            end
+            STOP_HALF: begin
+                if (count_ticks == HALF_CYCLE)
+                begin
                     if (tx_start)
                         next_state = START;
                     else
@@ -132,6 +159,7 @@ module uart_tx #(parameter DATA_WIDTH = 8, parameter STOP_BITS = 2, parameter TI
                 end
             end
             default: begin
+                // will move to START only on last tick. TBD: move it sooner?
                 if (tx_start) next_state = START;
             end
         endcase

@@ -1,10 +1,13 @@
 # UART module
+Implementation of UART16550 according to PC16550D spec (or other TI UARTs like TL16C550)
+Including an initial C++ driver which is being used in a Verilator testbench.
 
-- Glitch resistive UART module
-- N=5 to 8 data bits (TBD)
-- M=1 or 2 stop bits
-- OSR=Programmable oversample rate by 4, 8, 16, 32
-- PAR=None, even, odd or forced parity bit
+- Glitch suppressing
+- Rx-Tx FIFOs
+- N = 5 to 8 data bits
+- M = 1, 1.5 and 2 stop bits
+- OSR = oversample rate 8, 16, 32
+- Some features are TBD: Modem, fifo threshold levels
 
 ![clock_div.png](./dir/uart_tb_2stopbits.png)
 

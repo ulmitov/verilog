@@ -32,6 +32,7 @@ class driver extends uvm_driver#(transaction);
         // reset was done in top_tb
         wait(!vif.DRIVER_MP.res);
         @(vif.DRIVER_MP.cb_drv);
+        vif.DRIVER_MP.cb_drv.en <= 1'b1;
         vif.DRIVER_MP.cb_drv.push <= req.push;
         vif.DRIVER_MP.cb_drv.pull <= req.pull;
         vif.DRIVER_MP.cb_drv.din <= req.din;
