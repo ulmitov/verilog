@@ -24,8 +24,8 @@ simulations:
     options: '-image image -code-cov a -uvm 1.2 +UVM_NO_RELNOTES +UVM_TESTNAME=test_push_pull_while_empty'
 source_files:
   - language: verilog
-    path: ../fifo.v
-    options: '-incdir ../ -vlog_sv2012'
+    path: ../modules/fifo.v
+    options: '-incdir ../modules/ -vlog_sv2012'
   - language: verilog
     path: fifo_config.sv
     options: '-uvm 1.2'

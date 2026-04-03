@@ -169,7 +169,7 @@ module uart_tx #(parameter DATA_WIDTH = 8, parameter TICKS_NUM = 16) (
             state <= IDLE;
         else
             state <= next_state;
-        `ifdef DEBUG
+        `ifdef DEBUG_RUN
             $strobe("DEBUG: [Tx_uart] tx_din=%0b tx_dout=%0b count_bits=%0d", tx_din, tx_dout, count_bits);
         `endif
     end

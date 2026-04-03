@@ -1,0 +1,141 @@
+/*
+tb="memory_tb"
+msrc="testbench/${tb}.v ../RISCV_SingleCycle/risc_pkg.sv memory.sv"
+
+verilator --lint-only -Wall ../RISCV_SingleCycle/risc_pkg.sv memory.sv
+
+iverilog -Wall -g2012 -o ./vcd/${tb}.vvp -s ${tb} ${msrc} && vvp ./vcd/${tb}.vvp
+*/
+`include "consts.vh"
+
+`timescale 1ns / 1ns
+
+`define VCD "vcd/memory_tb.vcd"
+`define T_WR 10
+`define T_RD 10
+`define T_CLK (`T_WR * 2)
+
+`define OP_DMEM_BYTE 3'b000
+`define D_WIDTH 8   // Memory data word width
+`define D_DEPTH 4   // Memory depth
+// TODO: simultaneous read\write test? two clocks test? minimum f test? `define RO_DELAY (`T_DELAY_FF + `T_WR)
+
+
+module memory_tb;
+    reg clk, rclk, we, re, res;
+    reg [$clog2(`D_DEPTH)-1:0] addr;
+    reg [`D_WIDTH-1:0] data, exp;
+    reg [`D_WIDTH-1:0] exp_ram [`D_DEPTH-1:0];
+    wire [`D_WIDTH-1:0] out;
+    integer i, j, a;
+
+    memory #( .DATA_WIDTH(`D_WIDTH), .ADDR_WIDTH($clog2(`D_DEPTH)), .DEPTH(`D_DEPTH) ) uut (
+        .wclk(clk),
+        .rclk(rclk),
+        .req(1'b1),
+        .res(res),
+        .wen(we),
+        .ren(re),
+        .zero_ex(1'b0),
+        .blsize(`OP_DMEM_BYTE),
+        .wr_data(data),
+        .addr(addr),
+        .rd_data(out)
+    );
+
+    // clock generation
+    always #`T_WR clk = ~clk;
+    always #`T_RD rclk = ~rclk;
+
+    // write operation
+    task w_op;
+        input [$clog2(`D_DEPTH)-1:0] address;
+        input [`D_WIDTH-1:0] din;
+        begin
+            addr = address;
+            we = 1'b1;
+            data = din;
+            #`T_CLK we = 1'b0;
+            exp_ram[address] = din;
+        end
+    endtask
+
+    // read operation
+    task r_op;
+        input [$clog2(`D_DEPTH)-1:0] address;
+        input [`D_WIDTH-1:0] din;
+        begin
+            addr = address;
+            we = 1'b0;
+            re = 1'b1;
+            if (uut.SYNC_READ == 0)
+                #`T_CLK re = 1'b0; // if async then wait flip flop delay ?
+            else
+                #`T_CLK re = 1'b0;
+            if (out !== din) $display("%0d: ERROR: addr=%0h: out=%0h not as expected %0h", $time, addr, out, din);
+        end
+    endtask
+
+    // read whole ram and compare to expected
+    task check_ram;
+        for (a = 0; a < `D_DEPTH; a = a + 1)
+            r_op(a, exp_ram[a]);
+    endtask
+
+    // stimulus
+    initial begin
+        $dumpfile(`VCD);
+        $dumpvars();
+        if (`D_DEPTH < 24)
+            $monitor("%0d: addr=%0h, we=%0b, data=%2h, out=%2h", $time, addr, we, data, out);
+
+        // initial state
+        for (a = 0; a < `D_DEPTH; a = a + 1)
+            exp_ram[a] = {`D_WIDTH{1'b1}};
+        clk = 1'b0;
+        rclk = 1'b0;
+        res = 1'b0;
+        #`T_CLK res = 1'b1;
+        #`T_CLK res = 1'b0;
+        // wait half phase in order to send steady signals before posedge
+        #`T_WR;
+        addr = 0;
+        data = 0;
+        we = 1'b0;
+        re = 1'b0;
+
+        $display("*** Test stuck at 1's ***");
+        for (i = 0; i < `D_DEPTH; i = i + 1) begin
+            w_op(i, 0);
+            r_op(i, 0);
+        end
+        check_ram();
+
+        $display("*** Test registers for stuck at 0 ***");
+        for (i = 0; i < `D_DEPTH; i = i + 1) begin
+            $display("*** Checking stuck at 0 register %0h ***", i);
+            for (j = 0; j < `D_WIDTH; j = j + 1) begin
+                w_op(i, 2**j);
+                r_op(i, 2**j);
+                check_ram();
+            end
+            w_op(i, 0);
+        end
+
+        $display("*** Test stuck at 0's and cross talk ***");
+        for (i = 0; i < `D_DEPTH; i = i + 1) begin
+            w_op(i, 2**`D_WIDTH - 1);
+            r_op(i, 2**`D_WIDTH - 1);
+            check_ram();
+        end
+        
+        $display("*** Test logic ***");
+        for (i = 0; i < `D_DEPTH; i = i + 1) begin
+            w_op(i, `D_DEPTH - 1 - i);
+            r_op(i, `D_DEPTH - 1 - i);
+            check_ram();
+        end
+        $display("End of testbench: %s", `VCD);
+        #`T_CLK $finish;
+    end
+endmodule

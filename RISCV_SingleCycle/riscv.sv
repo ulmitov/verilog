@@ -1,4 +1,4 @@
-`include "consts.v"
+`include "consts.vh"
 import risc_pkg::*;
 
 
@@ -40,7 +40,7 @@ module riscv #(
         .rclk(), .wclk(), .res(),  .wen(), .wr_data(),
         .req(1'b1),
         .zero_ex(1'b1),
-        .mem_size(OP_DMEM_WORD),
+        .blsize(OP_DMEM_WORD),
         .ren(imem_req),
         .addr(pc),
         .rd_data(instruction)
@@ -113,7 +113,7 @@ module riscv #(
         .wen(dmem_wr),
         .req(dmem_req),
         .addr(dmem_addr),
-        .mem_size(dmem_size),
+        .blsize(dmem_size),
         .zero_ex(dmem_zero_ex),
         .wr_data(dmem_wr_data),
         .rd_data(dmem_rd_data)
@@ -151,7 +151,7 @@ module riscv #(
     );
 
 
-    `ifdef DEBUG
+    `ifdef DEBUG_RUN
         // DEBUG only: set x when no need for data
         assign dmem_addr = dmem_req ? alu_res[31:0] : {32{1'bX}};
         assign dmem_wr_data = dmem_req ? rs2_data : {XLEN{1'bX}};

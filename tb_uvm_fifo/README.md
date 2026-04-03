@@ -1,10 +1,14 @@
 # FIFO UVM testbench
 
-The implemented FIFO ![module](../fifo.v) is a synchronous type (single clock).
+The implemented ![fifo.v](../modules/fifo.v) module is of a synchronous type (single clock).
 So TB has a single interface and a single agent enviroment with a configuration class.
 Monitor broadcasts transactions to Scoreboard analysis FIFO export port
 and also to Coverage collector's analysis export port.
 Scoreboard uses a queue as a Ref model.
+
+# UVM testbench design:
+
+![uvm testbench diagram](./dir/uvm_diagram.png)
 
 
 Run via Dsim studio (Compile -> Elab -> Sim): ![project dpf](./UVM_FIFO.dpf)

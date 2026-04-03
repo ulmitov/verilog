@@ -9,7 +9,7 @@ module branch_control (
 
     output logic branch_taken
 );
-    `ifdef GATEFLOW
+    `ifdef GATE_FLOW
         wire eq, lt, ltu;
 
         adder #(32) branch_comparator (

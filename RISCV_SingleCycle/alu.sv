@@ -1,4 +1,4 @@
-`include "consts.v"
+`include "consts.vh"
 import risc_pkg::*;
 
 
@@ -8,7 +8,7 @@ module alu #(parameter XLEN = 32) (
     input logic [XLEN-1:0] alu_b,
     output logic [XLEN-1:0] alu_res
 );
-    `ifdef GATEFLOW
+    `ifdef GATE_FLOW
         logic lt, ltu;
         logic nadd_sub, right_en, sign_ext;
         logic [XLEN-1:0] sum, out_sh;

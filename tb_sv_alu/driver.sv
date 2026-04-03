@@ -1,4 +1,4 @@
-`include "consts.v"
+`include "consts.vh"
 `define T_DELAY (`T_DELAY_PD*(3*32))
 
 

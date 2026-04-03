@@ -5,11 +5,21 @@ version: '0.2'
 work_dir: .
 design_root_dir: .
 simulations:
-  - name: Sim
+  - name: Sim MXD
     options: >-
       -build-all -cs-randc-max 31 +acc+b -code-cov a -waves dir/uart_tb.mxd -top
       work.uart_tb
+  - name: Sim VCD
+    options: >-
+      -build-all -cs-randc-max 31 +acc+b -code-cov a -waves dir/uart_tb.vcd -top
+      work.uart_tb
 source_files:
+  - language: verilog
+    path: ../modules/shift_reg.v
+    options: '-incdir ../modules/'
+  - language: verilog
+    path: ../modules/fifo.v
+    options: '-incdir ../modules/'
   - language: verilog
     path: clock_divider.sv
   - language: verilog
@@ -17,14 +27,8 @@ source_files:
   - language: verilog
     path: uart_tx.sv
   - language: verilog
-    path: testbench.sv
+    path: testbench/testbench.sv
   - language: verilog
     path: uart.sv
-  - language: verilog
-    path: ../shift_reg.v
-    options: '-incdir ../'
-  - language: verilog
-    path: ../fifo.v
-    options: '-incdir ../'
 library_search_paths:
   - $STD_LIBS/ieee93

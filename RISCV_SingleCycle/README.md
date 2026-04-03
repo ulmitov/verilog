@@ -1,50 +1,52 @@
 # RISCV RV32I single cycle implementation
 
- - `asm` folder holds the assembly programs and their hex code mem files.
- - `vcd` folder holds the simulation results.
+ - `asm` folder contains assembly programs and their hex code mem files
+ - `vcd` folder contains simulation results of `tb_riscv.sv`
+
+
+## Architecture:
+![arch.png](./dir/arch.png)
 
 
 ## Run:
 ```
-src="riscv_tb.sv risc_pkg.sv riscv.sv fetch.sv decode.sv register_file.sv branch_control.sv control.sv alu.sv ../memory.sv ../adder.v ../shift.v ../mux.v"
+src="tb_riscv.sv risc_pkg.sv riscv.sv fetch.sv decode.sv register_file.sv branch_control.sv control.sv alu.sv ../modules/memory.sv ../modules/adder.v ../modules/shift.v ../modules/mux.v"
 
-iverilog -Wall -g2012 -I ../ -o vcd/riscv_tb.vvp -s riscv_tb ${src};
-vvp vcd/riscv_tb.vvp
+iverilog -Wall -g2012 -I ../modules/ -o vcd/tb_riscv.vvp -s tb_riscv ${src};
+vvp vcd/tb_riscv.vvp
 
-# or via Verilator:
-ignore="-Wno-IMPORTSTAR -Wno-PINCONNECTEMPTY -Wno-DECLFILENAME -Wno-UNUSEDSIGNAL -Wno-WIDTHTRUNC -Wno-CASEINCOMPLETE"
-verilator -Wall ${ignore} --trace-vcd --binary --timing -I../ --top riscv_tb --cc ${src}
-./obj_dir/Vriscv_tb
+# or:
+verilator -Wno-lint --trace-vcd --binary --timing -I../modules/ --top tb_riscv --cc ${src}
+./obj_dir/Vtb_riscv
 ```
 
 
 ##  Testbench files:
- - `alu.sv` unit has a **SystemVerilog** testbench in `tb_sv_alu` folder
- - `memory.sv` unit has a Verilog testbench in `memory_tb.v` (in upper folder)
- - `adder.v` and `shift.v` and `mux.v` - have Verilog testbenches in the upper folder
- - `riscv_tb.sv` is a Verilog end to end testbench which runs the following assembly programs:
+ - `alu.sv` unit has a **SystemVerilog** testbench in ![tb_sv_alu](../tb_sv_alu) folder
+ - `memory.sv` and other small modules have testbenches in ![/modules/testbench](../modules/testbench) folder
+ - `riscv_tb.sv` is a Verilog application level testbench which runs the following **assembly programs**:
 
 
 
 ## bubble_sort.asm
 See array values each rf_wr_en
-![Bubble sort result](./vcd/bubble_sort_in.png)
+![Bubble sort result](./dir/bubble_sort_in.png)
 See sorted values in reg_file address 0x0B through 0x0E (x11-x14)
-![Bubble sort result](./vcd/bubble_sort_out.png)
+![Bubble sort result](./dir/bubble_sort_out.png)
 
 
 
 ## fibonacci_sequence.asm
 See values each ram.wen in ram.wr_data
-![Fibonacci result](./vcd/fibonacci_out.png)
+![Fibonacci result](./dir/fibonacci_out.png)
 
 
 
 ## find_max_in_array.asm
 See array values each ram.wen
-![Find max result](./vcd/find_max_in_array_in.png)
+![Find max result](./dir/find_max_in_array_in.png)
 Wrote max value 2A to ram address 0x18:
-![Find max result](./vcd/find_max_in_array_out.png)
+![Find max result](./dir/find_max_in_array_out.png)
 
 
 

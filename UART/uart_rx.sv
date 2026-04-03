@@ -220,7 +220,7 @@ module uart_rx #(parameter DATA_WIDTH = 8, parameter TICKS_NUM = 16) (
             state <= IDLE;
         else
             state <= next_state;
-        `ifdef DEBUG
+        `ifdef DEBUG_RUN
             $strobe("DEBUG: [Rx_uart] rx_sync=%0b rx_din=%0b rx_out=%0b count_bits=%0d", rx_sync, rx_din, rx_out, count_bits);
         `endif
     end
