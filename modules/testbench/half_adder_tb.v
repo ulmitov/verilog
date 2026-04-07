@@ -28,7 +28,7 @@ module half_adder_tb;
 
     initial begin
         $dumpfile("vcd/adder_half_tb.vcd");
-        $dumpvars(0, half_adder_tb);
+        $dumpvars(0);
         $monitor("%d (a, b)=(%b, %b), sum,carry=(%b, %b), exp=(%b, %b)", $time, a, b, sum, carry, es, ec);
         `_APPLY_VALUES(0, 0);
         `_APPLY_VALUES(0, 1);

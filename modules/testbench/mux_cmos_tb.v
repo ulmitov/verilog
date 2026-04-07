@@ -12,13 +12,13 @@ module mux_cmos_tb;
 
     always @(*) begin
         #(`T_CLK+1) exp = s ? b : a;
-        if (out_c !== exp) $display("%0d：　ERROR: out_c=%0b, exp=%0b", $time, out_c, exp);
-        if (out_p !== exp) $display("%0d：　ERROR: out_p=%0b, exp=%0b", $time, out_p, exp);
+        if (out_c !== exp) $display("%0d: ERROR: out_c=%0b, exp=%0b", $time, out_c, exp);
+        if (out_p !== exp) $display("%0d: ERROR: out_p=%0b, exp=%0b", $time, out_p, exp);
     end
 
     initial begin
         $dumpfile("vcd/mux_cmos_tb.vcd");
-        $dumpvars(0, mux_cmos_tb);
+        $dumpvars(0);
         $monitor("%d: a=%0b, b=%0b, s=%0b, out_c=%0b, out_p=%0b, exp=%0b", $time, a, b, s, out_c, out_p, exp);
 
         #`T_CLK a=0; b=0; s=0;

@@ -20,7 +20,7 @@ module decoder_tb;
 
     initial begin
         $dumpfile(`VCD);
-        $dumpvars(0, decoder_tb);
+        $dumpvars(0);
         $monitor("%4d: en=%0d, din=%4b, out=%16b", $time, en, din, out);
         $display("Test stuck at 1");
         en = 0;

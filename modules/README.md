@@ -9,11 +9,13 @@
 ## How to run:
 ```
 # lint example:
-make lint TOP=fifo.v
+make lint ARG=fifo.v
 
 # run testbench with iverilog:
-make vvp TOP=fifo
+make fifo
+# or
+make vvp ARG=fifo
 
 # run testbench with verilator:
-make ver TOP=fifo
+make ver ARG=fifo
 ```

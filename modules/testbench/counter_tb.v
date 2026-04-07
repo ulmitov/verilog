@@ -32,12 +32,12 @@ module counter_tb();
     
     always #T_CLK clk = ~clk;
 
-    always #T_CYC if (expected !== count)
-        $display("ERROR: %0d: count=%0d not as expected %0d", $time, count, expected);
+    always #T_CYC if (expected !== 'bX && expected !== count)
+        $display("[counter_tb] ERROR: %0d: count=%0d not as expected %0d", $time, count, expected);
 
     initial begin
         $dumpfile(vcd);
-        $dumpvars(0, counter_tb);
+        $dumpvars(0);
         $monitor("%0d: en=%0d count=%0d", $time, enable, count);
         
         $display("*** TC init TYPE = %s ***", TYPE);

@@ -6,8 +6,8 @@ import uvm_pkg::*;
 
 
 /* Base class with all kinds of sequences */
-class sequences extends uvm_sequence#(transaction);
-    `uvm_object_utils(sequences)
+class base_sequence extends uvm_sequence#(transaction);
+    `uvm_object_utils(base_sequence)
 
     transaction req;
     int num_to_full;
@@ -31,10 +31,11 @@ class sequences extends uvm_sequence#(transaction);
                 $sformatf("--- STARTING TRANSACTIONS: %s (%0d total) ---", txt, num));
     endfunction
     virtual task seq_pull(input int repeats = 1);
-        // uvm_do macros are not recommended to use
         header("pull only", repeats);
-        repeat(repeats)
-            `uvm_do_with(req, { push == 0; pull == 1; })
+        repeat(repeats) begin
+            if (!req.randomize() with { push == 0; pull == 1; })
+                uvm_report_error(get_name(), "Failed to randomize");
+        end
     endtask
 
     virtual task seq_push_00(input int repeats = 1);
@@ -81,8 +82,10 @@ class sequences extends uvm_sequence#(transaction);
 
     virtual task seq_random(input int repeats = 1);
         header("fully random", repeats);
-        repeat(repeats)
-            `uvm_do_with(req, { push dist { 1 := 7, 0 := 3 }; })
+        repeat(repeats) begin
+            if (!req.randomize() with { push dist { 1 := 7, 0 := 3 }; })
+                uvm_report_error(get_name(), "Failed to randomize");
+        end
     endtask
 
     virtual task seq_parallel(input int repeats = 1);
@@ -90,7 +93,8 @@ class sequences extends uvm_sequence#(transaction);
         header("push+pull in parallel", repeats);
         repeat(repeats) begin
             data = ~data;
-            `uvm_do_with(req, { req.push == 1; req.pull == 1; req.din == data; })
+            if (!req.randomize() with { req.push == 1; req.pull == 1; req.din == data; })
+                uvm_report_error(get_name(), "Failed to randomize");
         end
     endtask
 endclass
@@ -122,7 +126,7 @@ class seq_lib extends uvm_sequence_library #(transaction);
 endclass
 
 
-class sequence_rand extends sequences;
+class sequence_rand extends base_sequence;
     `uvm_object_utils(sequence_rand)
     function new(string name = "SEQ_random");
         super.new(name);
@@ -133,7 +137,7 @@ class sequence_rand extends sequences;
 endclass
 
 
-class sequence_parallel extends sequences;
+class sequence_parallel extends base_sequence;
     `uvm_object_utils(sequence_parallel)
     function new(string name = "SEQpar");
         super.new(name);
@@ -150,7 +154,7 @@ class sequence_parallel extends sequences;
 endclass
 
 
-class sequence_consecutives_while_empty extends sequences;
+class sequence_consecutives_while_empty extends base_sequence;
     `uvm_object_utils(sequence_consecutives_while_empty)
     function new(string name = "SEQ_consecutives");
         super.new(name);
@@ -166,7 +170,7 @@ class sequence_consecutives_while_empty extends sequences;
 endclass
 
 
-class sequence_consecutives_while_full extends sequences;
+class sequence_consecutives_while_full extends base_sequence;
     `uvm_object_utils(sequence_consecutives_while_full)
     function new(string name = "SEQ_consecutives");
         super.new(name);
@@ -182,7 +186,7 @@ class sequence_consecutives_while_full extends sequences;
 endclass
 
 
-class sequence_push_pull_00 extends sequences;
+class sequence_push_pull_00 extends base_sequence;
     `uvm_object_utils(sequence_push_pull_00)
     function new(string name = "SEQ_00");
         super.new(name);
@@ -198,7 +202,7 @@ class sequence_push_pull_00 extends sequences;
 endclass
 
 
-class sequence_push_pull_ff extends sequences;
+class sequence_push_pull_ff extends base_sequence;
     `uvm_object_utils(sequence_push_pull_ff)
     function new(string name = "SEQ_FF");
         super.new(name);
@@ -214,7 +218,7 @@ class sequence_push_pull_ff extends sequences;
 endclass
 
 
-class sequence_push_pull_FF_00 extends sequences;
+class sequence_push_pull_FF_00 extends base_sequence;
     `uvm_object_utils(sequence_push_pull_FF_00)
     function new(string name = "SEQ_FF_00");
         super.new(name);

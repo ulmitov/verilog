@@ -29,7 +29,7 @@ module sequence_tb();
 
     initial begin
         $dumpfile(`VCD);
-        $dumpvars();
+        $dumpvars(0);
         $monitor("%0d: fn=%0d, d=%0d, out=%0d, result=%0b", $time, fn, data, OUT, result);
 
         clk = 1'b0;
@@ -44,7 +44,7 @@ module sequence_tb();
         for (i = 32; i > 0; i = i - 1)
             #T_CYC data = stimulus[i - 1];
         #T_CYC if (result != expected)
-            $display("%0d: TEST %0d FAILED: got %0b instead of %0b", $time, tc_counter, result, expected);
+            $display("%0d: TEST %0d ERROR: got %0b instead of %0b", $time, tc_counter, result, expected);
         else
             $display("%0d: TEST %0d PASSED", $time, tc_counter);
 
@@ -58,7 +58,7 @@ module sequence_tb();
         for (i = 32; i > 0; i = i - 1)
             #T_CYC data = stimulus[i - 1];
         #T_CYC if (result != expected)
-            $display("%0d: TEST %0d FAILED: got %0b instead of %0b", $time, tc_counter, result, expected);
+            $display("%0d: TEST %0d ERROR: got %0b instead of %0b", $time, tc_counter, result, expected);
         else
             $display("%0d: TEST %0d PASSED", $time, tc_counter);
 
@@ -72,7 +72,7 @@ module sequence_tb();
         for (i = 32; i > 0; i = i - 1)
             #T_CYC data = stimulus[i - 1];
         #T_CYC if (result != expected)
-            $display("%0d: TEST %0d FAILED: got %0b instead of %0b", $time, tc_counter, result, expected);
+            $display("%0d: TEST %0d ERROR: got %0b instead of %0b", $time, tc_counter, result, expected);
         else
             $display("%0d: TEST %0d PASSED", $time, tc_counter);
 
@@ -87,7 +87,7 @@ module sequence_tb();
         for (i = 32; i > 0; i = i - 1)
             #T_CYC data = stimulus[i - 1];
         #T_CYC if (result != expected)
-            $display("%0d: TEST NON-OVERLAPPING %0d FAILED: got %0b instead of %0b", $time, tc_counter, result, expected);
+            $display("%0d: TEST NON-OVERLAPPING %0d ERROR: got %0b instead of %0b", $time, tc_counter, result, expected);
         else
             $display("%0d: TEST NON-OVERLAPPING %0d PASSED", $time, tc_counter);
 
@@ -101,7 +101,7 @@ module sequence_tb();
         for (i = 32; i > 0; i = i - 1)
             #T_CYC data = stimulus[i - 1];
         #T_CYC if (result != expected)
-            $display("%0d: TEST NON-OVERLAPPING %0d FAILED: got %0b instead of %0b", $time, tc_counter, result, expected);
+            $display("%0d: TEST NON-OVERLAPPING %0d ERROR: got %0b instead of %0b", $time, tc_counter, result, expected);
         else
             $display("%0d: TEST NON-OVERLAPPING %0d PASSED", $time, tc_counter);
         $display("End of testbench: %s", `VCD);

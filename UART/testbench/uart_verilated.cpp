@@ -22,7 +22,7 @@ UartVerilated::~UartVerilated() {
 }
 
 void UartVerilated::wait_ticks(int repeat) {
-    for (int i = 0; i < repeat; i++) tick();
+    while(repeat--) tick();
 }
 
 void UartVerilated::tick() {

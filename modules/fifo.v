@@ -25,11 +25,11 @@ yosys -p "read_verilog ${f}.v; hierarchy -check -top $m; proc; opt; simplemap; c
 */
 `include "consts.vh"
 
-//`define COUNTER_LOGIC
+//`define COUNTER_LOGIC     // if this logic is required then uncomment the define line
 
 
 module fifo #(
-    parameter ADDR_WIDTH = 3,           // how much addresses, so depth is 2**ADDR_WIDTH
+    parameter ADDR_WIDTH = 3,           // address bit width, so depth is 2**ADDR_WIDTH
     parameter DATA_WIDTH = 8,
     parameter name="FIFO"
 ) (
@@ -42,26 +42,19 @@ module fifo #(
     output wire [DATA_WIDTH-1:0] dout,  // pulls a value from fifo
     output wire empty,
     output wire full
-`ifdef COUNTER_LOGIC
-    ,output reg [ADDR_WIDTH-1:0] count  // items counter. if this logic is required then uncomment the define line
-`endif
+//`ifdef COUNTER_LOGIC
+    ,output reg [ADDR_WIDTH-1:0] count  // items counter
+//`endif
 );
     reg [DATA_WIDTH-1:0] mem [2**ADDR_WIDTH-1:0];
     reg [ADDR_WIDTH-1:0] w_ptr, r_ptr;
     reg [ADDR_WIDTH-1:0] next_w, next_r;
     wire ren, wen;
 
-    task print;
-        integer i;
-        begin
-            $strobe("Previous %s state:", name);
-            for (i = 0; i < 2**ADDR_WIDTH; i = i + 1)
-                $strobe("mem[%0d] = 0x%h", i, mem[i]);
-        end
-    endtask
-
-    // write op
     assign wen = push & ~full;
+    assign ren = pull & ~empty;
+
+    /* WRITE */
     always @(posedge clk) begin
         if (res)
             next_w <= {{(ADDR_WIDTH-1){1'b0}}, 1'b1};
@@ -78,14 +71,13 @@ module fifo #(
         if (~res & wen) mem[w_ptr] <= #`T_DELAY_FF din;
         `ifdef DEBUG_RUN
             if (push)
-                $display("%s DEBUG: PUSH:  w_ptr=%0d  next_w=%0d  din=%0h  full=%0b", name, w_ptr, next_w, din, full);
+                $display("DEBUG: %s PUSH:  w_ptr=%0d  next_w=%0d  din=%0h  full=%0b", name, w_ptr, next_w, din, full);
         `endif
     end
 
-    // read op
+    /* READ */
     assign #`T_DELAY_PD dout = mem[r_ptr];      // for now always setting current mem value even if x
-    assign ren = pull & ~empty;
-
+    
     always @(posedge clk) begin
         if (res)
             next_r <= {{(ADDR_WIDTH-1){1'b0}}, 1'b1};
@@ -98,18 +90,18 @@ module fifo #(
         else if (ren & en)
             r_ptr <= #`T_DELAY_FF next_r;
         `ifdef DEBUG_RUN
-            if (pull & ~empty)
-                $display("%s DEBUG: PULL:  r_ptr=%0d  next_r=%0d  dout=%0h  empty=%0b", name, r_ptr, next_r, dout, empty);
-                //print();
+            if (ren)
+                $display("DEBUG: %s PULL:  r_ptr=%0d  next_r=%0d  dout=%0h  empty=%0b", name, r_ptr, next_r, dout, empty);
+                //print_mem();
         `endif
     end
 
     `ifndef COUNTER_LOGIC
         reg pushed;
-        //wire ptmet;
-        //assign ptmet = &(r_ptr ~^ next_w);              // pointers met
-        assign full  = (&(r_ptr ~^ w_ptr) | ~en) & pushed;     // if pointers met and there was a push means we are full
-        assign empty = &(r_ptr ~^ w_ptr) & ~pushed;     // if pointers met but there was no push then we are empty
+        wire ptmet;
+        assign ptmet = &(r_ptr ~^ w_ptr);              // pointers met
+        assign empty = ptmet & ~pushed;     // if pointers met but there was no push then we are empty
+        assign full  = (ptmet | ~en) & pushed;     // if pointers met and there was a push means we are full
 
         always @(posedge clk) begin
             if (res)
@@ -122,16 +114,17 @@ module fifo #(
     `else
         reg [ADDR_WIDTH-1:0] count_add;
 
-        // if only one cell empty left then sig raised
-        assign full  = &count[ADDR_WIDTH-1:1] & ~count[0];
         assign empty = ~|count;
+        assign full  = (&count & en) | (~en & ~empty);
+        //assign full  = &count[ADDR_WIDTH-1:1] & ~count[0];  // if only one cell empty left then sig raised
 
+        // 4to1 mux
         always @(*) begin
-            // 4to1 mux
             casez ({pull, push, empty, full})
                 4'b100?: count_add = -1;
                 4'b01?0: count_add = 1;
-                default: count_add = 0; // if pull and push are set then also no change
+                //4'b1101: count_add = 0;
+                default: count_add = 0; // if pull and push both set then no change
             endcase
         end
 
@@ -142,4 +135,13 @@ module fifo #(
                 count <= count + count_add;
         end
     `endif
+
+    task print_mem;
+        integer i;
+        begin
+            $strobe("Previous %s state:", name);
+            for (i = 0; i < 2**ADDR_WIDTH; i = i + 1)
+                $strobe("mem[%0d] = 0x%h", i, mem[i]);
+        end
+    endtask
 endmodule

@@ -32,7 +32,7 @@ module priority_enc_tb;
 
     initial begin
         $dumpfile("vcd/priority_enc_tb.vcd");
-        $dumpvars(0, priority_enc_tb);
+        $dumpvars(0);
         $monitor("%4d: din=%b, out=%b, valid=%b", $time, din, out, valid);
 
         for (i = 0; i < 2**8 ; i = i + 1) #`T_CLK din = i;

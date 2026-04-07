@@ -29,16 +29,15 @@ module shift_reg #(parameter N = 4) (
                     darr[i] = load[i];
                 else begin
                     // mux on inputs
-                    if (en)
-                        // each FF input is the output of the preceding FF
-                        darr[i] = dout[i+1];
-                    else
-                        // each FF input is the output of current FF
-                        darr[i] = dout[i];
+                    if (en) begin
+                        if (i == N-1)
+                            darr[i] = din;          // MSB FF input is din
+                        else
+                            darr[i] = dout[i+1];    // each FF input is the output of the preceding FF
+                    end else
+                        darr[i] = dout[i];          // each FF input is the output of current FF
                 end
             end
-            // MSB FF input to be din
-            if (~load_en & en) darr[N-1] = din;
         end
         genvar k;
         generate

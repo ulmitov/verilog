@@ -1,8 +1,6 @@
 #include <stdint.h>
-#include <stdbool.h>
 
-//#define LOGS_ENABLE 1
-#ifdef LOGS_ENABLE
+#ifdef DEBUG_MODE
 #include <stdio.h>
 #endif
 
@@ -46,8 +44,8 @@ class UartDriver {
         MASK_FIFO_EN    = 1 << UART_FCR_FIFOEN,
     };
     public:
-        short int freq_divisor;
-        short int ticks_per_word;
+        unsigned short freq_divisor;
+        unsigned short ticks_per_word;
 
         /**
         * constructor
@@ -78,9 +76,9 @@ class UartDriver {
         /**
         * set fifo mode to enable or disable
         *
-        * @param enable true/false
+        * @param enable 1 or 0
         */
-        void set_fifo_mode(bool enable);
+        void set_fifo_mode(short enable);
 
         /**
         * set baud rate and uart settings (LCR)
@@ -88,16 +86,16 @@ class UartDriver {
         * @param baud baud rate
         * @param stop_bits stop bits value according to spec
         * @param parity parity bits value according to spec
-        * @param word_len word length value according to spec (default is 8 bits)
+        * @param word_len word length value according to spec, default is 3 (8 bits)
         */
-        void set_baud_rate(int baud, short int stop_bits, short int parity, short int word_len = 3);
+        void set_baud_rate(int baud, unsigned char stop_bits, unsigned char parity, unsigned char word_len = 3);
 
         /**
         * check if uart rx fifo is empty
         *
         * @return 1: if empty; 0: otherwise
         */
-        bool rx_fifo_empty();
+        unsigned char rx_fifo_empty();
 
         /**
         * check if uart tx fifo is full.
@@ -106,14 +104,14 @@ class UartDriver {
         *
         * @return 1: if full; 0: otherwise
         */
-        bool tx_fifo_full();
+        unsigned char tx_fifo_full();
 
         /**
         * check if uart tx fifo is empty
         *
         * @return 1: if full; 0: otherwise
         */
-        bool tx_fifo_empty();
+        unsigned char tx_fifo_empty();
 
         /**
         * transmit a byte with tx fifo status polling
@@ -121,14 +119,14 @@ class UartDriver {
         * @param byte data byte to be transmitted
         * @param timeout how much clock ticks to attempt to send
         */
-        void tx_byte(uint8_t byte, short int timeout = 1000);
+        void tx_byte(uint8_t byte, unsigned short timeout = 1000);
 
         /**
         * raw receive a byte, without polling
         *
         * @return -1 if rx fifo empty; byte data otherwise
         */
-        int rx_byte();
+        char rx_byte();
 
         /**
         * receive a string, with polling
@@ -136,7 +134,7 @@ class UartDriver {
         * @param txt preallocated string array pointer
         * @param length string length
         */
-        void recv_str(char* txt, short int length);
+        void recv_str(char *txt, unsigned short length);
 
         /**
         * receive a char, with polling
@@ -144,7 +142,7 @@ class UartDriver {
         * @param timeout how much clock ticks to wait for char
         * @return null if no data received; char otherwise
         */
-        char recv_ch(short int timeout = 1000);
+        char recv_ch(unsigned short timeout = 1000);
 
         /**
         * send (print) a char via uart
@@ -160,12 +158,3 @@ class UartDriver {
         */
         void send_str(const char *str);
 };
-/*
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#ifdef __cplusplus
-}
-#endif
-*/

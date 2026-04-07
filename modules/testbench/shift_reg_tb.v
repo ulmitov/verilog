@@ -47,7 +47,7 @@ module shift_reg_tb;
                 if (out_serial === exp_out[0])
                     $display("%0t: OK: out_serial is %0b", $time, out_serial);
                 else begin
-                    $display("%0t: ERROR: out_serial %0b is not as expected %0b on iteration %0d", $time, out_serial, exp_out[0], j);
+                    $display("%0t [shift_reg_tb] ERROR: out_serial %0b is not as expected %0b on iteration %0d", $time, out_serial, exp_out[0], j);
                     err = err + 1;
                 end
                 in = in >> 1;
@@ -71,7 +71,7 @@ module shift_reg_tb;
                 if (out_serial === exp_out[0])
                     $display("%0t: OK: out_serial is %0b", $time, out_serial);
                 else begin
-                    $display("%0t: ERROR: out_serial %0b is not as expected %0b on iteration %0d", $time, out_serial, exp_out[0], j);
+                    $display("%0t [shift_reg_tb] ERROR: out_serial %0b is not as expected %0b on iteration %0d", $time, out_serial, exp_out[0], j);
                     err = err + 1;
                 end
                 @(negedge clk);
@@ -93,7 +93,7 @@ module shift_reg_tb;
                 if (out_cyclic === exp_out[0])
                     $display("%0t: OK: out_cyclic is %0b", $time, out_cyclic);
                 else begin
-                    $display("%0t: ERROR: out_cyclic %0b is not as expected %0b on iteration %0d", $time, out_cyclic, exp_out[0], j);
+                    $display("%0t [shift_reg_tb] ERROR: out_cyclic %0b is not as expected %0b on iteration %0d", $time, out_cyclic, exp_out[0], j);
                     err = err + 1;
                 end
                 @(negedge clk);
@@ -103,7 +103,7 @@ module shift_reg_tb;
     
     initial begin
         $dumpfile(`VCD);
-        $dumpvars;
+        $dumpvars(0);
         $monitor("%0t INFO: load_en=%0b  en_serial=%0b  en_cyclic=%0b", $time, load_en, en_serial, en_cyclic);
         `ifdef GATE_FLOW
             $display("STAR TEST: GATE FLOW RESET");
@@ -153,9 +153,9 @@ module shift_reg_tb;
         end
 
         @(posedge clk) if (err)
-            $display("RESULT: TESTS FAILED: %0d errors occured", err);
+            $display("[shift_reg_tb] RESULT: TESTS FAILED: %0d errors occured", err);
         else
-            $display("RESULT: TESTS PASSED");
+            $display("[shift_reg_tb] RESULT: TESTS PASSED");
         $display("End of testbench: %s", `VCD);
         $finish;
     end

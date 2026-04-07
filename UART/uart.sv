@@ -100,7 +100,7 @@ module uart #(
     assign fifo_en = fcreg[`UART_FCR_FIFOEN];
     assign res_frx = ~res_n | (fifo_en & fcreg[`UART_FCR_RXCLR]);
     assign res_ftx = ~res_n | (fifo_en & fcreg[`UART_FCR_TXCLR]);
-    // Storing fifo out, since it changes after pull
-    always_ff @(posedge clk) if (tx_ready) tx_data <= tx_fifo_out;
-    always_ff @(posedge clk) if (rd_uart) rd_data <= rx_fifo_out;
+    // buffer fifo out, since it will change after pull
+    always_latch if (tx_ready) tx_data = tx_fifo_out;
+    always_latch if (rd_uart) rd_data = rx_fifo_out;
 endmodule

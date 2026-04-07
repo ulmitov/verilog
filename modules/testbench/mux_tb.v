@@ -1,5 +1,5 @@
 `timescale 1ns / 1ns
-`define T_CLK 10       // not real clock, only test delays
+`define TDELAY 10
 
 
 module mux_tb;
@@ -13,15 +13,18 @@ module mux_tb;
 
     initial begin
         $dumpfile("vcd/mux_tb.vcd");
-        $dumpvars(0, mux_tb);
-        $monitor("%d: din=%16b, sel=%d, out=%d, exp=%d", $time, din, sel, out, exp);
+        $dumpvars(0);
+        $monitor("%d: din=%16b  sel=%0b  out=%0b  exp=%0b", $time, din, sel, out, exp);
 
-        #`T_CLK sel = 0; din = 0; exp = 0;
+        #`TDELAY sel = 0; din = 0; exp = 0;
+        #`TDELAY if (out != exp) $display("ERROR: mux out %0b is not as expected %0b", out, exp);
         for (i = 0; i < 16; i = i + 1) begin
-            #`T_CLK sel = i; exp = 1; din = 2 ** i; 
-            #`T_CLK sel = i; exp = 0; din = 'hFFFF - 2 ** i;
+            sel = i; din = 2 ** i; exp = din[i];
+            #`TDELAY if (out != exp) $display("ERROR: mux out %0b with sel %0b is not as expected %0b", out, sel, exp);
+            sel = i; din = 'hFFFF - 2 ** i; exp = din[i];
+            #`TDELAY if (out != exp) $display("ERROR: mux out %0b with sel %0b is not as expected %0b", out, sel, exp);
         end
         $display("End of mux testbench");
-        #`T_CLK $finish;
+        $finish;
     end
 endmodule

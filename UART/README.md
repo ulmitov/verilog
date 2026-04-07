@@ -15,28 +15,26 @@ Spec references:
 - https://www.ti.com/lit/ds/symlink/tl16c550c.pdf
 
 
+## Run C++ testbench:
+```
+make uartcpp
+```
+
+## Run Verilog testbenches:
+```
+make baud_tb
+make uart_rx_tb
+make uart_tx_tb
+make uart_tb
+make uart_top_tb
+```
+
 
 ## Block diagram:
 The modem features are not implemented for now.
 
 ![arch.png](./dir/arch.png)
 
-
-
-## Run C++ testbench:
-```
-usrc="uart_top.sv uart.sv clock_divider.sv uart_tx.sv uart_rx.sv ../modules/fifo.v ../modules/shift_reg.v"
-
-verilator -DCONST_DELAYS_OFF -I../modules/ -CFLAGS "-I../driver/"  -Wno-lint --pins-inout-enables --trace-vcd --timing --top uart_top --cc --public-flat-rw --coverage --build --exe testbench/uart_tb.cpp driver/uart_driver.cpp testbench/uart_verilated.cpp ${usrc}
-
-# can add -CFLAGS "-DLOGS_ENABLE" for debug logging messages
-
-./obj_dir/Vuart_top
-```
-
-
-## Run Verilog testbenches:
-According to the comment blocks on top of each test in testbench/testbench.sv
 
 
 ## Simulation results:

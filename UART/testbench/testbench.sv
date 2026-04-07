@@ -12,6 +12,7 @@ module baud_tb;
     logic clk;
     logic res_n;
     logic clk_out2, clk_out3, clk_out4, clk_out5, clk_out6, clk_out7, clk_out8, clk_out9, clk_out10;
+    integer cnt2 = 0, cnt3 = 0, cnt4 = 0, cnt5 = 0, cnt6 = 0, cnt7 = 0, cnt8 = 0, cnt9 = 0, cnt10 = 0;
 
     clock_divider uut2 (.clk_in(clk), .res_n(res_n), .div(16'd2), .clk_out(clk_out2));
     clock_divider uut3 (.clk_in(clk), .res_n(res_n), .div(16'd3), .clk_out(clk_out3));
@@ -24,15 +25,37 @@ module baud_tb;
     clock_divider uut10 (.clk_in(clk), .res_n(res_n), .div(16'd10), .clk_out(clk_out10));
 
     always #`TCLK clk = ~clk;
+    always @(posedge clk_out2) cnt2 = cnt2 + 1;
+    always @(posedge clk_out3) cnt3 = cnt3 + 1;
+    always @(posedge clk_out4) cnt4 = cnt4 + 1;
+    always @(posedge clk_out5) cnt5 = cnt5 + 1;
+    always @(posedge clk_out6) cnt6 = cnt6 + 1;
+    always @(posedge clk_out7) cnt7 = cnt7 + 1;
+    always @(posedge clk_out8) cnt8 = cnt8 + 1;
+    always @(posedge clk_out9) cnt9 = cnt9 + 1;
+    always @(posedge clk_out10) cnt10 = cnt10 + 1;
+
     initial begin
         $dumpfile("dir/baud_tb.vcd");
-        $dumpvars(0, baud_tb);
+        $dumpvars(0);
         clk = 1'b1;
         res_n = 1'b1;
         @(posedge clk) res_n = 1'b0;
         @(posedge clk);
         @(posedge clk) res_n = 1'b1;
-        #5000 $finish;
+        repeat(24) @(posedge clk);
+        // each clock initial state is 1, so adding 1 to counters
+        if (cnt2 != 13) $display("*** [baud_tb] ERROR: cnt2 %0d is not 13", cnt2);
+        if (cnt3 != 9) $display("*** [baud_tb] ERROR: cnt3 %0d is not 9", cnt3);
+        if (cnt4 != 7) $display("*** [baud_tb] ERROR: cnt4 %0d is not 7", cnt4);
+        if (cnt5 != 5) $display("*** [baud_tb] ERROR: cnt5 %0d is not 5", cnt5);
+        if (cnt6 != 5) $display("*** [baud_tb] ERROR: cnt6 %0d is not 5", cnt6);
+        if (cnt7 != 4) $display("*** [baud_tb] ERROR: cnt7 %0d is not 4", cnt7);
+        if (cnt8 != 4) $display("*** [baud_tb] ERROR: cnt8 %0d is not 4", cnt8);
+        if (cnt9 != 3) $display("*** [baud_tb] ERROR: cnt9 %0d is not 3", cnt9);
+        if (cnt10 != 3) $display("*** [baud_tb] ERROR: cnt10 %0d is not 3", cnt10);
+        $display("End of testbench: baud_tb.vcd");
+        $finish;
     end
 endmodule
 
@@ -62,7 +85,7 @@ module uart_rx_tb;
         .res_n(res_n),
         .rx_baud(b_tick),
         .rx_din(din),
-        .lcreg(8'b00011111),
+        .lcreg(8'b00001111),
         .rx_out(uart_rx_out),
         .rx_ready(valid)
     );
@@ -84,6 +107,10 @@ module uart_rx_tb;
             // stop bits
             #baud_wait din = 1'b1;
             #baud_wait din = 1'b1;
+            if (uart_rx_out != {err_fr, err_par, tx_data})
+                $display("*** [uart_rx_tb] ERROR: uart_rx_out %0h is not as expected %0h", uart_rx_out, {err_fr, err_par, tx_data});
+            if (^uart_rx_out[8:0])
+                $display("*** [uart_rx_tb] ERROR: parity bit %0b is not correct", err_par);
             // some wait
             #baud_wait;
             #baud_wait;
@@ -103,6 +130,7 @@ module uart_rx_tb;
         driver(8'hB2);
         driver(8'hAA);
         driver(8'h95);
+        $display("End of testbench: uart_rx_tb.vcd");
         $finish;
     end
 endmodule
@@ -122,8 +150,19 @@ module uart_tx_tb;
     logic b_tick;
     logic [7:0] din;
     localparam DIV = 16'd4;
+    logic [11:0] tsr_data;
+    logic sreg_clk;
+    logic [3:0] cnt;
 
     clock_divider tx_baud (.clk_in(clk), .res_n(res_n), .div(DIV), .clk_out(b_tick));
+
+    shift_reg #(.N(12)) tb_thr (
+        .clk(sreg_clk),
+        .res_n(res_n),
+        .en(en),
+        .din(uart_tx_out),
+        .dout(tsr_data)
+    );
 
     uart_tx dut (
         .clk(clk),
@@ -138,6 +177,16 @@ module uart_tx_tb;
     );
 
     always #`TCLK clk  = ~clk;
+
+    assign sreg_clk = cnt == 7;
+
+    always_ff @(posedge b_tick or negedge res_n) begin
+        if (~res_n | cnt == 15)
+            cnt <= 0;
+        else
+            cnt <= cnt + 1;
+    end
+
     initial begin
         $dumpfile("dir/uart_tx_tb.vcd");
         $dumpvars(0);
@@ -149,13 +198,22 @@ module uart_tx_tb;
         res_n = 1'b1;
         //@(posedge clk) res_n = 1'b0;
         repeat(16*DIV) @(posedge clk);
-        din = 8'hB2;
+        din = 8'hC2;
         en = 1'b1;
-        repeat(2) @(posedge clk);
         @(posedge valid);
-        din = 8'hAA;
         @(posedge valid);
+        if (tsr_data !== 'b110110000100)
+            $display("*** [uart_tx_tb] ERROR: tx dout %0b is not as expected", tsr_data);
+        else
+            $display("PASSED: tx dout %0h is correct!", tsr_data);
+        din = 8'hA9;
+        @(posedge valid);
+        if (tsr_data !== 'b111101010010)
+            $display("*** [uart_tx_tb] ERROR: tx dout %0b is not as expected", tsr_data);
+        else 
+            $display("PASSED: tx dout %0h is correct!", tsr_data);
         repeat(48*DIV) @(posedge clk);
+        $display("End of testbench: uart_tx_tb.vcd");
         $finish;
     end
 endmodule
@@ -206,6 +264,16 @@ module uart_tb;
         .lcreg(lcreg),
         .fcreg(8'b0000_0001)
     );
+
+    task expect_result;
+        input integer exp_val;
+        begin
+            wait(rx_empty == 1'b0);
+            wait(rx_empty == 1'b1);
+            if (rd_data !== exp_val) $display("*** [uart_tb] ERROR: rd_data %0h is not %0h", rd_data, exp_val);
+            else $display("PASSED: rd_data 0x%0h is correct!", rd_data);
+        end
+    endtask
     
     always #`TCLK clk = ~clk;
     assign rd_uart = ~rx_empty;
@@ -213,19 +281,19 @@ module uart_tb;
     initial begin
         $dumpfile("dir/UART_VTB.vcd");
         $dumpvars();
-        $monitor("%t [TB INFO] wr_data=%0h rd_data=%0h", $time, wr_data, rd_data);
+        $monitor("%t [uart_tb] INFO: wr_data=%0h  rd_data=%0h  rx_ready=%0b", $time, wr_data, rd_data, rx_ready);
         clk = 0;
         res_n = 1;
         divisor = 430; // 100mhz / 16*(9600*12/8)
-        byte_wait = divisor * 16 * 12;
+        byte_wait = divisor * 16 * 10;
         @(posedge clk) res_n = 0;
         @(posedge clk) res_n = 1;
         lcreg = 8'b0001_1111;  // even parity
         @(negedge clk) wr_uart = 1;
         wr_data = 'hAB;
         @(negedge clk) wr_uart = 0;
-        wait(rd_data == 'hAB);
-
+        expect_result(wr_data);
+        
         $display("Pausing before next tx");
         repeat(byte_wait) @(negedge clk);
         $display("Proceeding");
@@ -238,8 +306,14 @@ module uart_tb;
         @(negedge clk) wr_data = 'hB2;
         @(negedge clk) wr_uart = 0;
 
-        repeat(byte_wait * 5) @(posedge clk);
-        $display("UART TB FINISH");
+        //repeat(byte_wait * 5) @(posedge clk);
+        expect_result('hDA);
+        expect_result('hC2);
+        expect_result('hB9);
+        expect_result('hB2);
+
+        repeat(byte_wait) @(posedge clk);
+        $display("End of testbench: UART_VTB.vcd");
         $finish;
     end
 endmodule
@@ -273,21 +347,33 @@ module uart_top_tb;
 
     always #`TCLK clk = ~clk;
     initial begin
-        $dumpfile("uart_top_tb.vcd");
+        $dumpfile("dir/uart_top_tb.vcd");
         $dumpvars();
-        $monitor("%t BUS=0x%0h", $time, dutout);
+        $monitor("%t: addr=%0h  BUS=0x%0h", $time, addr, dutout);
         @(posedge clk) res = 0;
         @(negedge clk);
+
+        // input to LCR:
         ddis = 1;
         wr = 1;
         addr = 3;   // lcr
-        dutin = 128;
-        @(negedge clk) addr = 0; dutin = 64; // dll
-        @(negedge clk) ddis = 0;
+        dutin = 'h80;
+        @(negedge clk) if (dutout != 'h80)
+            $display("*** [uart_top_tb] ERROR: uart_top data_bus is not 0x80");
+        
+        // input to DLL:
+        addr = 0; dutin = 'h40;
+        @(negedge clk) if (dutout != 'h40)
+            $display("*** [uart_top_tb] ERROR: uart_top data_bus is not 0x80");
+    
+        // output LCR:
+        ddis = 0;
         wr = 0;
         rd = 1;
-        //@(posedge clk);
         addr = 3;
-        @(negedge clk) $finish;
+        @(negedge clk) if (dutout != 'h80)
+            $display("*** [uart_top_tb] ERROR: uart data_bus is not 0x80");
+        $display("End of testbench: uart_top_tb.vcd");
+        $finish;
     end
 endmodule

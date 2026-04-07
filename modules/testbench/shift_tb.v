@@ -40,7 +40,7 @@ module shift_tb;
 
     initial begin
         $dumpfile(`VCD);
-        $dumpvars(0, uut_r);
+        $dumpvars(0);
         $monitor("%4d: data=%8b, shifts=%0d (%3b), out=%8b", $time, data, shifts, shifts, out);
         $display("Delay time for %0d bit numbers is %0d ns", N, T_DELAY);
 

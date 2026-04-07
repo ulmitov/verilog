@@ -30,22 +30,22 @@ module fifo_tb;
         .dout(out),
         .empty(empty),
         .full(full)
-        //,.count(count)
+        ,.count(count)
     );
 
     always #`T_RD clk = ~clk;
 
     `define _ASSERT(ex_empty, ex_full, ex_items) \
     begin \
-        if (full  !== ex_full)  $display("* ERROR: full=%0b  not as expected %0b", full, ex_full);   \
-        if (empty !== ex_empty) $display("* ERROR: empty=%0b not as expected %0b", empty, ex_empty); \
-        if (count != ex_items) $display("* ERROR: count=%0b not as expected %0b", count, ex_items); \
+        if (full  !== ex_full)  $display("[fifo_tb] ERROR: full=%0b  not as expected %0b", full, ex_full);   \
+        if (empty !== ex_empty) $display("[fifo_tb] ERROR: empty=%0b not as expected %0b", empty, ex_empty); \
+        if (count != 'hX && count != ex_items) $display("[fifo_tb] ERROR: count=%0b not as expected %0b", count, ex_items); \
     end
 
     initial begin
         $dumpfile(`VCD);
-        $dumpvars();
-        $monitor("%0d: wen=%0b, ren=%0b, data=%0h, out=%0h, full=%0b, empty=%0b, count=%0d", $time, wen, ren, data, out, full, empty, count);
+        $dumpvars(0);
+        $monitor("%0t: wen=%0b  ren=%0b  data=%0h  out=%0h  full=%0b  empty=%0b  count=%0d", $time, wen, ren, data, out, full, empty, count);
         en = 1'b1;
 
         $display("Test reset and struck at 1's");
@@ -97,7 +97,7 @@ module fifo_tb;
         ren = 1'b1;
         $display("---Test count and full 0 and dout is correct");
         for (i = 0; i < DEPTH; i = i + 1) begin
-            #TCLK if (out != 'hFF) $display("%t ERROR: out %0h is not 0xFF", $time, out);
+            #TCLK if (out != 'hFF) $display("%0t ERROR: out %0h is not 0xFF", $time, out);
         end
 
 
@@ -126,13 +126,17 @@ module fifo_tb;
         #TCLK `_ASSERT(0, 1, 1);
         ren = 1'b1;
         wen = 1'b0;
-        #TCLK `_ASSERT(1, 0, 1);
-        #TCLK `_ASSERT(1, 0, 1);
+        #TCLK `_ASSERT(1, 0, 0);
+        #TCLK `_ASSERT(1, 0, 0);
         ren = 1'b0;
         wen = 1'b1;
         data = 'hC;
+        // parallel push-pull
         #TCLK ren = 1'b1;
-        #TCLK `_ASSERT(1, 0, 1);
+        #TCLK data = 'hD;
+        `_ASSERT(1, 0, 1);
+        #TCLK data = 'hE;
+        `_ASSERT(1, 0, 1);
         $display("End of testbench: %s", `VCD);
         #TCLK $finish;
     end

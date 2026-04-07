@@ -6,4 +6,4 @@
  - ![RISCV implementation](./RISCV_SingleCycle) with some assembly code to check functionality
  - ![modules](./modules) folder includes different verilog modules and their verilog testbenches
 
-Each folder has a Reamde
+Please navigate to each folder to view its project description Reamde

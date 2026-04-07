@@ -5,7 +5,7 @@
 import uvm_pkg::*;
 
 
-class test_base #(type REQ = sequences) extends uvm_test;
+class test_base #(type REQ = base_sequence) extends uvm_test;
     `uvm_component_utils(test_base)
 
     environment env;
