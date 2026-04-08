@@ -39,8 +39,7 @@ module riscv #(
     ) instruction_mem (
         .rclk(), .wclk(), .res(),  .wen(), .wr_data(),
         .req(1'b1),
-        .zero_ex(1'b1),
-        .blsize(OP_DMEM_WORD),
+        .blsize(op_enum_dmem_size'(OP_DMEM_WORD)),
         .ren(imem_req),
         .addr(pc),
         .rd_data(instruction)
@@ -99,15 +98,13 @@ module riscv #(
     );
 
 
-    memory #(
+    data_memory #(
         .DATA_WIDTH(XLEN),
         .DEPTH(MEM_DEPTH),
         .ADDR_WIDTH(32),
-        .MEM_FILE(""),
         .ENDIANESS(0)
     ) data_mem (
-        .rclk(),
-        .wclk(clk),
+        .clk(clk),
         .res(~res_n),
         .ren(1'b1),
         .wen(dmem_wr),

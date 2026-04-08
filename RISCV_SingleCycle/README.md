@@ -1,24 +1,24 @@
 # RISCV RV32I single cycle implementation
 
  - `asm` folder contains assembly programs and their hex code mem files
- - `vcd` folder contains simulation results of `tb_riscv.sv`
-
-
-## Architecture:
-![arch.png](./dir/arch.png)
+ - `dir` folder contains simulation results of `tb_riscv.sv`
 
 
 ## Run:
 ```
-src="tb_riscv.sv risc_pkg.sv riscv.sv fetch.sv decode.sv register_file.sv branch_control.sv control.sv alu.sv ../modules/memory.sv ../modules/adder.v ../modules/shift.v ../modules/mux.v"
+# iverilog:
+make risc_tb_arr;   # find max in array asm
+make risc_tb_bub;   # bubble sort asm
+make risc_tb_fib;   # fibonacci asm
 
-iverilog -Wall -g2012 -I ../modules/ -o vcd/tb_riscv.vvp -s tb_riscv ${src};
-vvp vcd/tb_riscv.vvp
+make risc;          # all testbenches
 
-# or:
-verilator -Wno-lint --trace-vcd --binary --timing -I../modules/ --top tb_riscv --cc ${src}
-./obj_dir/Vtb_riscv
+# verilator:
+make riscver;
 ```
+
+## Architecture:
+![arch.png](./dir/arch.png)
 
 
 ##  Testbench files:

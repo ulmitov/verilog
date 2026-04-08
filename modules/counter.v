@@ -11,26 +11,46 @@
 /*
     N-bit Up-Down counter with sync reset, enable bit, pre-load value
 
-f="counter"; m="counter_behavioral"
+f="counter"; m="counter"
 yosys -p "read_verilog ${f}.v; hierarchy -check -top $m; proc; opt; wreduce; clean; stat; write_verilog -noattr synth/${m}_synth.v; show -format svg -prefix synth/${m} ${m}; show ${m}"
 */
-module counter_behavioral #(parameter n = 3) (
+module counter #(parameter n = 4) (
     input clk,
     input res_n,
     input en,
     input count_up,
-    input load,
-    input [n-1:0] set,
-    output reg [n-1:0] count
+    input load_en,
+    input [n-1:0] load,
+    output wire [n-1:0] count
 );
-    always @(posedge clk) begin
-        if (!res_n)
-            count <= 0;
-        else if (load)
-            count <= set;
-        else if (en)
-            #`T_DELAY_FF count <= count + (count_up ? 1 : -1);
-    end
+    `ifdef GATE_FLOW_OFF
+        reg [n-1:0] C;
+        assign count = C;
+        always @(posedge clk) begin
+            if (!res_n)
+                C <= 0;
+            else if (load_en)
+                C <= load;
+            else if (en)
+                C <= #`T_DELAY_FF C + (count_up ? 1 : -1);
+        end
+    `else
+        wire [n-1:0] en_xor;
+        wire [n-1:0] din_and;
+        generate
+            genvar i;
+            for (i = 0; i < n; i = i + 1) begin: dff
+                if (i == 0) begin
+                    assign din_and[0] = en;
+                    assign en_xor[0] = load_en ? load[0] : en ^ count[0];
+                end else begin
+                    assign din_and[i] = din_and[i-1] & (count_up ^~ count[i-1]);
+                    assign en_xor[i] = load_en ? load[i] : din_and[i] ^ (count[i]);
+                end
+                ff_d dff_i(.clk(clk), .res_n(res_n), .en(en), .din(en_xor[i]), .Q(count[i]));
+            end
+        endgenerate
+    `endif
 endmodule
 
 
@@ -54,11 +74,12 @@ module counter_tff_async #(parameter n = 3, parameter count_up = 1) (
     wire [n-1:0] ff_clk;
     generate
         genvar i;
-        assign ff_clk[0] = clk;
-        ff_t ff_0(.clk(ff_clk[0]), .res_n(res_n), .T(en), .Q(count[0]));
-        for (i = 1; i < n; i = i + 1) begin
-            assign ff_clk[i] = count_up ? ~count[i-1] : count[i-1];
-            ff_t ff_i(.clk(ff_clk[i]), .res_n(res_n), .T(en), .Q(count[i]));
+        for (i = 0; i < n; i = i + 1) begin: tff
+            if (i == 0)
+                assign ff_clk[0] = clk;
+            else
+                assign ff_clk[i] = count_up ^ count[i-1];
+            ff_t tff_i(.clk(ff_clk[i]), .res_n(res_n), .T(en), .Q(count[i]));
         end
     endgenerate
 endmodule
@@ -80,11 +101,12 @@ module counter_tff_sync #(parameter n = 3) (
     wire [n-1:0] en_and;
     generate
         genvar i;
-        assign en_and[0] = en;
-        ff_t ff_0(.clk(clk), .res_n(res_n), .T(en), .Q(count[0]));
-        for (i = 1; i < n; i = i + 1) begin
-            assign en_and[i] = en_and[i-1] & (count_up ? count[i-1] : ~count[i-1]);
-            ff_t ff_i(.clk(clk), .res_n(res_n), .T(en_and[i]), .Q(count[i]));
+        for (i = 0; i < n; i = i + 1) begin: tff
+            if (i == 0)
+                assign en_and[0] = en;
+            else
+                assign en_and[i] = en_and[i-1] & (count_up ^~ count[i-1]);
+            ff_t tff_i(.clk(clk), .res_n(res_n), .T(en_and[i]), .Q(count[i]));
         end
     endgenerate
 endmodule
@@ -103,8 +125,8 @@ module counter_jkff #(parameter n = 3) (
     input count_up,
     output wire [n-1:0] count
 );
-    wire J, K;
     wire [n-1:0] j, k, d;
+    wire J, K;
 
     // Clear: J=0, K=1; hold: J=0, K=0; Clear has higher priority:
     assign J = en & res_n;
@@ -114,14 +136,14 @@ module counter_jkff #(parameter n = 3) (
     // each JK input is a product of two previous outputs (or values determined in previous circuit)
     generate
         genvar i;
-        for (i = 0; i < n; i = i + 1) begin
+        for (i = 0; i < n; i = i + 1) begin: jkff
             if (i == 0)
                 assign d[i] = en;
             else
-                assign d[i] = d[i-1] & (count_up ? count[i-1] : ~count[i-1]);
+                assign d[i] = d[i-1] & (count_up ^~ count[i-1]);
             assign j[i] = J != K ? J : d[i];
             assign k[i] = J != K ? K : d[i];
-            ff_jk ff ( .clk(clk), .J(j[i]), .K(k[i]), .Q(count[i]) );
+            ff_jk jkff_i ( .clk(clk), .J(j[i]), .K(k[i]), .Q(count[i]) );
         end
     endgenerate
 endmodule

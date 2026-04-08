@@ -12,7 +12,7 @@ module fetch (
     logic [31:0] next_pc;   // the real next pc that should be taken according to ALU or branch control
     logic req;
 
-    adder_full_n #(32) pc_adder (.X(imem_addr), .Y(32'h4), .Cin(1'b0), .sum(next_pc_alu), .carry());
+    adder #(32) pc_adder (.Nadd_sub(1'b0), .X(imem_addr), .Y(32'h4), .sum(next_pc_alu));
 
     assign req = imem_data != NOP_CMD || imem_data[6:0] == OPCODE_SYSTEM;
     assign next_pc = pc_mux ? pc_jump : next_pc_alu;

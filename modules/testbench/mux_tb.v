@@ -24,7 +24,7 @@ module mux_tb;
             sel = i; din = 'hFFFF - 2 ** i; exp = din[i];
             #`TDELAY if (out != exp) $display("ERROR: mux out %0b with sel %0b is not as expected %0b", out, sel, exp);
         end
-        $display("End of mux testbench");
+        $display("End testbench: vcd/mux_tb.vcd");
         $finish;
     end
 endmodule

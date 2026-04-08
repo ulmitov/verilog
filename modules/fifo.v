@@ -25,7 +25,7 @@ yosys -p "read_verilog ${f}.v; hierarchy -check -top $m; proc; opt; simplemap; c
 */
 `include "consts.vh"
 
-//`define COUNTER_LOGIC     // if this logic is required then uncomment the define line
+`define COUNTER_LOGIC     // if this logic is required then uncomment the define line
 
 
 module fifo #(
@@ -41,18 +41,21 @@ module fifo #(
     input wire [DATA_WIDTH-1:0] din,    // pushes a value into fifo
     output wire [DATA_WIDTH-1:0] dout,  // pulls a value from fifo
     output wire empty,
-    output wire full
+    output wire full,
+    output wire half_full
 //`ifdef COUNTER_LOGIC
-    ,output reg [ADDR_WIDTH-1:0] count  // items counter
+    ,output reg [ADDR_WIDTH:0] count  // items counter
 //`endif
 );
     reg [DATA_WIDTH-1:0] mem [2**ADDR_WIDTH-1:0];
     reg [ADDR_WIDTH-1:0] w_ptr, r_ptr;
     reg [ADDR_WIDTH-1:0] next_w, next_r;
     wire ren, wen;
+    wire ptmet;              // pointers met
 
     assign wen = push & ~full;
     assign ren = pull & ~empty;
+    assign ptmet = &(r_ptr ~^ w_ptr);
 
     /* WRITE */
     always @(posedge clk) begin
@@ -92,39 +95,37 @@ module fifo #(
         `ifdef DEBUG_RUN
             if (ren)
                 $display("DEBUG: %s PULL:  r_ptr=%0d  next_r=%0d  dout=%0h  empty=%0b", name, r_ptr, next_r, dout, empty);
-                //print_mem();
         `endif
     end
 
     `ifndef COUNTER_LOGIC
         reg pushed;
-        wire ptmet;
-        assign ptmet = &(r_ptr ~^ w_ptr);              // pointers met
+
         assign empty = ptmet & ~pushed;     // if pointers met but there was no push then we are empty
         assign full  = (ptmet | ~en) & pushed;     // if pointers met and there was a push means we are full
+        //assign half_full = w_ptr == r_ptr << 1;
 
         always @(posedge clk) begin
             if (res)
                 pushed <= 1'b0;
-            else if (wen & ~pull)
+            else if (wen | (push & pull))
                 pushed <= 1'b1;
             else if (ren)           // also when push and pull both set
                 pushed <= 1'b0;
         end
     `else
-        reg [ADDR_WIDTH-1:0] count_add;
+        reg [ADDR_WIDTH:0] count_add;
 
         assign empty = ~|count;
-        assign full  = (&count & en) | (~en & ~empty);
-        //assign full  = &count[ADDR_WIDTH-1:1] & ~count[0];  // if only one cell empty left then sig raised
+        assign full  = (count[ADDR_WIDTH] & en) | (~en & ~empty);
+        assign half_full = count >= (2**ADDR_WIDTH >> 1);
 
-        // 4to1 mux
         always @(*) begin
             casez ({pull, push, empty, full})
                 4'b100?: count_add = -1;
                 4'b01?0: count_add = 1;
-                //4'b1101: count_add = 0;
-                default: count_add = 0; // if pull and push both set then no change
+                4'b1110: count_add = 1; // pull fail on parrallel
+                default: count_add = 0; // no change on parrallel
             endcase
         end
 
@@ -135,13 +136,4 @@ module fifo #(
                 count <= count + count_add;
         end
     `endif
-
-    task print_mem;
-        integer i;
-        begin
-            $strobe("Previous %s state:", name);
-            for (i = 0; i < 2**ADDR_WIDTH; i = i + 1)
-                $strobe("mem[%0d] = 0x%h", i, mem[i]);
-        end
-    endtask
 endmodule

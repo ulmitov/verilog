@@ -8,7 +8,7 @@ module alu #(parameter XLEN = 32) (
     input logic [XLEN-1:0] alu_b,
     output logic [XLEN-1:0] alu_res
 );
-    `ifdef GATE_FLOW
+    `ifndef GATE_FLOW_OFF
         logic lt, ltu;
         logic nadd_sub, right_en, sign_ext;
         logic [XLEN-1:0] sum, out_sh;

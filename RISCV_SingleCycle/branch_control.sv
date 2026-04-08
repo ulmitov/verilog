@@ -6,17 +6,15 @@ module branch_control (
     input logic [2:0] funct3,
     input logic [31:0] rs1_data,
     input logic [31:0] rs2_data,
-
     output logic branch_taken
 );
-    `ifdef GATE_FLOW
+    `ifndef GATE_FLOW_OFF
         wire eq, lt, ltu;
 
         adder #(32) branch_comparator (
             .Nadd_sub(1'b1),
             .X(rs1_data),
             .Y(rs2_data),
-            .sum(), .carry(), .overflow(),
             .eq(eq),
             .lt(lt),
             .ltu(ltu)

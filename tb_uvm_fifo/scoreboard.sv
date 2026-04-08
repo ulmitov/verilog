@@ -42,7 +42,7 @@ class scoreboard extends uvm_scoreboard;
             end
 
             // check full sig
-            exp_full = fifo_config::FIFO_DEPTH - 1;
+            exp_full = fifo_config::FIFO_DEPTH;
             if (msize < exp_full) begin
                 assert(!ftr.full) else
                     uvm_report_error(get_name(),

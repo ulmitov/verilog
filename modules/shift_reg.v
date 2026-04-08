@@ -22,7 +22,7 @@ module shift_reg #(parameter N = 4) (
     reg [N-1:0] darr;
     assign dout_n = dout[0];
 
-    `ifdef GATE_FLOW
+    `ifndef GATE_FLOW_OFF
         always @(*) begin
             for (i = 0; i < N; i = i + 1) begin
                 if (load_en)

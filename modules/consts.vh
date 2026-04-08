@@ -1,9 +1,9 @@
 /*
     Constants definitions
 */
-`define DEBUG_RUN 1             // uncomment to see some debug messages
-`define GATE_FLOW 1             // uncomment to use gate flow logic (should be uncommented by default)
-//`define CONST_DELAYS_OFF      // uncomment to disable delays in combinational and sequential logic
+`define DEBUG_RUN             // uncomment to see some debug messages
+//`define GATE_FLOW_OFF       // uncomment to use data flow logic (should be commented by default)
+//`define CONST_DELAYS_OFF    // uncomment to disable delays in combinational and sequential logic
 
 `ifndef CONST_DELAYS_OFF
     `define T_DELAY_FF 2

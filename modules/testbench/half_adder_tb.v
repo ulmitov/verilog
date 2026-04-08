@@ -4,6 +4,7 @@ iverilog -Wall -g2005 -gspecify -o ./vcd/${tb}.vvp -s ${tb} testbench/${tb}.v ad
 */
 `include "consts.vh"
 `timescale 1ns / 100ps
+`define VCD "vcd/adder_half_tb.vcd"
 
 
 module half_adder_tb;
@@ -27,7 +28,7 @@ module half_adder_tb;
     assign es = a^b;
 
     initial begin
-        $dumpfile("vcd/adder_half_tb.vcd");
+        $dumpfile(`VCD);
         $dumpvars(0);
         $monitor("%d (a, b)=(%b, %b), sum,carry=(%b, %b), exp=(%b, %b)", $time, a, b, sum, carry, es, ec);
         `_APPLY_VALUES(0, 0);
@@ -39,7 +40,7 @@ module half_adder_tb;
         `_APPLY_VALUES(1, 1);
         `_APPLY_VALUES(0, 1);
         `_APPLY_VALUES(0, 0);
-        $display("END of Half adder testbench");
+        $display("End of testbench: %s", `VCD);
         $finish;
     end
 endmodule

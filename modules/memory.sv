@@ -32,15 +32,12 @@ module memory #(
     input logic req,
     input logic wen,
     input logic ren,
-    input logic zero_ex,
     input op_enum_dmem_size blsize,
     input logic [ADDR_WIDTH-1:0] addr,
     input logic [DATA_WIDTH-1:0] wr_data,
     output logic [DATA_WIDTH-1:0] rd_data
 );       
     logic [7:0] MEMX [0:DEPTH-1];    // Each mem address holds 1 byte
-    logic [DATA_WIDTH-1:0] temp_rd;
-    logic sign;
 
     task initmem;
         input string path;
@@ -73,46 +70,24 @@ module memory #(
     if (!SYNC_READ) begin: async_read
         always_latch begin
             if (res)
-                temp_rd = 0;
+                rd_data = 0;
             else if (req & ren) begin
                 if (ENDIANESS)
-                    temp_rd = {MEMX[addr], MEMX[addr+1], MEMX[addr+2], MEMX[addr+3]};
+                    rd_data = {MEMX[addr], MEMX[addr+1], MEMX[addr+2], MEMX[addr+3]};
                 else
-                    temp_rd = {MEMX[addr+3], MEMX[addr+2], MEMX[addr+1], MEMX[addr]};
+                    rd_data = {MEMX[addr+3], MEMX[addr+2], MEMX[addr+1], MEMX[addr]};
             end
         end
     end else begin: sync_read
         always_ff @(posedge rclk) begin
             if (res)
-                temp_rd <= 0;
+                rd_data <= 0;
             else if (req & ren) begin
                 if (ENDIANESS)
-                    temp_rd <= #`T_DELAY_FF {MEMX[addr], MEMX[addr+1], MEMX[addr+2], MEMX[addr+3]};
+                    rd_data <= #`T_DELAY_FF {MEMX[addr], MEMX[addr+1], MEMX[addr+2], MEMX[addr+3]};
                 else
-                    temp_rd <= #`T_DELAY_FF {MEMX[addr+3], MEMX[addr+2], MEMX[addr+1], MEMX[addr]};
+                    rd_data <= #`T_DELAY_FF {MEMX[addr+3], MEMX[addr+2], MEMX[addr+1], MEMX[addr]};
             end
         end
-    end
-
-    always_comb begin: set_read_sign_bit
-        if (zero_ex)
-            sign = 1'b0;
-        else begin
-            case (blsize)
-                OP_DMEM_BYTE: sign = temp_rd[7];
-                OP_DMEM_HALF: sign = temp_rd[15];
-                OP_DMEM_TRPL: sign = temp_rd[23];
-                default: sign = 1'b0;
-            endcase
-        end 
-    end
-
-    always_comb begin: extend_to_requested_size
-        case (blsize)
-            OP_DMEM_BYTE: rd_data = {{24{sign}}, temp_rd[7:0]};
-            OP_DMEM_HALF: rd_data = {{16{sign}}, temp_rd[15:0]};
-            OP_DMEM_TRPL: rd_data = {{ 8{sign}}, temp_rd[23:0]};
-            default: rd_data = temp_rd;
-        endcase
     end
 endmodule

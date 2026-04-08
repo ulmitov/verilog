@@ -13,11 +13,10 @@ module ff_d #(parameter N = 1) (
     output reg [N-1:0] Q
 );
     always @(posedge clk or negedge res_n) begin
-        if (!res_n) begin
+        if (!res_n)
             Q <= 0;
-        end else if (en) begin
+        else if (en)
             Q <= #`T_DELAY_FF din;
-        end
     end
 endmodule
 

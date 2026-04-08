@@ -40,7 +40,7 @@ interface fifo_interface (
     modport MONITOR_MP(clocking cb_mon, input clk, input res);
 
     /* ASSERTIONS */
-    static int THRESH_FULL = fifo_config::FIFO_DEPTH-1;
+    static int THRESH_FULL = fifo_config::FIFO_DEPTH;
     static int THRESH_NONE = 0;
     int count;
     always_ff @(posedge clk) begin

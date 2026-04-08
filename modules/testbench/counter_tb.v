@@ -1,16 +1,30 @@
 /*
-    Testbench for different counters
+    Testbenches for counter modules
 */
 `include "consts.vh"
 `timescale 1ns / 1ns
 
 
-module counter_tb();
-    parameter N = 4;
+module counter_dff_tb;
+    counter_tb #(.TYPE("dff")) cnt_tb();
+endmodule
+
+module counter_jkff_tb;
+    counter_tb #(.TYPE("jkff")) cnt_tb();
+endmodule
+
+module counter_tff_sync_tb;
+    counter_tb #(.TYPE("tff_sync")) cnt_tb();
+endmodule
+
+module counter_tff_async_tb;
+    counter_tb #(.TYPE("tff_async")) cnt_tb();
+endmodule
+
+
+module counter_tb #(parameter N = 4, parameter TYPE = "dff");
     parameter T_CLK = `T_DELAY_FF * N + 1;
     parameter T_CYC = T_CLK * 2;
-
-    parameter TYPE = "behavioral";
     parameter vcd = {"vcd/counter_", TYPE, "_tb.vcd"};
 
     reg res_n, enable, count_up, load;
@@ -20,8 +34,8 @@ module counter_tb();
     integer i, expected;
 
     generate
-        if (TYPE == "behavioral")
-            counter_behavioral #(N) dut (.clk(clk), .res_n(res_n), .en(enable), .count_up(count_up), .load(load), .set(set), .count(count));
+        if (TYPE == "dff")
+            counter #(N) dut (.clk(clk), .res_n(res_n), .en(enable), .count_up(count_up), .load_en(load), .load(set), .count(count));
         else if (TYPE == "jkff")
             counter_jkff #(N) dut (.clk(clk), .res_n(res_n), .en(enable), .count_up(count_up), .count(count)); 
         else if (TYPE == "tff_sync")
@@ -33,7 +47,7 @@ module counter_tb();
     always #T_CLK clk = ~clk;
 
     always #T_CYC if (expected !== 'bX && expected !== count)
-        $display("[counter_tb] ERROR: %0d: count=%0d not as expected %0d", $time, count, expected);
+        $display("%0t: [counter_tb] ERROR: count=%0d not as expected %0d", $time, count, expected);
 
     initial begin
         $dumpfile(vcd);
@@ -72,18 +86,30 @@ module counter_tb();
         for (i = 0; i < 2**N; i = i + 1) #T_CYC;
         enable = 1'b1;
 
-        if (TYPE == "behavioral") begin
+        if (TYPE == "dff") begin
             $display("*** TC set load to 1's ***");
             load = 1'b1;
-            set = 2**N - 1;
+            set = 2**N >> 1;
             expected = set;
-            #T_CYC set = 0;
-            $display("*** TC set load to 0's ***");
-            load = 1'b0;
-            for (i = 0; i < 2**N; i = i + 1) begin
+            #T_CYC set = 2**N - 1;
+            expected = set;
+            #T_CYC load = 1'b0;
+            
+            for (i = 0; i < 2**N >> 1; i = i + 1) begin
                 expected = expected == 0 ? 2**N - 1 : expected - 1;
                 #T_CYC;
             end
+            $display("*** TC set load to 0's ***");
+            set = 0;
+            load = 1'b1;
+            expected = set;
+            count_up = 1'b1;
+            #T_CYC load = 1'b0;
+            for (i = 0; i < 2**N >> 1; i = i + 1) begin
+                expected = expected + 1;
+                #T_CYC;
+            end
+            
         end
         enable = 1'b0;
         $display("End of testbench: %s", vcd);

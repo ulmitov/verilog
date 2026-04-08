@@ -1,6 +1,6 @@
 `timescale 1ns / 1ns
 `define T_CLK 10       // not real clock, only test delays
-
+`define VCD "vcd/mux_cmos_tb.vcd"
 
 module mux_cmos_tb;
     reg a, b, s;
@@ -17,7 +17,7 @@ module mux_cmos_tb;
     end
 
     initial begin
-        $dumpfile("vcd/mux_cmos_tb.vcd");
+        $dumpfile(`VCD);
         $dumpvars(0);
         $monitor("%d: a=%0b, b=%0b, s=%0b, out_c=%0b, out_p=%0b, exp=%0b", $time, a, b, s, out_c, out_p, exp);
 
@@ -28,7 +28,7 @@ module mux_cmos_tb;
         #`T_CLK b=0;
         #`T_CLK s=0;
         #`T_CLK a=0;
-        $display("End of CMOS MUX testbench");
+        $display("End of testbench: %s", `VCD);
         #`T_CLK $finish;
     end
 endmodule

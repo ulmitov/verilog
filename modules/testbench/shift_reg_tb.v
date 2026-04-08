@@ -105,7 +105,7 @@ module shift_reg_tb;
         $dumpfile(`VCD);
         $dumpvars(0);
         $monitor("%0t INFO: load_en=%0b  en_serial=%0b  en_cyclic=%0b", $time, load_en, en_serial, en_cyclic);
-        `ifdef GATE_FLOW
+        `ifndef GATE_FLOW_OFF
             $display("STAR TEST: GATE FLOW RESET");
         `else
             $display("STAR TEST: DATA FLOW RESET");

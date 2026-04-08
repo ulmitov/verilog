@@ -9,13 +9,6 @@
 //`define BEHAVIORAL 1      // uncomment to use behavioral flow logic
 
 
-`ifdef BEHAVIORAL
-    `ifdef GATE_FLOW        // defined in consts
-        `undef GATE_FLOW
-    `endif
-`endif
-
-
 /*
     MUX 2 to 1
 
@@ -28,9 +21,8 @@ module mux_2to1 (
     input  SEL,
     output wire Y
 );
-    `ifdef GATE_FLOW
+    `ifndef GATE_FLOW_OFF
         wire not_sel, and1, and2;
-
         not #(`T_DELAY_PD) (not_sel, SEL);
         and #(`T_DELAY_PD) (and1, W0, not_sel);
         and #(`T_DELAY_PD) (and2, W1, SEL);
@@ -52,9 +44,8 @@ module mux_4to1(
     input [1:0] SEL,
     output wire Y
 );
-    `ifdef GATE_FLOW
+    `ifndef GATE_FLOW_OFF
         wire y1, y2;
-
         mux_2to1 m1 ( .W0(W[0]), .W1(W[1]), .SEL(SEL[0]), .Y(y1) );
         mux_2to1 m2 ( .W0(W[2]), .W1(W[3]), .SEL(SEL[0]), .Y(y2) );
         mux_2to1 m3 ( .W0(y1), .W1(y2), .SEL(SEL[1]), .Y(Y) );
@@ -76,15 +67,7 @@ module mux_16to1(
     input [3:0] SEL,
     output wire Y
 );
-    `ifdef GATE_FLOW
-        wire y1, y2, y3, y4;
-
-        mux_4to1 m1 ( .W(W[3:0]), .SEL(SEL[1:0]), .Y(y1) );
-        mux_4to1 m2 ( .W(W[7:4]), .SEL(SEL[1:0]), .Y(y2) );
-        mux_4to1 m3 ( .W(W[11:8]), .SEL(SEL[1:0]), .Y(y3) );
-        mux_4to1 m4 ( .W(W[15:12]), .SEL(SEL[1:0]), .Y(y4) );
-        mux_4to1 m5 ( .W({y4, y3, y2, y1}), .SEL(SEL[3:2]), .Y(Y) );
-    `elsif BEHAVIORAL
+    `ifdef BEHAVIORAL
         // synth has too much gates
         reg out;
         assign Y = out;
@@ -109,8 +92,15 @@ module mux_16to1(
                 default: out = 0;
             endcase 
         end
-    `else
+    `elsif GATE_FLOW_OFF
         mux_Nto1 m1 ( .W(W), .SEL(SEL), .Y(Y) );
+    `else
+        wire y1, y2, y3, y4;
+        mux_4to1 m1 ( .W(W[3:0]), .SEL(SEL[1:0]), .Y(y1) );
+        mux_4to1 m2 ( .W(W[7:4]), .SEL(SEL[1:0]), .Y(y2) );
+        mux_4to1 m3 ( .W(W[11:8]), .SEL(SEL[1:0]), .Y(y3) );
+        mux_4to1 m4 ( .W(W[15:12]), .SEL(SEL[1:0]), .Y(y4) );
+        mux_4to1 m5 ( .W({y4, y3, y2, y1}), .SEL(SEL[3:2]), .Y(Y) );
     `endif
 endmodule
 
@@ -156,7 +146,13 @@ module decoder2to4 (
                 endcase
             end
         end
-    `elsif GATE_FLOW
+    `elsif GATE_FLOW_OFF
+        // synth produces 2 NOT and 6 AND gates
+        assign y[0] = en & ~w[1] & ~w[0];
+        assign y[1] = en & ~w[1] & w[0];
+        assign y[2] = en & w[1] & ~w[0];
+        assign y[3] = en & w[1] & w[0];
+    `else
         // synth is 2 NOTs and 8 ANDs
         wire nw0, nw1, y0, y1, y2, y3;
 
@@ -172,12 +168,6 @@ module decoder2to4 (
         and a6 (y[1], en, y1);
         and a7 (y[2], en, y2);
         and a8 (y[3], en, y3);
-    `else
-        // synth produces 2 NOT and 6 AND gates
-        assign y[0] = en & ~w[1] & ~w[0];
-        assign y[1] = en & ~w[1] & w[0];
-        assign y[2] = en & w[1] & ~w[0];
-        assign y[3] = en & w[1] & w[0];
     `endif
 endmodule
 

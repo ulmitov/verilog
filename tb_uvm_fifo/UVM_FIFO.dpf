@@ -9,7 +9,7 @@ simulations:
     options: '-top work.top_tb -genimage image -uvm 1.2 -dump-agg +acc+b'
   - name: Sim DEBUG
     options: >-
-      -image image -code-cov a -waves dir/waves.vcd -dump-agg +acc+b -uvm 1.2
+      -image image -code-cov a -waves dir/waves.mxd -dump-agg +acc+b -uvm 1.2
       +UVM_NO_RELNOTES +UVM_CONFIG_DB_TRACE +UVM_VERBOSITY=UVM_HIGH
       +UVM_TESTNAME=test_regression
   - name: Sim Vcd
@@ -21,7 +21,9 @@ simulations:
       -image image -code-cov a -waves dir/waves.mxd -dump-agg +acc+b -uvm 1.2
       +UVM_NO_RELNOTES +UVM_TESTNAME=test_random
   - name: Sim no waves
-    options: '-image image -code-cov a -uvm 1.2 +UVM_NO_RELNOTES +UVM_TESTNAME=test_push_pull_while_empty'
+    options: >-
+      -image image -code-cov a -uvm 1.2 +UVM_NO_RELNOTES
+      +UVM_TESTNAME=test_regression
 source_files:
   - language: verilog
     path: ../modules/fifo.v

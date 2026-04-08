@@ -36,7 +36,6 @@ module memory_tb;
         .res(res),
         .wen(we),
         .ren(re),
-        .zero_ex(1'b0),
         .blsize(`OP_DMEM_BYTE),
         .wr_data(data),
         .addr(addr),
@@ -85,7 +84,7 @@ module memory_tb;
     // stimulus
     initial begin
         $dumpfile(`VCD);
-        $dumpvars();
+        $dumpvars(0, memory_tb);
         if (`D_DEPTH < 24)
             $monitor("%0d: addr=%0h, we=%0b, data=%2h, out=%2h", $time, addr, we, data, out);
 

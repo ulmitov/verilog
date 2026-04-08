@@ -48,4 +48,6 @@ dcreport -out_dir dir metrics.db
 
 
 ![waves.vcd:](./dir/waves.vcd)
+
+
 ![waves.vcd](./dir/waves.png)

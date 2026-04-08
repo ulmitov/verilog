@@ -15,13 +15,16 @@ Spec references:
 - https://www.ti.com/lit/ds/symlink/tl16c550c.pdf
 
 
-## Run C++ testbench:
+## Run C++ driver testbench:
 ```
 make uartcpp
 ```
 
 ## Run Verilog testbenches:
 ```
+make uart       # run all of the below
+
+# specific tests:
 make baud_tb
 make uart_rx_tb
 make uart_tx_tb

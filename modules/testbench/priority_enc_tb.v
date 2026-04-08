@@ -6,6 +6,7 @@ vvp ./vcd/${tb}.vvp
 */
 `timescale 1ns / 1ns
 `define T_CLK 10
+`define VCD "vcd/priority_enc_tb.vcd"
 
 
 module priority_enc_tb;
@@ -31,11 +32,12 @@ module priority_enc_tb;
     end
 
     initial begin
-        $dumpfile("vcd/priority_enc_tb.vcd");
+        $dumpfile(`VCD);
         $dumpvars(0);
         $monitor("%4d: din=%b, out=%b, valid=%b", $time, din, out, valid);
 
         for (i = 0; i < 2**8 ; i = i + 1) #`T_CLK din = i;
+        $display("End of testbench: %s", `VCD);
         #`T_CLK $finish;
     end
 endmodule

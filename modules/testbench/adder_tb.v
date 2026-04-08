@@ -3,35 +3,40 @@
 */
 `include "consts.vh"
 `timescale 1ns / 100ps
-`define VCD "vcd/adder_tb.vcd"
+`define VCD 
 
 
-module adder_tb();
-    localparam n = 4;
-    localparam T_DELAY = `T_DELAY_PD * 3 * n;
+module fast_adder_tb;
+    adder_tb #(.FAST_ADDER(1), .VCD("vcd/fast_adder_tb.vcd")) fast_tb();
+endmodule
 
-    wire [n-1:0] sum;
+
+module adder_tb #(parameter FAST_ADDER = 0, parameter N = 4, parameter VCD = "vcd/adder_tb.vcd");
+    localparam T_DELAY = `T_DELAY_PD * 3 * N;
+
+    wire [N-1:0] sum;
     wire carry, of, eq, lt, ltu;
-    reg [n-1:0] X, Y;
+    reg [N-1:0] X, Y;
     reg mode, msb;
-    reg signed [n:0] sum_s;
-
+    reg signed [N:0] sum_s;
     integer j, q, check_c, check_s;
 
-    adder #(.n(n)) UUT (.X(X), .Y(Y), .Nadd_sub(mode), .sum(sum), .carry(carry), .overflow(of), .eq(eq), .lt(lt), .ltu(ltu));
+    generate
+        if (FAST_ADDER)
+            fast_adder #(.n(N)) UUT (.X(X), .Y(Y), .Nadd_sub(mode), .sum(sum), .carry(carry), .overflow(of), .eq(eq), .lt(lt), .ltu(ltu));
+        else
+            adder #(.n(N)) UUT (.X(X), .Y(Y), .Nadd_sub(mode), .sum(sum), .carry(carry), .overflow(of), .eq(eq), .lt(lt), .ltu(ltu));
+    endgenerate
 
     task check_values;
-        input [n-1:0] ex_sum;
+        input [N-1:0] ex_sum;
         input ex_carry;
         input ex_overflow;
         input ex_eq;
         input ex_lt;
         input ex_ltu;
     begin
-        #T_DELAY if (of)
-            msb = carry;
-        else
-            msb = sum[n-1];
+        #T_DELAY msb = of ? carry : sum[N-1];
         sum_s = $signed({msb, sum});
         $display("%8d INFO: X=%4b Y=%4b Nadd_sub=%b: sum=%4d (%4b with sign %0b) overflow=%0b, carry=%0d, eq=%0b, lt=%0b, ltu=%0b", $time, X, Y, mode, sum_s, sum, msb, of, carry, eq, lt, ltu);
         if (sum !== ex_sum)
@@ -50,18 +55,18 @@ module adder_tb();
     endtask
 
     initial begin
-        $dumpfile(`VCD);
-        $dumpvars();
+        $dumpfile(VCD);
+        $dumpvars(0);
 
         // Per stage test
-        for (j = 0; j < n; j = j + 1) begin
+        for (j = 0; j < N; j = j + 1) begin
 
             $display("Test stuck at 1's");
             X = 0; Y = 0; mode = 0;
             check_values(0, 0, 0, 1'bX, 1'bX, 1'bX);
 
             $display("Test per stage %0d. q is per stage inputs X, Y. Checking each FA bit by bit.", j);
-            for (q = 1; q < 2**n - 1; q = q + 1) begin
+            for (q = 1; q < 2**N - 1; q = q + 1) begin
                 if (j == 0)
                     {X[j], Y[j]} = q[1:0];
                 else begin
@@ -69,20 +74,20 @@ module adder_tb();
                     {X[j-1], X[j], Y[j]} = q;
                 end
                 check_s = X + Y;
-                check_c = check_s > 2**n - 1;
-                check_s = check_s[n-1:0];
+                check_c = check_s > 2**N - 1;
+                check_s = check_s[N-1:0];
                 check_values(check_s, check_c, 1'bX, 1'bX, 1'bX, 1'bX);
             end
         end
 
         $display("Test crosstalk");
-        X = 2**n - 1; Y = 2**n - 1; mode = 0;
-        check_values(2**n - 2, 1, 0, 1'bX, 1'bX, 1'bX);
+        X = 2**N - 1; Y = 2**N - 1; mode = 0;
+        check_values(2**N - 2, 1, 0, 1'bX, 1'bX, 1'bX);
 
         X = -1; Y = -1; mode = 0;
         check_values(-2, 1, 0, 1'bX, 1'bX, 1'bX);
 
-        $display("Test substraction: N bits represent values 2**%0d/2...-2**%0d/2+1", n, n);
+        $display("Test substraction: N bits represent values 2**%0d/2...-2**%0d/2+1", N, N);
         $display("Checking all cases as signed numbers");
         $display("So we have only N-1 bits to represent magnitude");
         $display("If overflow=1: then sign is the carry");
@@ -95,16 +100,16 @@ module adder_tb();
         X = 0; Y = 1; mode = 1;
         check_values(-1, 1'bX, 1'b0, 0, 1, 1);
 
-        X = 2**n - 1; Y = 1; mode = 1;
+        X = 2**N - 1; Y = 1; mode = 1;
         check_values(-2, 1'bX, 1'b0, 0, 1, 0);
 
         X = -1; Y = 1; mode = 1;
         check_values(-2, 1'bX, 1'b0, 0, 1, 0);
 
-        X = 2**n - 1; Y = 2**n - 1; mode = 1;
+        X = 2**N - 1; Y = 2**N - 1; mode = 1;
         check_values(0, 1'bX, 1'b0, 1, 0, 0);
 
-        X = 0; Y = 2**n - 1; mode = 1;
+        X = 0; Y = 2**N - 1; mode = 1;
         check_values(1, 1'bX, 1'b0, 0, 0, 1);
 
         $display("Test comparator");
@@ -151,7 +156,7 @@ module adder_tb();
         X = -7; Y = 3; mode = 1;
         check_values(-10, 1'b1, 1'b1, 0, 1, 0);
 
-        $display("End of testbench: %s", `VCD);
+        $display("End of testbench: %s", VCD);
         $finish;
     end
 endmodule
