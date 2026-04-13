@@ -1,41 +1,34 @@
 /*
 Synchronous FIFO with parallel read-write
 
+SPEC: https://docs.amd.com/api/khub/documents/nnCmr3UMFG34c9PLASZvHw/content
+
 Design:
 
 All flags are synchronized to the single system clock
-First-Word Fall-Through (FWFT): The first word is available immediately on the output bus when the FIFO is not empty, reducing latency
+First-Word Fall-Through (FWFT): The first word is available immediately 
+on the output bus when the FIFO is not empty, reducing latency
 
 TODO:
-    Asynchronous/Independent Clocks: empty, almost_empty, and data_valid are typically synchronized to the read clock (rd_clk), while full, almost_full, and wr_ack are synchronized to the write clock (wr_clk). 
-Status & Management Flags (Common)
-    Almost Empty (almost_empty): Indicates the FIFO is nearly empty (e.g., only one word remains). Used to signal that a read operation should cease soon.
-    Almost Full (almost_full): Indicates the FIFO is nearly full (e.g., one more write can be accepted). Used to warn the producer to stop writing.
-    Data Valid (data_valid / valid): In standard mode, indicates that the data on the output bus (dout) is valid for sampling.
-    Write Acknowledge (wr_ack): Asserted to indicate that a write request was successful. 
-
-Error & Programmable Flags
-    Underflow (underflow): Asserted if a read request is made while the FIFO is empty. Usually indicates an error in control logic.
-    Overflow (overflow): Asserted if a write request is made while the FIFO is full.
-    Programmable Full (prog_full): A user-defined threshold flag that asserts when the fill level exceeds a set limit.
-    Programmable Empty (prog_empty): A user-defined threshold flag that asserts when the fill level falls below a set limit. 
+    Asynchronous/Independent Clocks: empty, almost_empty, and data_valid are
+    typically synchronized to the read clock (rd_clk), while full, almost_full
+    and wr_ack are synchronized to the write clock (wr_clk). 
 
 f="fifo"; m="fifo";
 yosys -p "read_verilog ${f}.v; hierarchy -check -top $m; proc; opt; simplemap; clean; show -format svg -prefix synth/${m} ${m}; show ${m}"
 */
 `include "consts.vh"
 
-`define COUNTER_LOGIC     // if this logic is required then uncomment the define line
+`define COUNTER_LOGIC                   // uncomment if this logic is required
 
 
 module fifo #(
+    parameter name="FIFO",
     parameter ADDR_WIDTH = 3,           // address bit width, so depth is 2**ADDR_WIDTH
-    parameter DATA_WIDTH = 8,
-    parameter name="FIFO"
+    parameter DATA_WIDTH = 8
 ) (
     input res,
     input clk,
-    input en,                           // if not en then fifo is just a static register
     input push,
     input pull,
     input wire [DATA_WIDTH-1:0] din,    // pushes a value into fifo
@@ -44,7 +37,7 @@ module fifo #(
     output wire full,
     output wire half_full
 //`ifdef COUNTER_LOGIC
-    ,output reg [ADDR_WIDTH:0] count  // items counter
+    ,output reg [ADDR_WIDTH:0] count    // items counter
 //`endif
 );
     reg [DATA_WIDTH-1:0] mem [2**ADDR_WIDTH-1:0];
@@ -61,36 +54,36 @@ module fifo #(
     always @(posedge clk) begin
         if (res)
             next_w <= {{(ADDR_WIDTH-1){1'b0}}, 1'b1};
-        else if (wen & en)
+        else if (wen)
             next_w <= #`T_DELAY_FF next_w + 1;
     end
     always @(posedge clk) begin
         if (res)
             w_ptr <= 0;
-        else if (wen & en)
+        else if (wen)
             w_ptr <= #`T_DELAY_FF next_w;
     end
     always @(posedge clk) begin
         if (~res & wen) mem[w_ptr] <= #`T_DELAY_FF din;
         `ifdef DEBUG_RUN
             if (push)
-                $display("DEBUG: %s PUSH:  w_ptr=%0d  next_w=%0d  din=%0h  full=%0b", name, w_ptr, next_w, din, full);
+                $display("DEBUG: %s PUSH:  w_ptr=%0d  next_w=%0d  din=%0h  full=%0b  empty=%0b", name, w_ptr, next_w, din, full, empty);
         `endif
     end
 
-    /* READ */
-    assign #`T_DELAY_PD dout = mem[r_ptr];      // for now always setting current mem value even if x
-    
+    /* READ (FWFT mode) */
+    assign #`T_DELAY_PD dout = mem[r_ptr];
+
     always @(posedge clk) begin
         if (res)
             next_r <= {{(ADDR_WIDTH-1){1'b0}}, 1'b1};
-        else if (ren & en)
+        else if (ren)
             next_r <= #`T_DELAY_FF next_r + 1;
     end
     always @(posedge clk) begin
         if (res)
             r_ptr <= 0;
-        else if (ren & en)
+        else if (ren)
             r_ptr <= #`T_DELAY_FF next_r;
         `ifdef DEBUG_RUN
             if (ren)
@@ -102,7 +95,7 @@ module fifo #(
         reg pushed;
 
         assign empty = ptmet & ~pushed;     // if pointers met but there was no push then we are empty
-        assign full  = (ptmet | ~en) & pushed;     // if pointers met and there was a push means we are full
+        assign full  = ptmet & pushed;     // if pointers met and there was a push means we are full
         //assign half_full = w_ptr == r_ptr << 1;
 
         always @(posedge clk) begin
@@ -117,8 +110,8 @@ module fifo #(
         reg [ADDR_WIDTH:0] count_add;
 
         assign empty = ~|count;
-        assign full  = (count[ADDR_WIDTH] & en) | (~en & ~empty);
-        assign half_full = count >= (2**ADDR_WIDTH >> 1);
+        assign full  = count[ADDR_WIDTH];
+        assign half_full = full | count[ADDR_WIDTH-1];
 
         always @(*) begin
             casez ({pull, push, empty, full})

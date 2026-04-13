@@ -4,79 +4,100 @@
 UartDriver::UartDriver() {}
 UartDriver::~UartDriver() {}
 
-// not implemented for now, should be external
-void UartDriver::io_write(int addr, int data) {}
-int UartDriver::io_read(int addr) {return 0;}
+
+// TBD: should be taken from cpu header
+void UartDriver::io_write(int addr, int data) {
+    (*(volatile uint32_t *)((addr) = (data)));
+}
+
+int UartDriver::io_read(int addr) {
+    return (*(volatile uint32_t *)(addr));
+}
 
 
-void UartDriver::set_baud_rate(int baud, unsigned char stop_bits, unsigned char parity, unsigned char word_len) {
-    int par_bit = parity != 0;
-    int total_bits = word_len + 5 + stop_bits + 1 + par_bit;
-    int div = BAUD_OSRATE * baud * total_bits;
-    freq_divisor = (1000000 * CLK_FREQ_MHZ * (word_len + 5) + (div - 1))/ div;  // round up
+void UartDriver::set_baud_rate(unsigned int baud, unsigned char stop_bits, unsigned char parity, unsigned char word_len) {
+    float rate = CLK_FREQ_MHZ * (word_len + 5);
+    rate = rate * 1000000 / baud / BAUD_OSRATE;
+    short total_bits = parity != 0;
+    total_bits = word_len + 5 + stop_bits + 1 + total_bits;
+    freq_divisor = (rate + total_bits - 1) / total_bits;        // round up: (a + b - 1) / b
     ticks_per_word = freq_divisor * BAUD_OSRATE * total_bits;
-    io_write(UART_REG_LCR, MASK_LCR_DLAB);
+    io_write(UART_REG_LCR, 1 << UART_LCR_DL);
     io_write(UART_REG_DLL, (uint8_t) freq_divisor);
     io_write(UART_REG_DLM, (uint8_t) (freq_divisor >> 8));
     io_write(UART_REG_LCR, (word_len << UART_LCR_WLS) | (stop_bits << UART_LCR_STB) | (parity << UART_LCR_PEN));
 }
 
+int UartDriver::get_line_status() {
+    line_status = io_read(UART_REG_LSR);
+    return line_status;
+}
+
 unsigned char UartDriver::rx_fifo_empty() {
-    // TODO: set UART_FCR_RXFIFTL then can check for full also
-    uint8_t rd_word = io_read(UART_REG_LSR);
-    return !(rd_word & MASK_RX_EMPTY);
+    return !(get_line_status() & (1 << UART_LSR_DR));
 }
 
 unsigned char UartDriver::tx_fifo_empty() {
-    uint8_t rd_word = io_read(UART_REG_LSR);
-    return rd_word & MASK_TX_EMPTY;
+    return get_line_status() & (1 << UART_LSR_TF);
 }
 
-unsigned char UartDriver::tx_fifo_full() {
-    return !tx_fifo_empty();
+unsigned char UartDriver::is_overrun() {
+    return get_line_status() & (1 << UART_LSR_OE);
 }
 
 void UartDriver::set_fifo_mode(short enable) {
-    io_write(UART_REG_FCR, enable ? MASK_FIFO_EN : 0x00);
+    io_write(UART_REG_FCR, enable ? (1 << UART_FCR_FIFOEN) : 0x00);
 }
 
-char UartDriver::rx_byte() {
-    if (rx_fifo_empty()) {
-        #ifdef DEBUG_MODE
-        printf("rx fifo empty..");
-        #endif
-        return -1;
-    }
+void UartDriver::flush_fifo() {
+    io_write(UART_REG_FCR, 1 << UART_FCR_RXCLR | 1 << UART_FCR_TXCLR);
+}
+
+unsigned char UartDriver::rx_byte() {
     return io_read(UART_REG_RBR);
 }
 
-char UartDriver::recv_ch(unsigned short timeout) {
+char UartDriver::recv_ch() {
     int ch;
-    while (timeout--) {
+    if (!rx_fifo_empty()) {
         ch = rx_byte();
-        if (ch != -1) return ((char) ch);
+        #ifdef DEBUG_MODE
+        printf("rx got char: %c (0x%x)\n", ch, ch);
+        #endif
+        return (char) ch;
+    } else {
+        #ifdef DEBUG_MODE
+        printf("rx fifo empty\n");
+        #endif
     }
     return UART_EOM;
 }
 
-void UartDriver::recv_str(char *txt, unsigned short length) {
-    char ch;
-    while (length-- && (ch = recv_ch()) != UART_EOM) {
+short UartDriver::poll_rx(unsigned short timeout) {
+    short res;
+    while (timeout-- && (res = rx_fifo_empty())) {
         #ifdef DEBUG_MODE
-        if (ch != UART_EOM) printf("rx got char: %c (%x)\n", ((char)ch), ch);
+        printf("P");
         #endif
-        *txt++ = ch;
     }
+    return !res;
 }
 
-void UartDriver::tx_byte(uint8_t byte, unsigned short timeout) {
+void UartDriver::recv_str(char *txt) {
+    // in fifo mode can just poll for rx fifo empty.
+    // in polling mode should check local flag.
+    while (poll_rx() && (*txt++ = recv_ch()));
+    *txt = UART_EOM;
+}
+
+void UartDriver::tx_byte(uint8_t data, unsigned short timeout) {
     while (timeout--) {
         if (tx_fifo_empty()) {
-            io_write(UART_REG_THR, byte);
+            io_write(UART_REG_THR, data);
             break;
         }
         #ifdef DEBUG_MODE
-        printf("t");
+        printf("T");
         #endif
     }
 }

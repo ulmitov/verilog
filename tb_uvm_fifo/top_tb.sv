@@ -25,7 +25,6 @@ module top_tb;
     fifo #(.ADDR_WIDTH(fifo_config::ADDR_WIDTH), .DATA_WIDTH(fifo_config::DATA_WIDTH)) DUT (
         .res(IF.res),
         .clk(IF.clk),
-        .en(IF.en),
         .push(IF.push),
         .pull(IF.pull),
         .din(IF.din),

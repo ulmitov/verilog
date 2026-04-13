@@ -59,9 +59,16 @@ module uart_rx #(parameter DATA_WIDTH = 8, parameter TICKS_NUM = 16) (
     always_ff @(posedge clk) rx_ready <= rx_done & ~rx_done_set;
 
     // 3-stage synchronizer to prevent metastability and glitches shorter than system clock
-    logic [2:0] rx_sync_reg;
     logic s0, s1, s2;
     logic rx_sync;
+    synchroniser #(.DATA_WIDTH(1), .STAGES(3)) synch_din (
+        .clk(clk),
+        .res(~res_n),
+        .din(rx_din),
+        .dout(rx_sync)
+    );
+    /*
+    logic [2:0] rx_sync_reg;
     assign rx_sync = rx_sync_reg[2];
     always_ff @(posedge clk or negedge res_n) begin
         if (~res_n)
@@ -69,6 +76,7 @@ module uart_rx #(parameter DATA_WIDTH = 8, parameter TICKS_NUM = 16) (
         else
             rx_sync_reg <= {rx_sync_reg[1:0], rx_din};
     end
+    */
     // Majority voting for each bit, at least 2 samples with same value needed
     // For 32 ticks need more samples?
     always_ff @(posedge rx_baud) begin

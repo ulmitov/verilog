@@ -12,7 +12,7 @@ module fifo_tb;
     localparam DEPTH = 2**`ADDR_WIDTH;
     localparam TCLK = `T_WR * 2;
     reg clk = 1'b0;
-    reg wen, ren, res, en;
+    reg wen, ren, res;
     reg [`DATA_WIDTH-1:0] data;
     wire [`DATA_WIDTH-1:0] out;
     wire [`ADDR_WIDTH:0] count;
@@ -24,7 +24,6 @@ module fifo_tb;
     fifo #( .DATA_WIDTH(`DATA_WIDTH), .ADDR_WIDTH(`ADDR_WIDTH) ) UUT(
         .res(res),
         .clk(clk),
-        .en(en),
         .push(wen),
         .pull(ren),
         .din(data),
@@ -68,7 +67,6 @@ module fifo_tb;
         $dumpfile(`VCD);
         $dumpvars(0);
         $monitor("%0t: wen=%0b  ren=%0b  data=%0h  out=%0h  full=%0b  empty=%0b  half_full=%0b  count=%0d", $time, wen, ren, data, out, full, empty, half_full, count);
-        en = 1'b1;
 
         $display("Test reset and struck at 1's");
         wen = 1'b0;
@@ -134,33 +132,8 @@ module fifo_tb;
             data = i - 1;
             #TCLK ASSERT(0, 0, 1);
         end
-        wen = 1'b0;
-        ren = 1'b1;
-        #TCLK;
 
-        $display("---Test Disabled mode");
-        en = 1'b0;
-        ren = 1'b0;
-        wen = 1'b1;
-        data = 'hB;
-        #TCLK ASSERT(0, 1, 1);
-        data = 'hF;
-        #TCLK ASSERT(0, 1, 1);
-        ren = 1'b1;
-        wen = 1'b0;
-        #TCLK ASSERT(1, 0, 0);
-        #TCLK ASSERT(1, 0, 0);
-        ren = 1'b0;
-        wen = 1'b1;
-        data = 'hC;
-        $display("--- Test parallel push-pull while disabled");
-        #TCLK ren = 1'b1;
-        #TCLK data = 'hD;
-        ASSERT(0, 1, 1);
-        #TCLK data = 'hE;
-        ASSERT(0, 1, 1);
-        #TCLK;
-        if (~err) $display("*** FIFO TB PASSED ! ***");
+        #TCLK if (~err) $display("*** FIFO TB PASSED ! ***");
         $display("End of testbench: %s", `VCD);
         $finish;
     end

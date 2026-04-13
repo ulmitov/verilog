@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "uart_verilated.h"
+#include "verilated_cov.h"
 
 
 UartVerilated::UartVerilated(const char * vcd_path, int argc, char **argv): 
@@ -17,6 +18,8 @@ UartVerilated::UartVerilated(const char * vcd_path, int argc, char **argv):
 UartVerilated::~UartVerilated() {
     top->eval();
     vcd->close();
+    top->final();
+    VerilatedCov::write("coverage.dat");
     delete vcd;
     delete top;
 }

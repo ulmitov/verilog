@@ -35,10 +35,13 @@ module uart #(
     logic [DWIDTH+1:0] rx_out;
     logic rx_din;
     logic rx_clk;
-    logic res_frx;
-    logic res_ftx;
+    logic res_rxf;
+    logic res_txf;
     logic fifo_en;
-    logic rx_pull;
+    logic rx_fifo_full;
+    logic tx_fifo_full;
+    logic tx_push;
+    logic rx_push;
 
     clock_divider #(DIV_BITS) baud_gen (
         .clk_in(clk),
@@ -60,14 +63,13 @@ module uart #(
     );
     fifo #(.ADDR_WIDTH(FIFO_ADDR_W), .DATA_WIDTH(DWIDTH+2), .name("Rx_fifo")) Rx_fifo (
         .clk(clk),
-        .res(res_frx),
-        .en(fcreg[`UART_FCR_FIFOEN]),
-        .push(rx_ready), // The character in the shift register is overwritten, but it is not transferred to the FIFO.
+        .res(res_rxf),
+        .push(rx_push),
         .pull(rd_uart),
         .din(rx_out),
         .dout(rx_fifo_out),
         .empty(rx_empty),
-        .full(rx_full)
+        .full(rx_fifo_full)
     );
 
     // Tx: CPU push wr_data when ~tx_full -> TxFIFO outputs tx_data to TxUUT
@@ -85,22 +87,25 @@ module uart #(
     );
     fifo #(.ADDR_WIDTH(FIFO_ADDR_W), .DATA_WIDTH(DWIDTH), .name("Tx_fifo")) Tx_fifo (
         .clk(clk),
-        .res(res_ftx),
-        .en(fcreg[`UART_FCR_FIFOEN]),
-        .push(wr_uart),
+        .res(res_txf),
+        .push(tx_push),
         .pull(tx_ready),
         .din(wr_data),
         .dout(tx_fifo_out),
         .empty(tx_empty),
-        .full(tx_full)
+        .full(tx_fifo_full)
     );
 
     assign rx_din = LOOPBACK ? tx_ext : rx_ext;
     assign rx_clk = LOOPBACK ? tx_baud : clk_rx;
     assign fifo_en = fcreg[`UART_FCR_FIFOEN];
-    assign res_frx = ~res_n | (fifo_en & fcreg[`UART_FCR_RXCLR]);
-    assign res_ftx = ~res_n | (fifo_en & fcreg[`UART_FCR_TXCLR]);
+    assign rx_full = (fifo_en & rx_fifo_full) | (~fifo_en & ~rx_empty);
+    assign tx_full = (fifo_en & tx_fifo_full) | (~fifo_en & ~tx_empty);
+    assign tx_push = wr_uart & ~tx_full;
+    assign rx_push = rx_ready & ~rx_full; // The character in the shift register is overwritten, but it is not transferred to the FIFO
+    assign res_rxf = ~res_n | (fifo_en & fcreg[`UART_FCR_RXCLR]);
+    assign res_txf = ~res_n | (fifo_en & fcreg[`UART_FCR_TXCLR]);
     // buffer fifo out, since it will change after pull
-    always_latch if (tx_ready) tx_data = tx_fifo_out;
-    always_latch if (rd_uart) rd_data = rx_fifo_out;
+    always_ff @(posedge clk) if (tx_ready) tx_data <= tx_fifo_out;
+    always_ff @(posedge clk) if (rd_uart) rd_data <= rx_fifo_out;
 endmodule

@@ -1,17 +1,24 @@
 .ONESHELL:
 #SHELL := /bin/bash
-SHELL := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))vvp.sh
-
-.PHONY: all
+pwd := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
+SHELL := $(pwd)vvp.sh
 
 #export UVM_HOME := $(HOME)/dev/sda6/UVM/1800.2-2020/src
 export UVM_HOME := $(HOME)/dev/sda6/UVM/UVM1.2/src
 
 VERILATOR_ARGS := 	-Wno-lint -Wno-TIMESCALEMOD --assert --coverage --public-flat-rw --pins-inout-enables \
-					--trace-vcd --timing +incdir+../modules/ -j 0 --build --cc
+					--trace-vcd --timing -y ../modules +incdir+$(pwd)modules -j 0 --build --cc
+
+define get_coverage
+	verilator_coverage --write merged_coverage.dat $$(ls *.dat | xargs)
+	verilator_coverage --write-info merged.info merged_coverage.dat
+	genhtml -o "html" merged.info
+	find . -type f -name "*.html" -exec sed -i 's|../../../|../|g' {} +
+endef
 
 define verilator_tb
 	verilator $(VERILATOR_ARGS) --binary --top $(1) $(2) && ./obj_dir/V$(1)
+	mv coverage.dat $(1).dat || true
 endef
 
 define iverilog_tb
@@ -23,7 +30,7 @@ define iverilog
 endef
 
 define sverilog_tb
-	iverilog -Wall -g2012 -gspecify -I ../modules/ -o ./dir/$(1).vvp -s $(1) $(2) && vvp ./dir/$(1).vvp
+	iverilog -Wall -g2012 -gspecify -y ../modules -I ../modules/ -o ./dir/$(1).vvp -s $(1) $(2) && vvp ./dir/$(1).vvp
 endef
 
 confirm:
@@ -31,6 +38,8 @@ confirm:
 
 clean:
 	find . -type f -name "*.vvp" -delete
+	find . -type f -name "dsim.*" -delete
+	find . -type f -name "dvlcom.*" -delete
 
 ver:
 	$(call verilator_tb,$(ARG),$(SRC))
@@ -54,7 +63,7 @@ lint-uart:
 
 
 # Modules Regression suite
-grep_err := 2>&1 |grep -v timescale |grep -v dangling |grep -i -E 'error|end of|warning' || true
+grep_err := 2>&1 |grep -a -v -E 'timescale|dangling' |grep -a -i -E 'error|end of|warning' || true
 all:
 	$(MAKE) -s regression uart risc
 regression:
@@ -64,7 +73,9 @@ uart:
 	$(MAKE) -s baud_tb uart_rx_tb uart_tx_tb uart_tb uart_top_tb uartcpp $(grep_err)
 risc:
 	$(MAKE) -s risc_tb_arr risc_tb_bub risc_tb_fib $(grep_err)
-
+uartver:
+	$(MAKE) -s uart_rx_tb_ver uart_tx_tb_ver uart_tb_ver uartcpp $(grep_err)
+	cd UART; $(call get_coverage)
 
 	
 # Modules Testbenches
@@ -102,7 +113,7 @@ memory:
 	iverilog -Wall -g2012 -o ./vcd/$$tb.vvp -s $$tb testbench/$$tb.v $$mem_src && vvp ./vcd/$$tb.vvp
 
 # UART
-uart_src := uart_top.sv uart.sv clock_divider.sv uart_tx.sv uart_rx.sv ../modules/fifo.v ../modules/shift_reg.v
+uart_src := uart_top.sv uart.sv clock_divider.sv uart_tx.sv uart_rx.sv
 baud_tb:
 	cd UART; $(call sverilog_tb,baud_tb,testbench/testbench.sv clock_divider.sv)
 
@@ -123,12 +134,15 @@ uart_tb_ver:
 
 uart_top_tb:
 	cd UART; $(call sverilog_tb,uart_top_tb,testbench/testbench.sv ${uart_src})
+uart_top_tb_ver:
+	cd UART; $(call verilator_tb,uart_top_tb,testbench/testbench.sv ${uart_src})
 
 uartcpp:
 	cd UART; tb=uart_top;
 	tb_cpp="testbench/uart_tb.cpp driver/uart_driver.cpp testbench/uart_verilated.cpp";
 	verilator $(ARG) -DCONST_DELAYS_OFF -CFLAGS "-I../driver/" $(VERILATOR_ARGS) --exe --top $$tb $$tb_cpp $(uart_src) && ./obj_dir/V$$tb
-	# for debugging add: ARG='-CFLAGS "-g -DDEBUG_MODE"''
+	mv coverage.dat uartcpp.dat || true
+	# for debugging add: ARG='-CFLAGS "-g -DDEBUG_MODE"'
 
 # RISCV
 risc_src := risc_pkg.sv riscv.sv fetch.sv decode.sv register_file.sv branch_control.sv control.sv alu.sv data_memory.sv ../modules/memory.sv ../modules/adder.v ../modules/shift.v ../modules/mux.v

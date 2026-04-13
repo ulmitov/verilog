@@ -114,8 +114,8 @@ module uart_top (
             lsr[`UART_LSR_OE] <= 1'b0;
         else if (rbr_rd)
             lsr[`UART_LSR_OE] <= 1'b0;
-        else if (rx_full)
-            lsr[`UART_LSR_OE] <= rx_ready;
+        else if (rx_full & rx_ready)
+            lsr[`UART_LSR_OE] <= 1'b1;
     end
 
     /*  In the 16450 Mode this is a 0. In the FIFO mode LSR7 is set if at least one parity error

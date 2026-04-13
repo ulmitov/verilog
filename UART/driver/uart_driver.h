@@ -4,7 +4,7 @@
 #include <stdio.h>
 #endif
 
-#define CLK_FREQ_MHZ 10     // Mhz
+#define CLK_FREQ_MHZ 4
 #define BASE_ADDRESS 0x00
 #define UART_EOM '\0'       // End of message
 
@@ -29,20 +29,13 @@
 #define UART_LCR_DL 7
 #define UART_LSR_TE	6
 #define UART_FCR_FIFOEN 0
+#define UART_FCR_RXCLR 1
+#define UART_FCR_TXCLR 2
 
 /**
  * uart driver
  */
 class UartDriver {
-    /**
-     * mask fields
-     */
-    enum {
-        MASK_LCR_DLAB   = 1 << UART_LCR_DL,
-        MASK_TX_EMPTY   = 1 << UART_LSR_TF,
-        MASK_RX_EMPTY   = 1 << UART_LSR_DR,
-        MASK_FIFO_EN    = 1 << UART_FCR_FIFOEN,
-    };
     public:
         unsigned short freq_divisor;
         unsigned short ticks_per_word;
@@ -58,27 +51,16 @@ class UartDriver {
         ~UartDriver();
 
         /**
-         * read an io register.
-         * This actually should be an external function
-         * @param addr register word address
-         * @return 32-bit data of the register
-         */
-        virtual int io_read(int addr);
-
-        /**
-        * write an io register
-        * This actually should be an external function
-        * @param addr register word address
-        * @param data 32-bit data
-        */
-        virtual void io_write(int addr, int data);
-
-        /**
         * set fifo mode to enable or disable
         *
         * @param enable 1 or 0
         */
         void set_fifo_mode(short enable);
+
+        /**
+        * flush or reset fifo
+        */
+        void flush_fifo();
 
         /**
         * set baud rate and uart settings (LCR)
@@ -88,7 +70,7 @@ class UartDriver {
         * @param parity parity bits value according to spec
         * @param word_len word length value according to spec, default is 3 (8 bits)
         */
-        void set_baud_rate(int baud, unsigned char stop_bits, unsigned char parity, unsigned char word_len = 3);
+        void set_baud_rate(unsigned int baud, unsigned char stop_bits, unsigned char parity, unsigned char word_len = 3);
 
         /**
         * check if uart rx fifo is empty
@@ -96,15 +78,6 @@ class UartDriver {
         * @return 1: if empty; 0: otherwise
         */
         unsigned char rx_fifo_empty();
-
-        /**
-        * check if uart tx fifo is full.
-        * No real full flag exist, can only check if not empty,
-        * then sending more data might override
-        *
-        * @return 1: if full; 0: otherwise
-        */
-        unsigned char tx_fifo_full();
 
         /**
         * check if uart tx fifo is empty
@@ -116,33 +89,32 @@ class UartDriver {
         /**
         * transmit a byte with tx fifo status polling
         *
-        * @param byte data byte to be transmitted
+        * @param data data byte to be transmitted
         * @param timeout how much clock ticks to attempt to send
         */
-        void tx_byte(uint8_t byte, unsigned short timeout = 1000);
+        void tx_byte(uint8_t data, unsigned short timeout = 1000);
 
         /**
-        * raw receive a byte, without polling
+        * raw receive byte from RBR, without polling
         *
-        * @return -1 if rx fifo empty; byte data otherwise
+        * @return byte
         */
-        char rx_byte();
+        unsigned char rx_byte();
 
         /**
         * receive a string, with polling
         *
-        * @param txt preallocated string array pointer
-        * @param length string length
+        * @param txt string array pointer
         */
-        void recv_str(char *txt, unsigned short length);
+        void recv_str(char *txt);
 
         /**
         * receive a char, with polling
         *
-        * @param timeout how much clock ticks to wait for char
+        * @param timeout max clocks to wait for char
         * @return null if no data received; char otherwise
         */
-        char recv_ch(unsigned short timeout = 1000);
+        char recv_ch();
 
         /**
         * send (print) a char via uart
@@ -157,4 +129,42 @@ class UartDriver {
         * @param str pointer to the string to be sent
         */
         void send_str(const char *str);
+
+        /**
+        * check if Overrun flag was raised
+        *
+        * @return 1: if OE; 0: otherwise
+        */
+        unsigned char is_overrun();
+
+        /**
+        * get line status bits
+        *
+        * @return LSR value
+        */
+        int get_line_status();
+
+        /**
+        * poll for rx fifo to become empty
+        *
+        * @return 1: if rx fifo empty; 0: otherwise
+        */
+        short poll_rx(unsigned short timeout = 1000);
+    protected:
+        unsigned int line_status = 0;   // LSR is saved here each read
+        /**
+         * read an io register.
+         * This actually should be an external function
+         * @param addr register word address
+         * @return 32-bit data of the register
+         */
+        virtual int io_read(int addr);
+
+        /**
+        * write an io register
+        * This actually should be an external function
+        * @param addr register word address
+        * @param data 32-bit data
+        */
+        virtual void io_write(int addr, int data);
 };

@@ -59,28 +59,66 @@ endmodule
 
 
 /*
-    Simple single synchronizer of two stage shift register FF's
-    with an edge detector
+    Simple N bit synchronizer of 2-4 stages with edges detection
     Assuming din is 1-1.5 phases longer than clk, it can be used for clock crossing the din signal
 */
-module synchroniser #(parameter n = 1) (
+module synchroniser #(parameter DATA_WIDTH = 1, parameter STAGES = 3, parameter RES_VAL = 1) (
     input clk,
     input res,
-    input [n-1:0] din,
-    output wire [n-1:0] q,
-    output reg [n-1:0] edges   // din edge detector
+    input [DATA_WIDTH-1:0] din,
+    output wire [DATA_WIDTH-1:0] dout,
+    output reg [DATA_WIDTH-1:0] edges   // din edge detector
 );
-    reg [n-1:0] q0, q1;
-    assign q = q1;
-    always @(posedge clk) begin
-        if (res) begin
-            q0 <= 0;
-            q1 <= 0;
-            edges <= 0;
-        end else begin
+    localparam INIT_VAL = RES_VAL ? {DATA_WIDTH{1'b1}} : {DATA_WIDTH{1'b0}};
+    reg [DATA_WIDTH-1:0] q0;
+    reg [DATA_WIDTH-1:0] q1;
+
+    // Stage 1
+    always @(posedge clk or posedge res) begin
+        if (res)
+            q0 <= INIT_VAL;
+        else
             q0 <= din;
+    end
+
+    // Stage 2
+    always @(posedge clk or posedge res) begin
+        if (res)
+            q1 <= INIT_VAL;
+        else
             q1 <= q0;
-            edges <= edges ^ q1;
+    end
+
+    if (STAGES > 2) begin
+        reg [DATA_WIDTH-1:0] q2;
+        always @(posedge clk or posedge res) begin
+            if (res)
+                q2 <= INIT_VAL;
+            else
+                q2 <= q1;
         end
+
+        if (STAGES == 4) begin
+            reg [DATA_WIDTH-1:0] q3;
+            always @(posedge clk or posedge res) begin
+                if (res)
+                    q3 <= INIT_VAL;
+                else
+                    q3 <= q2;
+            end
+            assign dout = q3;
+        end else begin
+            assign dout = q2;
+        end
+    end else begin
+        assign dout = q1;
+    end
+
+    // Edge detector
+    always @(posedge clk or posedge res) begin
+        if (res)
+            edges <= 0;
+        else
+            edges <= edges ^ dout;
     end
 endmodule
