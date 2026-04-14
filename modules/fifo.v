@@ -14,12 +14,9 @@ TODO:
     typically synchronized to the read clock (rd_clk), while full, almost_full
     and wr_ack are synchronized to the write clock (wr_clk). 
 
-f="fifo"; m="fifo";
-yosys -p "read_verilog ${f}.v; hierarchy -check -top $m; proc; opt; simplemap; clean; show -format svg -prefix synth/${m} ${m}; show ${m}"
+m="fifo"; yosys -p "read_verilog ${m}.v; hierarchy -check -top $m; proc; opt; simplemap; clean; show -format svg -prefix synth/${m} ${m}; show ${m}"
 */
 `include "consts.vh"
-
-`define COUNTER_LOGIC                   // uncomment if this logic is required
 
 
 module fifo #(
@@ -35,20 +32,15 @@ module fifo #(
     output wire [DATA_WIDTH-1:0] dout,  // pulls a value from fifo
     output wire empty,
     output wire full,
-    output wire half_full
-//`ifdef COUNTER_LOGIC
-    ,output reg [ADDR_WIDTH:0] count    // items counter
-//`endif
+    output reg [ADDR_WIDTH:0] count     // items counter
 );
     reg [DATA_WIDTH-1:0] mem [2**ADDR_WIDTH-1:0];
     reg [ADDR_WIDTH-1:0] w_ptr, r_ptr;
     reg [ADDR_WIDTH-1:0] next_w, next_r;
     wire ren, wen;
-    wire ptmet;              // pointers met
 
     assign wen = push & ~full;
     assign ren = pull & ~empty;
-    assign ptmet = &(r_ptr ~^ w_ptr);
 
     /* WRITE */
     always @(posedge clk) begin
@@ -90,14 +82,13 @@ module fifo #(
                 $display("DEBUG: %s PULL:  r_ptr=%0d  next_r=%0d  dout=%0h  empty=%0b", name, r_ptr, next_r, dout, empty);
         `endif
     end
-
-    `ifndef COUNTER_LOGIC
+    /*
         reg pushed;
-
+        wire ptmet;              // pointers met
+        assign ptmet = &(r_ptr ~^ w_ptr);
         assign empty = ptmet & ~pushed;     // if pointers met but there was no push then we are empty
         assign full  = ptmet & pushed;     // if pointers met and there was a push means we are full
         //assign half_full = w_ptr == r_ptr << 1;
-
         always @(posedge clk) begin
             if (res)
                 pushed <= 1'b0;
@@ -106,27 +97,25 @@ module fifo #(
             else if (ren)           // also when push and pull both set
                 pushed <= 1'b0;
         end
-    `else
-        reg [ADDR_WIDTH:0] count_add;
+    */
+    reg [ADDR_WIDTH:0] count_add;
 
-        assign empty = ~|count;
-        assign full  = count[ADDR_WIDTH];
-        assign half_full = full | count[ADDR_WIDTH-1];
+    assign empty = ~|count;
+    assign full  = count[ADDR_WIDTH];
 
-        always @(*) begin
-            casez ({pull, push, empty, full})
-                4'b100?: count_add = -1;
-                4'b01?0: count_add = 1;
-                4'b1110: count_add = 1; // pull fail on parrallel
-                default: count_add = 0; // no change on parrallel
-            endcase
-        end
+    always @(*) begin
+        casez ({pull, push, empty, full})
+            4'b100?: count_add = -1;
+            4'b01?0: count_add = 1;
+            4'b1110: count_add = 1; // pull fail on parrallel
+            default: count_add = 0; // no change on parrallel
+        endcase
+    end
 
-        always @(posedge clk) begin
-            if (res)
-                count <= 0;
-            else
-                count <= count + count_add;
-        end
-    `endif
+    always @(posedge clk) begin
+        if (res)
+            count <= 0;
+        else
+            count <= count + count_add;
+    end
 endmodule

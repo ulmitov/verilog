@@ -41,6 +41,7 @@ The modem features are not implemented for now.
 
 
 ## Simulation results:
+**View online the VCD**: https://wavedrom.live/?github=ulmitov/verilog/main/UART/dir/UART_VTB.vcd
 See the input values in the tx_din signal versus the outputs in rx_out signal each tick of rx_done signal:
 ![clock_div.png](./dir/uart_tb_2stopbits.png)
 
@@ -53,4 +54,5 @@ set divisor to: 100 / (16 * 9600 * (8+2+1/8)) which is a rounded 470.
 
 `DIVIDER = Freq / ((M + PAR + N)/8) × OSR × Brate)`
 
+**View online the VCD**: https://wavedrom.live/?github=ulmitov/verilog/main/UART/dir/baud_tb.vcd
 ![clock_div.png](./dir/clock_div.png)

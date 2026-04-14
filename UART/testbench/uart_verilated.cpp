@@ -45,7 +45,7 @@ void UartVerilated::reset() {
     top->res = 0;
 }
 
-int UartVerilated::io_read(int addr) {
+uint32_t UartVerilated::io_read(uint32_t addr) {
     top->addr = addr;
     top->ddis = 0;
     top->wr = 0;
@@ -54,10 +54,10 @@ int UartVerilated::io_read(int addr) {
     tick();
     top->rd = 0;
     //printf("%ld ns: io_read addr %x data_bus=%x data_bus__out=%x\n", timestamp, addr, top->data_bus, top->data_bus__out);
-    return (int) top->data_bus__out;
+    return (uint32_t) top->data_bus__out;
 }
 
-void UartVerilated::io_write(int addr, int data) {
+void UartVerilated::io_write(uint32_t addr, uint32_t data) {
     printf("%ld ns: io_write addr %x val 0x%x (%c)\n", timestamp, addr, data, data);
     top->ddis = 1;
     top->cs = 1;

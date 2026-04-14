@@ -18,9 +18,9 @@ public:
 
     void wait_ticks(int repeat = 1);
 
-    void io_write(int addr, int data) override;
+    void io_write(uint32_t addr, uint32_t data) override;
 
-    int io_read(int addr) override;
+    uint32_t io_read(uint32_t addr) override;
 
 private:
     VerilatedVcdC* vcd;

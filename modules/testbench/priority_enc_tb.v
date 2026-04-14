@@ -21,12 +21,12 @@ module priority_enc_tb;
     // expected results
     always begin
         #`T_CLK exp_v = din ? 1 : 0;
-        if (valid !== exp_v) $display("ERROR: valid is not as expected");
+        #1 if (exp_v !== 1'bX && valid !== exp_v) $display("ERROR: valid %0b is not as expected %0b", valid, exp_v);
         br = 0;
         for (j = 7; j >= 0; j = j - 1) begin
             if (!br && din[j] === 1) begin
                 br = 1;
-                if (out !== j) $display("ERROR: out is not as expected %3b", j);
+                #1 if (out !== j) $display("ERROR: out is not as expected %3b", j);
             end
         end
     end

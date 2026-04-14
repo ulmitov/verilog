@@ -6,12 +6,12 @@ UartDriver::~UartDriver() {}
 
 
 // TBD: should be taken from cpu header
-void UartDriver::io_write(int addr, int data) {
-    (*(volatile uint32_t *)((addr) = (data)));
+void UartDriver::io_write(uint32_t addr, uint32_t data) {
+    (*((volatile uint32_t *)addr)) = (data);
 }
 
-int UartDriver::io_read(int addr) {
-    return (*(volatile uint32_t *)(addr));
+uint32_t UartDriver::io_read(uint32_t addr) {
+    return (*((volatile uint32_t *)addr));
 }
 
 

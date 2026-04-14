@@ -151,14 +151,14 @@ class UartDriver {
         */
         short poll_rx(unsigned short timeout = 1000);
     protected:
-        unsigned int line_status = 0;   // LSR is saved here each read
+        uint32_t line_status = 0;   // LSR is saved here each read
         /**
          * read an io register.
          * This actually should be an external function
          * @param addr register word address
          * @return 32-bit data of the register
          */
-        virtual int io_read(int addr);
+        virtual uint32_t io_read(uint32_t addr);
 
         /**
         * write an io register
@@ -166,5 +166,5 @@ class UartDriver {
         * @param addr register word address
         * @param data 32-bit data
         */
-        virtual void io_write(int addr, int data);
+        virtual void io_write(uint32_t addr, uint32_t data);
 };

@@ -14,9 +14,12 @@ make lint ARG=fifo.v
 # run testbench with iverilog:
 make fifo
 
+# run testbench with verilator:
+make fifo SIM=v
+
 # or set tb name and source files:
-make vvp ARG=fifo_tb SRC="testbench/fifo_tb.v fifo.v"
+make vvp TOP=fifo_tb SRC="testbench/fifo_tb.v fifo.v"
 
 # run testbench with verilator:
-make ver ARG=fifo_tb SRC="testbench/fifo_tb.v fifo.v"
+make ver TOP=fifo_tb SRC="testbench/fifo_tb.v fifo.v"
 ```

@@ -23,15 +23,16 @@ endmodule
 
 
 module counter_tb #(parameter N = 4, parameter TYPE = "dff");
-    parameter T_CLK = `T_DELAY_FF * N + 1;
-    parameter T_CYC = T_CLK * 2;
+    localparam T_CLK = `T_DELAY_FF * N + 1;
+    localparam T_CYC = T_CLK * 2;
+    localparam TDELAY = `T_DELAY_FF + 1;
     parameter vcd = {"vcd/counter_", TYPE, "_tb.vcd"};
 
-    reg res_n, enable, count_up, load;
     reg clk = 1'b0;
-    reg [N-1:0] set;
+    reg res_n, enable, count_up, load, err;
+    reg [N-1:0] set, expected;
     wire [N-1:0] count;
-    integer i, expected;
+    integer i;
 
     generate
         if (TYPE == "dff")
@@ -46,13 +47,17 @@ module counter_tb #(parameter N = 4, parameter TYPE = "dff");
     
     always #T_CLK clk = ~clk;
 
-    always #T_CYC if (expected !== 'bX && expected !== count)
-        $display("%0t: [counter_tb] ERROR: count=%0d not as expected %0d", $time, count, expected);
+    always @(negedge clk) begin
+        if (expected !== 'bX && expected !== count) begin
+            $display("%0t: [counter_tb] ERROR: count=%0d not as expected %0d", $time, count, expected);
+            err <= 1'b1;
+        end else err <= 1'b0;
+    end
 
     initial begin
         $dumpfile(vcd);
         $dumpvars(0);
-        $monitor("%0d: en=%0d count=%0d", $time, enable, count);
+        $monitor("%0d: en=%0d count=%0d expected=%0d", $time, enable, count, expected);
         
         $display("*** TC init TYPE = %s ***", TYPE);
         count_up = 1'b1;
@@ -60,14 +65,14 @@ module counter_tb #(parameter N = 4, parameter TYPE = "dff");
         res_n = 1'b1;
         #T_CYC res_n = 1'b0;
         load = 1'b0;
-        expected = 0;
         #T_CYC res_n = 1'b1;
         enable = 1'b1;
+        expected = 0;
 
         $display("*** TC count up ***");
         for (i = 0; i < 2*2**N - 2; i = i + 1) begin
-            expected = (expected == 2**N - 1) ? 0 : expected + 1;
-            #T_CYC;
+            #T_CYC expected = (expected == 2**N - 1) ? 0 : expected + 1;
+            
         end
 
         if (TYPE != "tff_async") begin
@@ -76,8 +81,7 @@ module counter_tb #(parameter N = 4, parameter TYPE = "dff");
             count_up = 1'b0;
             #T_CYC enable = 1'b1;
             for (i = 0; i < 2*2**N; i = i + 1) begin
-                expected = expected == 0 ? 2**N - 1 : expected - 1;
-                #T_CYC;
+                #T_CYC expected = expected == 0 ? 2**N - 1 : expected - 1;
             end
         end
 
@@ -90,27 +94,27 @@ module counter_tb #(parameter N = 4, parameter TYPE = "dff");
             $display("*** TC set load to 1's ***");
             load = 1'b1;
             set = 2**N >> 1;
-            expected = set;
-            #T_CYC set = 2**N - 1;
-            expected = set;
+            #T_CYC expected = set;
+            set = 2**N - 1;
+            #T_CYC expected = set;
             #T_CYC load = 1'b0;
             
             for (i = 0; i < 2**N >> 1; i = i + 1) begin
-                expected = expected == 0 ? 2**N - 1 : expected - 1;
-                #T_CYC;
+                #T_CYC expected = expected == 0 ? 2**N - 1 : expected - 1;
+                
             end
             $display("*** TC set load to 0's ***");
             set = 0;
             load = 1'b1;
-            expected = set;
+            #T_CYC expected = set;
             count_up = 1'b1;
             #T_CYC load = 1'b0;
             for (i = 0; i < 2**N >> 1; i = i + 1) begin
-                expected = expected + 1;
-                #T_CYC;
+                #T_CYC expected = expected + 1;
             end
             
         end
+
         enable = 1'b0;
         $display("End of testbench: %s", vcd);
         $finish;

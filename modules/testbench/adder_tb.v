@@ -3,7 +3,6 @@
 */
 `include "consts.vh"
 `timescale 1ns / 100ps
-`define VCD 
 
 
 module fast_adder_tb;
@@ -57,6 +56,7 @@ module adder_tb #(parameter FAST_ADDER = 0, parameter N = 4, parameter VCD = "vc
     initial begin
         $dumpfile(VCD);
         $dumpvars(0);
+        $monitor("%8d: overflow=%0b  carry=%0b", $time, of, carry);
 
         // Per stage test
         for (j = 0; j < N; j = j + 1) begin

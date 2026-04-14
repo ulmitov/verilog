@@ -16,7 +16,7 @@ module fifo_tb;
     reg [`DATA_WIDTH-1:0] data;
     wire [`DATA_WIDTH-1:0] out;
     wire [`ADDR_WIDTH:0] count;
-    wire full, empty, half_full;
+    wire full, empty;
     integer i;
     reg err;
     reg [`DATA_WIDTH-1:0] exp_fifo [DEPTH-1:0];
@@ -31,12 +31,10 @@ module fifo_tb;
         .empty(empty),
         .full(full)
         ,.count(count)
-        ,.half_full(half_full)
     );
 
     always #`T_RD clk = ~clk;
-    always @(*) if (err) #`T_RD $finish;
-
+    always @(posedge clk) if (err) #`T_RD $finish;
 
     task ASSERT;
         input integer ex_empty;
@@ -56,19 +54,15 @@ module fifo_tb;
             err = 1;
             $display("[fifo_tb] ERROR: count=%0b not as expected %0b", count, ex_items);
         end
-        if (half_full !== 1'bX && half_full != (count >= DEPTH >> 1)) begin
-            err = 1;
-            $display("[fifo_tb] ERROR: half_full=%0b not as expected", half_full);
-        end
     end
     endtask
 
     initial begin
         $dumpfile(`VCD);
         $dumpvars(0);
-        $monitor("%0t: wen=%0b  ren=%0b  data=%0h  out=%0h  full=%0b  empty=%0b  half_full=%0b  count=%0d", $time, wen, ren, data, out, full, empty, half_full, count);
+        $monitor("%0t: wen=%0b  ren=%0b  data=%0h  out=%0h  full=%0b  empty=%0b  count=%0d", $time, wen, ren, data, out, full, empty, count);
 
-        $display("Test reset and struck at 1's");
+        $display("Test reset and stuck 1's");
         wen = 1'b0;
         ren = 1'b0;
         res = 1'b1;
@@ -106,7 +100,7 @@ module fifo_tb;
             #TCLK;
         end
 
-        $display("---Test stuck at 0's");
+        $display("---Test stuck 0's");
         wen = 1'b1;
         ren = 1'b0;
         for (i = 0; i < DEPTH; i = i + 1) begin

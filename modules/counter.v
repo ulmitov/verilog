@@ -98,7 +98,8 @@ module counter_tff_sync #(parameter n = 3) (
     input count_up,
     output wire [n-1:0] count
 );
-    wire [n-1:0] en_and;
+    
+    wire [n-1:0] en_and;;
     generate
         genvar i;
         for (i = 0; i < n; i = i + 1) begin: tff
@@ -125,7 +126,8 @@ module counter_jkff #(parameter n = 3) (
     input count_up,
     output wire [n-1:0] count
 );
-    wire [n-1:0] j, k, d;
+    wire [n-1:0] j, k;
+    wire [n-1:0] d;
     wire J, K;
 
     // Clear: J=0, K=1; hold: J=0, K=0; Clear has higher priority:
