@@ -4,26 +4,43 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  # Allows to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
-  build:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Download and untar OSS-CAD-suite
-      run: |
-        curl -L https://github.com/YosysHQ/oss-cad-suite-build/releases/download/2026-04-13/oss-cad-suite-linux-x64-20260413.tgz -o oss.tgz
-        mkdir -p $HOME/dev/sda6/oss-cad-suite/
-        tar -xzf oss.tgz -C $HOME/dev/sda6/
-        sudo apt-get update
-        sudo apt-get install -y lcov
-    - name: iverilog regression with grep errors (gate flow code)
-      run: make all
-    - name: iverilog regression with grep errors (data flow code)
-      run: make all ARG="-DGATE_FLOW_OFF"
-    - name: verilator regression with coverage (gate flow code, full run log)
-      run: make coverage || cat coverage_merged_notb.dat
-    - uses: actions/upload-artifact@v7
-      with:
-        name: my-artifact
-        path: ./covhtml
-        overwrite: true
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup
+        uses: actions/configure-pages@v5
+      - name: Prepare
+        run: |
+          curl -L https://github.com/YosysHQ/oss-cad-suite-build/releases/download/2026-04-13/oss-cad-suite-linux-x64-20260413.tgz -o oss.tgz
+          mkdir -p $HOME/dev/sda6/oss-cad-suite/
+          tar -xzf oss.tgz -C $HOME/dev/sda6/
+          sudo apt-get update
+          sudo apt-get install -y lcov
+      - name: Regression run with grep errors via iverilog (gate flow code)
+        run: make all
+      - name: Regression run with grep errors via iverilog (data flow code)
+        run: make all ARG="-DGATE_FLOW_OFF"
+      - name: Regression run via verilator with coverage (gate flow code, full run log)
+        run: make coverage || cat coverage_merged_notb.dat
+      - name: Upload
+        uses: actions/upload-pages-artifact@v3
+        with:
+          name: github-pages
+          path: ./covhtml
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

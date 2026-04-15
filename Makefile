@@ -78,9 +78,9 @@ lint-uart:
 
 
 # Modules Regression suite
-grep_err := 2>&1 |grep -a -v -E 'timescale|dangling' |grep -a -i -E 'error|end of|warning' || true
+grep_err := 2>&1 |grep -a -v -E 'timescale|time unit|dangling|Not enough words|Part select' |grep -a -i -E 'error|end of|warning' || true
 all:
-	$(MAKE) -s regression uart risc $(grep_err)
+	@$(MAKE) -s regression uart risc $(grep_err)
 regression:
 	$(MAKE) -s adder half_adder fastadder mux decoder priority_enc mux_cmos
 	$(MAKE) -s sequence counters fifo memory shift_reg shift

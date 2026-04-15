@@ -280,7 +280,7 @@ module uart_tb;
 
     initial begin
         $dumpfile("vcd/UART_VTB.vcd");
-        $dumpvars();
+        $dumpvars(0, uut);
         $monitor("%t [uart_tb] INFO: wr_data=%0h  rd_data=%0h  rx_ready=%0b", $time, wr_data, rd_data, rx_ready);
         clk = 0;
         res_n = 1;
