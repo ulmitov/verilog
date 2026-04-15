@@ -13,7 +13,7 @@
 
 int main (int argc, char **argv, char **env) {
     #ifdef VERILATOR_SIM
-        UartVerilated* dut = new UartVerilated("dir/uart_cpp_tb.vcd", argc, argv);
+        UartVerilated* dut = new UartVerilated("vcd/uart_cpp_tb.vcd", argc, argv);
     #else
         UartDriver* dut = new UartDriver;
     #endif

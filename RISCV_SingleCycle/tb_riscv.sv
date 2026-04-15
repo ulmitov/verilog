@@ -3,19 +3,22 @@
 
 `define T_CLK (`T_DELAY_PD * (32*4)) // TODO: calc exact delay
 `define T_CYC (`T_CLK * 2)
-`define VCD_PATH "dir/"
+`define VCD_PATH "vcd/"
+
+string path = `__FILE__;
+`define ASM_PATH {path.substr(0, path.len() - 12), "asm/"}
 
 // see max value 2A in the end in ram dmem address d24 (h18)
 `define ARR_MAX "find_max_in_array.mem"
 
 // see values in the end in reg_file wr_data at rd_addr=0xB-0xE (x11-x14)
-`define BUBBLE "bubble_sort.mem"
+`define BUBBLES "bubble_sort.mem"
 
 // see values in ram each dmem_wr in dmem_wr_data
 `define FIBONACCI "fibonacci_sequence.mem"
 
 
-module tb_riscv #(parameter mem_file = `BUBBLE, parameter FINISH = 1);
+module tb_riscv #(parameter mem_file = `BUBBLES, parameter FINISH = 1);
     logic clk, res_n;
     integer i, exp;
     
@@ -39,7 +42,7 @@ module tb_riscv #(parameter mem_file = `BUBBLE, parameter FINISH = 1);
         $dumpfile({`VCD_PATH, mem_file, ".vcd"});
         $dumpvars(0, tb_riscv);
         $monitor("%6d: INFO: res=%0b", $time, res_n);
-        dut.instruction_mem.initmem({"asm/", mem_file});
+        dut.instruction_mem.initmem({`ASM_PATH, mem_file});
         clk = 1'b0;
         res_n = 1'b1;
         #`T_CYC res_n = 1'b0;
@@ -74,7 +77,7 @@ endmodule
 
 module tb_asm_bub;
     integer i, exp;
-    tb_riscv #(.mem_file(`BUBBLE), .FINISH(0)) tb();
+    tb_riscv #(.mem_file(`BUBBLES), .FINISH(0)) tb();
 
     initial begin
         wait (tb.dut.instruction === 'h13);

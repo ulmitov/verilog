@@ -5,8 +5,8 @@
 
 /*
 src="testbench/testbench.sv clock_divider.sv"
-iverilog -Wall -g2012 -o dir/baud_tb.vvp -s baud_tb ${src};
-vvp dir/baud_tb.vvp
+iverilog -Wall -g2012 -o vcd/baud_tb.vvp -s baud_tb ${src};
+vvp vcd/baud_tb.vvp
 */
 module baud_tb;
     logic clk;
@@ -36,7 +36,7 @@ module baud_tb;
     always @(posedge clk_out10) cnt10 = cnt10 + 1;
 
     initial begin
-        $dumpfile("dir/baud_tb.vcd");
+        $dumpfile("vcd/baud_tb.vcd");
         $dumpvars(0);
         clk = 1'b1;
         res_n = 1'b1;
@@ -62,8 +62,8 @@ endmodule
 
 /*
 src="testbench/testbench.sv uart_rx.sv clock_divider.sv ../modules/shift_reg.v"
-iverilog -Wall -g2012 -I ../modules/ -o dir/uart_rx_tb.vvp -s uart_rx_tb ${src};
-vvp dir/uart_rx_tb.vvp
+iverilog -Wall -g2012 -I ../modules/ -o vcd/uart_rx_tb.vvp -s uart_rx_tb ${src};
+vvp vcd/uart_rx_tb.vvp
 */
 module uart_rx_tb;
     localparam DATA_WIDTH = 8;
@@ -118,7 +118,7 @@ module uart_rx_tb;
     endtask
 
     initial begin
-        $dumpfile("dir/uart_rx_tb.vcd");
+        $dumpfile("vcd/uart_rx_tb.vcd");
         $dumpvars(0);
         $monitor("%t RX: din=%0b dout=%10b, rx_ready=%0b, err_par=%0b, err_fr=%0b", $time, din, uart_rx_out, valid, err_par, err_fr);
         clk = 1'b1;
@@ -138,8 +138,8 @@ endmodule
 
 /*
 src="testbench/testbench.sv uart_tx.sv clock_divider.sv ../modules/shift_reg.v"
-iverilog -Wall -g2012 -I ../modules/ -o dir/uart_tx_tb.vvp -s uart_tx_tb ${src};
-vvp dir/uart_tx_tb.vvp
+iverilog -Wall -g2012 -I ../modules/ -o vcd/uart_tx_tb.vvp -s uart_tx_tb ${src};
+vvp vcd/uart_tx_tb.vvp
 */
 module uart_tx_tb;
     logic clk;
@@ -188,7 +188,7 @@ module uart_tx_tb;
     end
 
     initial begin
-        $dumpfile("dir/uart_tx_tb.vcd");
+        $dumpfile("vcd/uart_tx_tb.vcd");
         $dumpvars(0);
         $monitor("%t TX: din=%0b dout=%0b", $time, din, uart_tx_out);
         clk = 1'b1;
@@ -221,8 +221,8 @@ endmodule
 
 /*
 src="testbench/testbench.sv uart.sv clock_divider.sv uart_tx.sv uart_rx.sv ../modules/fifo.v ../modules/shift_reg.v"
-iverilog -Wall -g2012 -I ../modules/ -o dir/uart_tb.vvp -s uart_tb ${src};
-vvp dir/uart_tb.vvp
+iverilog -Wall -g2012 -I ../modules/ -o vcd/uart_tb.vvp -s uart_tb ${src};
+vvp vcd/uart_tb.vvp
 */
 module uart_tb;
     localparam DWIDTH = 8;
@@ -279,7 +279,7 @@ module uart_tb;
     assign rd_uart = ~rx_empty;
 
     initial begin
-        $dumpfile("dir/UART_VTB.vcd");
+        $dumpfile("vcd/UART_VTB.vcd");
         $dumpvars();
         $monitor("%t [uart_tb] INFO: wr_data=%0h  rd_data=%0h  rx_ready=%0b", $time, wr_data, rd_data, rx_ready);
         clk = 0;
@@ -321,8 +321,8 @@ endmodule
 
 /*
 src="testbench/testbench.sv uart_top.sv uart.sv clock_divider.sv uart_tx.sv uart_rx.sv ../modules/fifo.v ../modules/shift_reg.v"
-iverilog -Wall -g2012 -I ../modules/ -o dir/uart_top_tb.vvp -s uart_top_tb ${src};
-vvp dir/uart_top_tb.vvp
+iverilog -Wall -g2012 -I ../modules/ -o vcd/uart_top_tb.vvp -s uart_top_tb ${src};
+vvp vcd/uart_top_tb.vvp
 */
 module uart_top_tb;
     logic clk = 1'b1;
@@ -347,7 +347,7 @@ module uart_top_tb;
 
     always #`TCLK clk = ~clk;
     initial begin
-        $dumpfile("dir/uart_top_tb.vcd");
+        $dumpfile("vcd/uart_top_tb.vcd");
         $dumpvars();
         $monitor("%t: addr=%0h  BUS=0x%0h", $time, addr, dutout);
         @(posedge clk) res = 0;

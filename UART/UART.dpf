@@ -7,11 +7,11 @@ design_root_dir: .
 simulations:
   - name: Sim MXD
     options: >-
-      -build-all -cs-randc-max 31 +acc+b -code-cov a -waves dir/uart_tb.mxd -top
+      -build-all -cs-randc-max 31 +acc+b -code-cov a -waves vcd/uart_tb.mxd -top
       work.uart_tb
   - name: Sim VCD
     options: >-
-      -build-all -cs-randc-max 31 +acc+b -code-cov a -waves dir/uart_tb.vcd -top
+      -build-all -cs-randc-max 31 +acc+b -code-cov a -waves vcd/uart_tb.vcd -top
       work.uart_tb
 source_files:
   - language: verilog
