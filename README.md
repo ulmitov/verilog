@@ -10,9 +10,10 @@ Please navigate to each folder to view the project description Readme
 
 
 # Code coverage:
-**Current status** of verification coverage can be viewed here: https://ulmitov.github.io/verilog/
+Full run log can be viewed in last deploy run under the <ins>"Regression run via Verilator"</ins> step:
+[![Verilog CI](https://github.com/ulmitov/verilog/actions/workflows/regression.yml/badge.svg)](https://github.com/ulmitov/verilog/actions/workflows/regression.yml)
 
-FIFO UVM and ALU SV testbenches **excluded** from coverage report since they run locally via Dsim (depends on release of  verilator v5.048)
+**Current status** of verification coverage can be viewed here: https://ulmitov.github.io/verilog/
 
 
 
@@ -21,6 +22,6 @@ FIFO UVM and ALU SV testbenches **excluded** from coverage report since they run
 - `make uart`: UART testbenches
 - `make uartcpp`: UART C++ driver testbench
 - `make riscv`: RISCV testbenches
-- `make all`: all testbenches, except for Fifo UVM and ALU SV suites, which run separately for now (TBD)
+- `make all`: all testbenches except for Fifo UVM
 
 

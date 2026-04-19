@@ -25,16 +25,16 @@ jobs:
         uses: actions/configure-pages@v5
       - name: Prepare
         run: |
-          curl -L https://github.com/YosysHQ/oss-cad-suite-build/releases/download/2026-04-13/oss-cad-suite-linux-x64-20260413.tgz -o oss.tgz
+          curl -L https://github.com/YosysHQ/oss-cad-suite-build/releases/download/2026-04-19/oss-cad-suite-linux-x64-20260419.tgz -o oss.tgz
           mkdir -p $HOME/dev/sda6/oss-cad-suite/
           tar -xzf oss.tgz -C $HOME/dev/sda6/
           sudo apt-get update
           sudo apt-get install -y lcov
-      - name: Regression run with grep errors via iverilog (gate flow code)
+      - name: Regression run via Iverilog (GATE flow code, grep errors)
         run: make all
-      - name: Regression run with grep errors via iverilog (data flow code)
+      - name: Regression run via Iverilog (DATA flow code, grep errors)
         run: make all ARG="-DGATE_FLOW_OFF"
-      - name: Regression run via verilator with coverage (gate flow code, full run log)
+      - name: Regression run via Verilator with coverage (GATE flow code, full run log)
         run: make coverage || cat coverage_merged_notb.dat
       - name: Upload
         uses: actions/upload-pages-artifact@v3

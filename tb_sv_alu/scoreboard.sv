@@ -1,27 +1,37 @@
 class scoreboard;
+    `ifndef VERILATOR
+    coverage cov;
+    `endif
     mailbox #(transaction) mon2scb_mail;
+    transaction trans;
     int count = 0;
     int fails = 0;
 
     function new (mailbox #(transaction) mb);
-        this.mon2scb_mail = mb;
+        mon2scb_mail = mb;
+        `ifndef VERILATOR
+        cov = new();
+        `endif
     endfunction
 
     task main(int num);
-        transaction trans;
+        trans = new();
         repeat(num) begin
-            #1 this.mon2scb_mail.get(trans);
+            #1 mon2scb_mail.get(trans);
             assert(trans.alu_res !== 32'bX && trans.alu_res !== 32'bZ)
-            else $error("ALU RESULT is invalid");
+            else $error("ERROR: ALU RESULT is invalid");
             if (trans.alu_res == trans.res_exp)
                 trans.display("SCB");
             else begin
                 $display("----------------------");
-                trans.display("SCB: FAIL");
+                trans.display("SCB: ERROR");
                 $display("----------------------");
-                this.fails++;
+                fails++;
             end
-            this.count++;
+            count++;
+            `ifndef VERILATOR
+            cov.sample(trans);
+            `endif
         end
     endtask
 endclass

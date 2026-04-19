@@ -28,7 +28,7 @@ module mux_2to1 (
         and #(`T_DELAY_PD) (and2, W1, SEL);
         or #(`T_DELAY_PD) (Y, and1, and2);
     `else
-        assign Y = (SEL) ? W1 : W0;
+        assign Y = SEL ? W1 : W0;
     `endif
 endmodule
 

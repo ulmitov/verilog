@@ -5,11 +5,11 @@ version: '0.2'
 work_dir: .
 design_root_dir: .
 simulations:
-  - name: tb_run MXD
+  - name: Sim MXD
     options: >-
       -top work.top_tb -build-all -cs-randc-max 31 +acc+b -code-cov a -waves
       tb_top_alu.mxd
-  - name: tb_run VCD
+  - name: Sim VCD
     options: >-
       -top work.top_tb -build-all -cs-randc-max 31 +acc+b -code-cov a -waves
       tb_top_alu.vcd
@@ -32,6 +32,8 @@ source_files:
     path: intf.sv
   - language: verilog
     path: transaction.sv
+  - language: verilog
+    path: coverage.sv
   - language: verilog
     path: generator.sv
   - language: verilog

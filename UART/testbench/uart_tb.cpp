@@ -109,8 +109,7 @@ int main (int argc, char **argv, char **env) {
         err = 1;
     }
 
-
-    std::cout << "*** [uart_tb.cpp]: End of testbench time: " << std::dec << dut->timestamp << " ******" << std::endl;
+    std::cout << "[uart_tb.cpp] End of testbench time: " << std::dec << dut->timestamp << std::endl;
     finish:
         delete dut;
         exit(err);

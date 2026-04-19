@@ -19,23 +19,30 @@ module shift #(parameter n = 4) (
     input sign,
     input [n-1:0] din,
     input [$clog2(n):0] shift_n,    // number of shifts
-    output wire [n-1:0] out
+    output reg [n-1:0] out
 );
-    wire [n-1:0] data, shifted;
+    reg [n-1:0] data;
+    wire [n-1:0] shifted;
     wire sign_in;
-    genvar k;
+    integer k;
 
     shift_right #(n) shr (.sign(sign_in), .din(data), .shift_n(shift_n), .shifted(shifted));
 
     assign sign_in = right_en & sign;
-
-    generate
-        // TODO: here also can use mux_2to1. This will add two more T_DELAY_PD levels for calc time.
-        for (k = 0; k < n; k = k + 1) begin
-            assign data[k] = right_en ? din[k] : din[n-k-1];
-            assign out[k]  = right_en ? shifted[k] : shifted[n-k-1];
+    // TODO: here also can use mux_2to1. This will add two more T_DELAY_PD levels for calc time.
+    always @(*) begin
+        if (right_en) begin
+            for (k = 0; k < n; k = k + 1) begin
+                data[k] = din[k];
+                out[k]  = shifted[k];
+            end
+        end else begin
+            for (k = 0; k < n; k = k + 1) begin
+                data[k] = din[n-k-1];
+                out[k]  = shifted[n-k-1];
+            end
         end
-    endgenerate
+    end
 endmodule
 
 
@@ -54,22 +61,24 @@ module shift_right #(parameter n = 4) (
     wire msb;
     genvar s, b;
 
+    // stage 0 we input the bits from din
+    assign stages[0] = din;
+    assign msb = sign & din[n-1];
+
+    // if number of shifts bigger than size of din, then output 0
+    assign shifted = shift_n[shifts_num] ? {n{msb}} : stages[shifts_num];
+
     generate
-        // stage 0 we input the bits from din
-        assign stages[0] = din;
-        assign msb = sign & din[n-1];
         // stage muxes. each stage shifts by 2**s
         for (s = 0; s < shifts_num; s = s + 1) begin
             // bit muxes
-            for (b = 0; b < n; b = b + 1) begin
+            for (b = 0; b < n; b = b + 1) begin: mux_st_i
                 if (b >= n - 2**s)
                     mux_2to1 mux_stage_bit (.W0(stages[s][b]), .W1(msb), .SEL(shift_n[s]), .Y(stages[s+1][b]));
                 else
                     mux_2to1 mux_stage_bit (.W0(stages[s][b]), .W1(stages[s][b+2**s]), .SEL(shift_n[s]), .Y(stages[s+1][b]));
             end
         end
-        // if number of shifts bigger than size of din, then output 0
-        assign shifted = shift_n[shifts_num] ? {n{msb}} : stages[shifts_num];
     endgenerate
 endmodule
 

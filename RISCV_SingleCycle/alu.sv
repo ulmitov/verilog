@@ -2,7 +2,7 @@
 import risc_pkg::*;
 
 
-module alu #(parameter XLEN = 32) (
+module alu #(parameter XLEN = RISCV_XLEN) (
     input op_enum_alu alu_op,
     input logic [XLEN-1:0] alu_a,
     input logic [XLEN-1:0] alu_b,
@@ -10,8 +10,12 @@ module alu #(parameter XLEN = 32) (
 );
     `ifndef GATE_FLOW_OFF
         logic lt, ltu;
-        logic nadd_sub, right_en, sign_ext;
-        logic [XLEN-1:0] sum, out_sh;
+        logic nadd_sub;
+        logic right_en;
+        logic sign_ext;
+        logic carry, of;
+        logic [XLEN-1:0] sum;
+        logic [XLEN-1:0] out_sh;
         logic [5:0] shifts_num;
 
         adder #(XLEN) alu_fa (
@@ -19,8 +23,7 @@ module alu #(parameter XLEN = 32) (
             .X(alu_a),
             .Y(alu_b),
             .sum(sum),
-            .carry(), .overflow(),
-            .eq(),
+            .carry(carry), .overflow(of), .eq(),
             .lt(lt),
             .ltu(ltu)
         );
@@ -34,6 +37,9 @@ module alu #(parameter XLEN = 32) (
         );
 
         initial $display("*** SYNTHESISED GATEFLOW ALU ***");
+        `ifdef VERILATOR
+        always #2 $display("[%0t]: ALU GATEFLOW: X=%8h Y=%8h Nadd_sub=%b: sum=%8h (out_sh %8h) lt=%0b, ltu=%0b  carry=%0b  of=%0b", $time, alu_a, alu_b, nadd_sub, sum, out_sh, lt, ltu, carry, of);
+        `endif
 
         assign shifts_num = {1'b0, alu_b[4:0]};
 
@@ -72,12 +78,12 @@ module alu #(parameter XLEN = 32) (
         end
     `else
         initial $display("*** SYNTHESISED DATAFLOW ALU ***");
-        alu_dataflow alu_df (.alu_op(alu_op), .alu_a(alu_a), .alu_b(alu_b), .alu_res(alu_res));
+        alu_dataflow #(XLEN) alu_df (.alu_op(alu_op), .alu_a(alu_a), .alu_b(alu_b), .alu_res(alu_res));
     `endif
 endmodule
 
 
-module alu_dataflow #(parameter XLEN = 32) (
+module alu_dataflow #(parameter XLEN = RISCV_XLEN) (
     input op_enum_alu alu_op,
     input logic [XLEN-1:0] alu_a,
     input logic [XLEN-1:0] alu_b,
@@ -97,5 +103,8 @@ module alu_dataflow #(parameter XLEN = 32) (
             OP_ALU_SLTU:alu_res = alu_a < alu_b ? {XLEN{1'b1}} : {XLEN{1'b0}};
             default:    alu_res = {XLEN{1'b0}};
         endcase
+        `ifdef VERILATOR
+        #2 $display("[%0t]: ALU DATAFLOW: X=%8h Y=%8h RES=%0h", $time, alu_a, alu_b, alu_res);
+        `endif
     end
 endmodule

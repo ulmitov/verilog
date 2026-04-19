@@ -30,10 +30,6 @@ module adder_tb #(parameter FAST_ADDER = 0, parameter N = 4, parameter VCD = "vc
     task check_values;
         input [N-1:0] ex_sum;
         input ex_carry;
-        input ex_overflow;
-        input ex_eq;
-        input ex_lt;
-        input ex_ltu;
     begin
         #T_DELAY msb = of ? carry : sum[N-1];
         sum_s = $signed({msb, sum});
@@ -42,8 +38,17 @@ module adder_tb #(parameter FAST_ADDER = 0, parameter N = 4, parameter VCD = "vc
             $display("*** ERROR: sum %0d (%0b) is not equal to expected %0d", sum, sum, ex_sum);
         if (carry != ex_carry)
             $display("*** ERROR: carry %0b is not equal to expected %0b", carry, ex_carry);
+    end
+    endtask
+
+    task check_flags;
+        input ex_overflow;
+        input ex_eq;
+        input ex_lt;
+        input ex_ltu;
+    begin
         if (of != ex_overflow)
-            $display("*** ERROR: overflow %0b is not equal to expected %0b", of, ex_overflow);
+            $display("*** ERROR: overflow %0b is not equal to expected %0d", of, ex_overflow);
         if (eq != ex_eq)
             $display("*** ERROR: eq %0b is not equal to expected %0b", of, ex_eq);
         if (lt != ex_lt)
@@ -57,13 +62,14 @@ module adder_tb #(parameter FAST_ADDER = 0, parameter N = 4, parameter VCD = "vc
         $dumpfile(VCD);
         $dumpvars(0);
         $monitor("%8d: overflow=%0b  carry=%0b", $time, of, carry);
+        $display("Propagation delay = %0d", T_DELAY);
 
         // Per stage test
         for (j = 0; j < N; j = j + 1) begin
 
             $display("Test stuck at 1's");
-            X = 0; Y = 0; mode = 0;
-            check_values(0, 0, 0, 1'bX, 1'bX, 1'bX);
+            X = 0; Y = 0; mode = 0; // 0 is addition
+            check_values(0, 0);
 
             $display("Test per stage %0d. q is per stage inputs X, Y. Checking each FA bit by bit.", j);
             for (q = 1; q < 2**N - 1; q = q + 1) begin
@@ -76,87 +82,105 @@ module adder_tb #(parameter FAST_ADDER = 0, parameter N = 4, parameter VCD = "vc
                 check_s = X + Y;
                 check_c = check_s > 2**N - 1;
                 check_s = check_s[N-1:0];
-                check_values(check_s, check_c, 1'bX, 1'bX, 1'bX, 1'bX);
+                check_values(check_s, check_c);
             end
         end
 
         $display("Test crosstalk");
         X = 2**N - 1; Y = 2**N - 1; mode = 0;
-        check_values(2**N - 2, 1, 0, 1'bX, 1'bX, 1'bX);
+        check_values(2**N - 2, 1);
 
         X = -1; Y = -1; mode = 0;
-        check_values(-2, 1, 0, 1'bX, 1'bX, 1'bX);
+        check_values(-2, 1);
 
-        $display("Test substraction: N bits represent values 2**%0d/2...-2**%0d/2+1", N, N);
+        $display("Test subtraction: N bits represent values 2**%0d/2...-2**%0d/2+1", N, N);
         $display("Checking all cases as signed numbers");
         $display("So we have only N-1 bits to represent magnitude");
         $display("If overflow=1: then sign is the carry");
         $display("If overflow=0: then sign is the MSB (Sn-1) and carry ignored");
-        $display("For substarction: not checking carry if overflow");
+        $display("For subtraction: not checking carry if overflow");
         
         X = -7; Y = -2; mode = 0;
-        check_values(-9, 1'b1, 1'b1, 1'bX, 1'bX, 1'bX);
+        check_values(-9, 1'b1);
 
         X = 0; Y = 1; mode = 1;
-        check_values(-1, 1'bX, 1'b0, 0, 1, 1);
+        check_values(-1, 1'b0);
+        check_flags(0, 0, 1, 1);
 
         X = 2**N - 1; Y = 1; mode = 1;
-        check_values(-2, 1'bX, 1'b0, 0, 1, 0);
+        check_values(-2, 1'b1);
+        check_flags(1'b0, 0, 1, 0);
 
         X = -1; Y = 1; mode = 1;
-        check_values(-2, 1'bX, 1'b0, 0, 1, 0);
+        check_values(-2, 1'b1);
+        check_flags(1'b0, 0, 1, 0);
 
         X = 2**N - 1; Y = 2**N - 1; mode = 1;
-        check_values(0, 1'bX, 1'b0, 1, 0, 0);
+        check_values(0, 1'b1);
+        check_flags(1'b0, 1, 0, 0);
 
         X = 0; Y = 2**N - 1; mode = 1;
-        check_values(1, 1'bX, 1'b0, 0, 0, 1);
+        check_values(1, 1'b0);
+        check_flags(1'b0, 0, 0, 1);
 
         $display("Test comparator");
         $display("Same sign for both, X > Y: expect carry 1:");
         X = 4; Y = 3; mode = 1;
-        check_values(1, 1'b1, 1'b0, 0, 0, 0);
+        check_values(1, 1'b1);
+        check_flags(1'b0, 0, 0, 0);
 
         X = -3; Y = -4; mode = 1;
-        check_values(1, 1'b1, 1'b0, 0, 0, 0);
+        check_values(1, 1'b1);
+        check_flags(1'b0, 0, 0, 0);
 
         $display("Same sign for both, X < Y: expect carry 0:");
         X = 3; Y = 4; mode = 1;
-        check_values(-1, 1'b0, 1'b0, 0, 1, 1);
+        check_values(-1, 1'b0);
+        check_flags(1'b0, 0, 1, 1);
 
         X = -4; Y = -3; mode = 1;
-        check_values(-1, 1'b0, 1'b0, 0, 1, 1);
+        check_values(-1, 1'b0);
+        check_flags(1'b0, 0, 1, 1);
 
         $display("Different signs: X > Y: expect carry 0");
         X = 4; Y = -3; mode = 1;
-        check_values(7, 1'b0, 1'b0, 0, 0, 1);
+        check_values(7, 1'b0);
+        check_flags(1'b0, 0, 0, 1);
 
         X = 3; Y = -4; mode = 1;
-        check_values(7, 1'b0, 1'b0, 0, 0, 1);
+        check_values(7, 1'b0);
+        check_flags(1'b0, 0, 0, 1);
 
         $display("Different signs: X < Y: expect carry 1");
         X = -4; Y = 3; mode = 1;
-        check_values(-7, 1'b1, 1'b0, 0, 1, 0);
+        check_values(-7, 1'b1);
+        check_flags(1'b0, 0, 1, 0);
 
         X = -3; Y = 4; mode = 1;
-        check_values(-7, 1'b1, 1'b0, 0, 1, 0);
+        check_values(-7, 1'b1);
+        check_flags(1'b0, 0, 1, 0);
 
         $display("Test comparator with overflow (should be same)");
         $display("Different signs: X > Y: expect carry 0");
         X = 4; Y = -5; mode = 1;
-        check_values(9, 1'b0, 1'b1, 0, 0, 1);
+        check_values(9, 1'b0);
+        check_flags(1'b1, 0, 0, 1);
 
         X = 6; Y = -5; mode = 1;
-        check_values(11, 1'b0, 1'b1, 0, 0, 1);
+        check_values(11, 1'b0);
+        check_flags(1'b1, 0, 0, 1);
 
         $display("Different signs: X < Y: expect carry 1");
         X = -5; Y = 7; mode = 1;
-        check_values(-12, 1'b1, 1'b1, 0, 1, 0);
+        check_values(-12, 1'b1);
+        check_flags(1'b1, 0, 1, 0);
 
         X = -7; Y = 3; mode = 1;
-        check_values(-10, 1'b1, 1'b1, 0, 1, 0);
+        check_values(-10, 1'b1);
+        check_flags(1'b1, 0, 1, 0);
 
         $display("End of testbench: %s", VCD);
         $finish;
     end
 endmodule
+

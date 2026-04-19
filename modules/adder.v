@@ -2,7 +2,7 @@
     FULL ADDERs and HALF ADDERs
 
 For unsigned addition if sum is bigger than bits size, then carry bit will rise.
-For signed addition or substraction MSB is the sign bit, but if sum is bigger than bits number,
+For signed addition or subtraction MSB is the sign bit, but if sum is bigger than bits number,
 then overflow will rise and the carry bit will hold the sign fo the sum!
 Then, a program instruction that specifies unsigned operands can use the carry-out signal,
 while an instruction that has signed operands can use the overflow signal.
@@ -20,7 +20,7 @@ f="adder"; m="adder"
 yosys -p "read_verilog ${f}.v; hierarchy -check -top $m; proc; techmap; clean; opt; clean -purge; stat; write_verilog -noattr synth/${m}_synth.v; show -format svg -prefix synth/${m} ${m}; show ${m}"
 */
 module adder #(parameter n = 4) (
-    input Nadd_sub,             // Mode select: 0 = addition; 1 = substraction
+    input Nadd_sub,             // Mode select: 0 = addition; 1 = subtraction
     input [n-1:0] X,
     input [n-1:0] Y,
     output wire [n-1:0] sum,
@@ -35,8 +35,8 @@ module adder #(parameter n = 4) (
         genvar k;
         assign C[0] = Nadd_sub;
         generate
-            for (k = 0; k < n; k = k + 1) begin
-                full_adder fa_k (.a(X[k]), .b(Y[k] ^ Nadd_sub), .cin(C[k]), .sum(sum[k]), .carry(C[k+1]));
+            for (k = 0; k < n; k = k + 1) begin: fa_k
+                full_adder fau (.a(X[k]), .b(Y[k] ^ Nadd_sub), .cin(C[k]), .sum(sum[k]), .carry(C[k+1]));
             end
         endgenerate
     `else
@@ -55,20 +55,21 @@ module adder #(parameter n = 4) (
         end
     `endif
 
-    wire same_sign, cmp;
+    wire same_sign;
     assign carry = C[n];
     assign same_sign = X[n-1] ^ Y[n-1];
     assign overflow = C[n-1] ^ C[n];    // alternative: X[n-1] & Y[n-1] & ~sum[n-1];
-    assign eq = Nadd_sub & ~(|sum);     // Equality
-    assign cmp = Nadd_sub & ~eq;
-    assign ltu = cmp & ~carry;          // Less Than unsigned. alternative: ~sum[n-1];
-    assign lt = cmp & ((~same_sign & ~carry) | (same_sign & carry)); // Less Than signed
+
+    // in case of comparison flags, Nadd_sub input is 1 and Y is 2 complemented
+    assign eq = ~(|sum);                // Equality. |(X ^~ Y)
+    assign ltu = ~eq & ~carry;          // Less Than unsigned  ~eq & ~carry   , ~sum[n-1]
+    assign lt = ~eq & ((~same_sign & ~carry) | (same_sign & carry)); // Less Than signed. sum[n-1] ^ overflow
 endmodule
 
 
 /* TODO: Predict carry using the generation function of x[k] & y[k] */
 module fast_adder #(parameter n = 4) (
-    input Nadd_sub,             // Mode select: 0 = addition; 1 = substraction
+    input Nadd_sub,             // Mode select: 0 = addition; 1 = subtraction
     input [n-1:0] X,
     input [n-1:0] Y,
     output wire [n-1:0] sum,

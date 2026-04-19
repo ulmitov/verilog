@@ -5,18 +5,19 @@ SHELL := $(pwd)vvp.sh
 SIM ?= iverilog
 RM_OBJDIR := false
 DEBUG_ARG := -CFLAGS \"-g -DDEBUG_MODE\"
+RUNTIME_DBG := --prof-cfuncs -CFLAGS -DVL_DEBUG --stats --debug --runtime-debug
 _mkvcdir := $(shell mkdir -p vcd)
 #export UVM_HOME := $(HOME)/dev/sda6/UVM/1800.2-2020/src
 export UVM_HOME := $(HOME)/dev/sda6/UVM/UVM1.2/src
 
 VERILATOR_ARGS := 	-Wno-lint -Wno-TIMESCALEMOD -Wno-SELRANGE -Wno-UNOPTFLAT -Wno-SPLITVAR \
-					--assert --coverage --public-flat-rw --pins-inout-enables \
-					--trace-vcd --timing -y modules -Imodules -j 1 --build --cc
+					--assert --coverage --pins-inout-enables \
+					--trace --timing -y modules -Imodules -j 1 --build --cc
 
 define get_coverage
 	pwd
 	verilator_coverage --write coverage_merged.dat $$(find . -type f -name "cov_*.dat" | xargs)
-	grep -v "testbench" coverage_merged.dat > coverage_merged_notb.dat
+	grep -v -E "testbench|verilated_std.sv|tb_sv_alu" coverage_merged.dat > coverage_merged_notb.dat
 	verilator_coverage --write-info coverage_merged.info coverage_merged_notb.dat
 	# sed -i 's|../modules|modules|g' coverage_merged.info
 	# verilator_coverage --annotate-all obj_dir_merged merged_coverage.dat
@@ -61,9 +62,10 @@ ver:
 vvp:
 	$(call run_sim,$(TOP),$(SRC),"")
 
-coverage:
-	$(MAKE) -s regression uart risc SIM=verilator RM_OBJDIR=true
+get_coverage:
 	$(call get_coverage)
+dsim_report:
+	dcreport -out_dir dir metrics.db
 
 
 lint:
@@ -78,7 +80,7 @@ lint-uart:
 
 
 # Modules Regression suite
-grep_err := 2>&1 |grep -a -v -E 'timescale|time unit|dangling|Not enough words|Part select' |grep -a -i -E 'error|end of|warning' || true
+grep_err := 2>&1 |grep -a -v -E 'timescale|time unit|dangling|Not enough words|Part select' |grep -a -i -E 'error|end of|warning|assertion|fault|fatal|fail' || true
 all:
 	@$(MAKE) -s regression uart risc $(grep_err)
 regression:
@@ -88,6 +90,9 @@ uart:
 	$(MAKE) -s uart_baud_tb uart_rx_tb uart_tx_tb uart_tb uart_top_tb uartcpp
 risc:
 	$(MAKE) -s risc_tb_arr risc_tb_bub risc_tb_fib
+coverage:
+	$(MAKE) -s regression uart risc alu SIM=verilator RM_OBJDIR=true
+	$(call get_coverage)
 
 
 # Modules Testbenches
@@ -120,7 +125,7 @@ shift:
 	$(call run_module,shift_tb,shift_tb.v,shift.v mux.v)
 memory:
 	$(call run_module,memory_tb,memory_tb.v,../RISCV_SingleCycle/risc_pkg.sv memory.sv)
-ifeq ($(SIM), iverilator)
+ifeq ($(SIM), iverilog)
 mux_cmos:
 	$(call run_module,mux_cmos_tb,mux_cmos_tb.v,mux_cmos.v)
 endif
@@ -141,17 +146,17 @@ uart_top_tb:
 uartcpp:
 	tb=uart_top
 	src="./UART/testbench/uart_tb.cpp ./UART/driver/uart_driver.cpp ./UART/testbench/uart_verilated.cpp"
-	args="$(VERILATOR_ARGS) $(ARG) -DCONST_DELAYS_OFF -CFLAGS "-I../UART/driver" -IUART --exe"
+	args="$(VERILATOR_ARGS) $(ARG) --public-flat-rw -DCONST_DELAYS_OFF -CFLAGS "-I../UART/driver" -IUART --exe"
 	verilator $$args --top $$tb $$src $(uart_src) && ./obj_dir/V$$tb
 	mv coverage.dat cov_uartcpp.dat || true
 	# for debugging add: ARG='-CFLAGS "-g -DDEBUG_MODE"'
 
 
 # RISCV
-risc_src := tb_riscv.sv risc_pkg.sv riscv.sv fetch.sv decode.sv register_file.sv branch_control.sv control.sv alu.sv data_memory.sv
-risc_mod := modules/memory.sv modules/adder.v modules/shift.v modules/mux.v
+risc_src := risc_pkg.sv tb_riscv.sv riscv.sv fetch.sv decode.sv register_file.sv branch_control.sv control.sv alu.sv data_memory.sv
+risc_mod := memory.sv adder.v shift.v mux.v
 define run_risc
-	$(call run_sim,$(1),$(foreach x,$(risc_src),RISCV_SingleCycle/$(x)) $(risc_mod))
+	$(call run_sim,$(1),$(foreach x,$(risc_src),RISCV_SingleCycle/$(x)) $(foreach x,$(risc_mod),modules/$(x)))
 endef
 risc_tb_arr:
 	$(call run_risc,tb_asm_arr)
@@ -162,10 +167,9 @@ risc_tb_fib:
 
 
 # SystemVerilog ALU TB
+alu_src := RISCV_SingleCycle/risc_pkg.sv tb_sv_alu/top_tb.sv modules/mux.v modules/shift.v modules/adder.v RISCV_SingleCycle/alu.sv
 alu:
-	cd tb_sv_alu; tb=top_tb;
-	alu_src="../modules/adder.v ../modules/shift.v ../modules/mux.v ../RISCV_SingleCycle/risc_pkg.sv ../RISCV_SingleCycle/alu.sv top_tb.sv";
-	verilator $(VERILATOR_ARGS) --top $$tb $$alu_src && ./obj_dir/V$$tb
+	$(call run_verilator,top_tb,-DBEHAVIORAL=1 -DCONST_DELAYS_OFF -Itb_sv_alu $(alu_src))
 
 
 # FIFO UVM TB

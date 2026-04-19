@@ -1,5 +1,8 @@
 `include "intf.sv"
 `include "transaction.sv"
+`ifndef VERILATOR
+`include "coverage.sv"
+`endif
 `include "generator.sv"
 `include "driver.sv"
 `include "monitor.sv"
@@ -17,60 +20,54 @@ class environment;
     mailbox #(transaction) mon2scb_mail;
 
     function new(virtual intf vif_init);
-        this.vif = vif_init;
-        this.gen2drv_mail = new();
-        this.mon2scb_mail = new();
-        this.gen = new(this.gen2drv_mail);
-        this.scb = new(this.mon2scb_mail);
-        this.drv = new(vif_init, this.gen2drv_mail);
-        this.mon = new(vif_init, this.mon2scb_mail);
+        vif = vif_init;
+        gen2drv_mail = new();
+        mon2scb_mail = new();
+        gen = new(gen2drv_mail);
+        scb = new(mon2scb_mail);
+        drv = new(vif, gen2drv_mail);
+        mon = new(vif, mon2scb_mail);
     endfunction
 
     task test_random_val(int num);
-        $display("Testing random inputs - functionality test");
+        $display("Testing random inputs: functionality test");
         fork
-            this.gen.rand_vals(num);
-            this.drv.main(num);
-            this.mon.main(num);
-            this.scb.main(num);
+            gen.rand_vals(num);
+            drv.main(num);
+            mon.main(num);
+            scb.main(num);
         join
     endtask
 
     task test_bit_by_bit(int num);
         $display("Testing a and b toggled bit by bit only for ADD operation to check sum and carry of each FA at each stage");
         fork
-            this.gen.rand_bits_add(num);
-            this.drv.main(num);
-            this.mon.main(num);
-            this.scb.main(num);
+            gen.rand_bits_add(num);
+            drv.main(num);
+            mon.main(num);
+            scb.main(num);
         join
     endtask
 
     task test_random_bit(int num);
-        $display("Testing bits randomly toggled in a and b for all opcodes except for ADD - this will check the shifts, xors and the rest");
+        $display("Testing bits randomly toggled in a and b for all opcodes except for ADD: this will check the shifts, xors and the rest");
         fork
-            this.gen.rand_bits_non_add(num);
-            this.drv.main(num);
-            this.mon.main(num);
-            this.scb.main(num);
+            gen.rand_bits_non_add(num);
+            drv.main(num);
+            mon.main(num);
+            scb.main(num);
         join
     endtask
 
     task test_manual_val();
         int i;
         int num = 10; // as amount of opcodes
-        $display("Testing manual inputs - checking stuck at 1's or 0's, crosstalk and boundary values");
+        $display("Testing manual inputs: checking stuck 1's or 0's, crosstalk and boundary values");
         fork
-            for (i = 0; i < num; i = i + 1) begin
-                this.gen.set(0, 0);
-                this.gen.set({32{1'b1}}, {32{1'b1}});
-                this.gen.set({{16{1'b0}}, {16{1'b1}}}, {{17{1'b0}}, {15{1'b1}}});
-                this.gen.set({{16{1'b1}}, {16{1'b0}}}, {1'b0, {15{1'b1}}, {16{1'b0}}});
-            end
-            num = num * 4;
-            this.drv.main(num);
-            this.mon.main(num);
-            this.scb.main(num);
+            gen.manual(num);   // each time have 5 transaction
+            drv.main(num * 5);
+            mon.main(num * 5);
+            scb.main(num * 5);
         join
     endtask
 
@@ -80,13 +77,18 @@ class environment;
 
     task post_test();
         $display("Post test run");
-        assert(this.scb.count == this.gen.count)
-            $display("Scoreboard: proccessed all %0d transactions", this.gen.count);
+        `ifndef VERILATOR
+        scb.cov.print();
+        `endif
+        assert(scb.count)
+        else $error("Scoreboard: Got 0 transactions");
+        assert(scb.count == gen.count)
+            $display("Scoreboard: proccessed all %0d transactions", gen.count);
         else
-            $error("Scoreboard: %d scb count is not %d", this.scb.count, this.gen.count);
-        assert(this.scb.fails == 0)
+            $error("Scoreboard: %d scb count is not %d", scb.count, gen.count);
+        assert(scb.fails == 0)
             $display("Scoreboard: PASSED");
         else
-            $display("Scoreboard: FAILED");
+            $display("Scoreboard: FAILED: %0d transaction errors", scb.fails);
     endtask
 endclass

@@ -1,16 +1,11 @@
-/*
-tb="shift_tb"
-verilator --lint-only -Wall --timing shift.v mux.v
-iverilog -Wall -g2005 -gspecify -o ./vcd/${tb}.vvp -s ${tb} testbench/${tb}.v shift.v mux.v
-vvp ./vcd/${tb}.vvp
-*/
 `include "consts.vh"
 `timescale 1ns / 100ps
 `define VCD "vcd/shift.vcd"
 
+
 module shift_tb;
     localparam N = 4;
-    // longest wait time: each shift is number of shift bits amount * mux delay which is 3 gate delays
+    // longest propagation delay: each shift is number of shift bits amount * mux delay which is 3 gate delays
     localparam T_DELAY = `T_DELAY_PD * 3 * $clog2(N);
 
     reg [N-1:0] data, din, exp;

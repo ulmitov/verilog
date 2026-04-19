@@ -1,87 +1,89 @@
-/*
-    Generating the stimulus by randomizing the transaction class
-    Sending the randomized class to driver
-*/
-import risc_pkg::*;
-
-
 class generator;
     mailbox #(transaction) gen2drv_mail;
-    rand transaction t;
+    rand transaction req;
     int count = 0;
+    int res;
 
     function new(mailbox #(transaction) mb);
-        this.gen2drv_mail = mb;
+        gen2drv_mail = mb;
     endfunction
 
+    /*
+        Generate fully random sequences
+    */
     task rand_vals(int num);
-        int res;
         repeat(num) begin
-            this.count++;
-            $display("TRANS No.%0d:", this.count);
-            t = new();
-            res = t.randomize();
-            if (!res) $fatal("Generator:: randomization failed");
-            t.display("GEN");
-            this.gen2drv_mail.put(t);
+            count++;
+            $display("TRANS No.%0d:", count);
+            req = new();
+            res = req.randomize();
+            if (!(|res)) $fatal("Generator:: randomization failed");
+            req.display("GEN");
+            gen2drv_mail.put(req);
         end
     endtask
 
-    task rand_bits_add(int num);
-        /*
+    /*
         Toggle same bit in a and b while b is togggled also with another lower bit
-        */
-        int res;
-
+    */
+    task rand_bits_add(int num);
         repeat(num) begin
-            this.count++;
-            $display("TRANS No.%0d:", this.count);
-            t = new();
-            res = t.randomize() with { $countones(alu_a) == 1 && alu_b == (alu_a | (alu_a << 1)); };
-            if (!res) $fatal("Generator:: randomization failed");
-            t.alu_op = op_enum_alu'(OP_ALU_ADD);
-            t.display("GEN");
-            this.gen2drv_mail.put(t);
+            count++;
+            $display("TRANS No.%0d:", count);
+            req = new();
+            res = req.randomize() with { $countones(alu_a) == 1 && alu_b == (alu_a | (alu_a << 1)); };
+            if (!(|res)) $fatal("Generator:: randomization failed");
+            req.alu_op = op_enum_alu'(OP_ALU_ADD);
+            req.display("GEN");
+            gen2drv_mail.put(req);
         end
     endtask
 
-    task rand_bits_non_add(int num);
-        /*
+    /*
         Toggle single bits in a and b
-        */
-        int res;
+    */
+    task rand_bits_non_add(int num);
         op_enum_alu opcode;
         repeat(num) begin
-            this.count++;
-            $display("TRANS No.%0d:", this.count);
-            t = new();
-            res = t.randomize() with { $countones(alu_a) == 1 && $countones(alu_b) == 1 && alu_a != alu_b; };
-            //if (!res) $fatal("Generator:: randomization failed");
-            std::randomize(opcode) with { opcode != OP_ALU_ADD; };
-            t.alu_op = opcode;
-            t.display("GEN");
-            this.gen2drv_mail.put(t);
+            count++;
+            $display("TRANS No.%0d:", count);
+            req = new();
+            res = req.randomize() with { $countones(alu_a) == 1 && $countones(alu_b) == 1 && alu_a != alu_b; };
+            if (!(|res)) $fatal("Generator:: randomization failed");
+            if (!(|std::randomize(opcode) with { opcode != OP_ALU_ADD; }))
+                $error("[ALU] ERROR: failed to randomize transaction");
+            req.alu_op = opcode;
+            req.display("GEN");
+            gen2drv_mail.put(req);
         end
     endtask
 
-    task set(input [31:0] a, b, int opcode = -1);
-        /*
+    /*
         Set a, b and opcode manually (or randomize opcode)
-        */
-        int res;
+    */
+    task set(input [31:0] a, b, int opcode = -1);
         op_enum_alu op;
-        this.count++;
-        $display("TRANS No.%0d:", this.count);
-        t = new();
+        count++;
+        $display("TRANS No.%0d:", count);
+        req = new();
         if (opcode == -1) begin
-            res = std::randomize(op);
-            t.alu_op = op;
-            if (!res) $fatal("Generator:: randomization failed");
+            if (!(|std::randomize(op))) $fatal("Generator:: randomization failed");
+            req.alu_op = op;
         end else
-            t.alu_op = op_enum_alu'(opcode);
-        t.alu_a = a;
-        t.alu_b = b;
-        t.display("GEN");
-        this.gen2drv_mail.put(t);
+            req.alu_op = op_enum_alu'(opcode);
+        req.alu_a = a;
+        req.alu_b = b;
+        req.display("GEN");
+        gen2drv_mail.put(req);
+    endtask
+
+    task manual(int num);
+        repeat(num) begin
+            set(0, 0);
+            set({32{1'b1}}, {32{1'b1}});
+            set(0, 0);
+            set({{16{1'b0}}, {16{1'b1}}}, {{17{1'b0}}, {15{1'b1}}});
+            set({{16{1'b1}}, {16{1'b0}}}, {1'b0, {15{1'b1}}, {16{1'b0}}});
+        end
     endtask
 endclass

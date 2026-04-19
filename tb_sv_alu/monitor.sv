@@ -1,26 +1,38 @@
+`ifdef VERILATOR
+`define VIF vif         // TBD: remove after verilator modport issues fixed
+`else
+`define VIF vif.mod_mon
+`endif
+
+
 class monitor;
-    virtual intf vif;
     mailbox #(transaction) mon2scb_mail;
+    transaction req;
+    virtual intf vif;
 
     function new(virtual intf vif_init, mailbox #(transaction) mb);
-        this.vif = vif_init;
-        this.mon2scb_mail = mb;
+        vif = vif_init;
+        mon2scb_mail = mb;
     endfunction
 
     task main(int num);
         repeat(num) begin
-            transaction trans;
-            trans = new();
-            // lock IF to avoid driver access
-            this.vif.lock();
-            trans.alu_a = this.vif.mod_mon.alu_a;
-            trans.alu_b = this.vif.mod_mon.alu_b;
-            trans.alu_op = this.vif.mod_mon.alu_op;
-            trans.alu_res = this.vif.mod_mon.alu_res;
-            trans.res_exp = this.vif.mod_mon.res_exp;
-            this.vif.unlock();
-            this.mon2scb_mail.put(trans);
-            trans.display("MON");
+            req = new();
+            // lock VIF to avoid driver access
+            `ifdef VERILATOR
+            @(negedge `VIF.clk) vif.lock();
+            $display("MON locked drv");
+            `else
+            vif.lock();
+            `endif
+            req.alu_a = `VIF.alu_a;
+            req.alu_b = `VIF.alu_b;
+            req.alu_op = `VIF.alu_op;
+            req.alu_res = `VIF.alu_res;
+            req.res_exp = `VIF.res_exp;
+            vif.unlock();
+            mon2scb_mail.put(req);
+            req.display("MON");
         end
     endtask
 endclass

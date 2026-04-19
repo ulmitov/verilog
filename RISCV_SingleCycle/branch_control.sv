@@ -10,7 +10,7 @@ module branch_control (
 );
     `ifndef GATE_FLOW_OFF
         wire eq, lt, ltu;
-
+        // TODO: replace with comparator
         adder #(32) branch_comparator (
             .Nadd_sub(1'b1),
             .X(rs1_data),

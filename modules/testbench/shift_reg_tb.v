@@ -1,6 +1,5 @@
-`include "consts.vh"
 `timescale 1ns / 1ns
-
+`include "consts.vh"
 `define VCD "vcd/shift_reg_tb.vcd"
 `define TCLK 5
 
