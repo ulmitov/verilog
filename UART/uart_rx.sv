@@ -37,7 +37,7 @@ module uart_rx #(parameter DATA_WIDTH = 8, parameter TICKS_NUM = 16) (
     logic ct_restart;
     logic [TICK_BW:0] count_ticks, ct_nextval;
     logic [$clog2(DATA_WIDTH)-1:0] count_bits, cb_next;
-    logic [DATA_WIDTH:0] sreg_out;
+    logic [DATA_WIDTH:0] rsr_data;
     logic [2:0] parity_reg;
     logic last_bit;
     logic err_par, err_fr;
@@ -48,7 +48,7 @@ module uart_rx #(parameter DATA_WIDTH = 8, parameter TICKS_NUM = 16) (
         .res_n(res_n),
         .en(sreg_en),
         .din(voted_din),
-        .dout(sreg_out),
+        .dout(rsr_data),
         .load_en(),
         .load(),
         .dout_n()
@@ -144,10 +144,10 @@ module uart_rx #(parameter DATA_WIDTH = 8, parameter TICKS_NUM = 16) (
 
     always_comb begin
         case (lcreg[`UART_LCR_WLS])
-            2'b00: parity_val = ^sreg_out[5:0];
-            2'b01: parity_val = ^sreg_out[6:0];
-            2'b10: parity_val = ^sreg_out[7:0];
-            2'b11: parity_val = ^sreg_out[8:0];
+            2'b00: parity_val = ^rsr_data[5:0];
+            2'b01: parity_val = ^rsr_data[6:0];
+            2'b10: parity_val = ^rsr_data[7:0];
+            2'b11: parity_val = ^rsr_data[8:0];
         endcase
     end
 
@@ -156,12 +156,30 @@ module uart_rx #(parameter DATA_WIDTH = 8, parameter TICKS_NUM = 16) (
     assign err_fr = state == STOP && ~voted_din;
     
     // Apply output. For 5, 6 and 7 bit words padding zeros. While msb in sreg is parity.
+    logic [DATA_WIDTH-1:0] sout;
+    always_comb begin
+        if (~parity_reg[0]) begin
+            case (lcreg[`UART_LCR_WLS])
+                2'b00: sout = rsr_data[8:4];
+                2'b01: sout = rsr_data[8:3];
+                2'b10: sout = rsr_data[8:2];
+                2'b11: sout = rsr_data[8:1];
+            endcase
+        end else begin
+            case (lcreg[`UART_LCR_WLS])
+                2'b00: sout = rsr_data[7:3];
+                2'b01: sout = rsr_data[7:2];
+                2'b10: sout = rsr_data[7:1];
+                2'b11: sout = rsr_data[7:0];
+            endcase
+        end
+    end
     always_comb begin
         case (lcreg[`UART_LCR_WLS])
-            2'b00: rx_out = {err_fr, err_par, 2'b0, sreg_out[5:0]};
-            2'b01: rx_out = {err_fr, err_par, 1'b0, sreg_out[6:0]};
-            2'b10: rx_out = {err_fr, err_par, sreg_out[7:0]};
-            2'b11: rx_out = {err_fr, err_par, sreg_out[7:0]};
+            2'b00: rx_out = {err_fr, err_par, 2'b0, sout};
+            2'b01: rx_out = {err_fr, err_par, 1'b0, sout};
+            2'b10: rx_out = {err_fr, err_par, sout};
+            2'b11: rx_out = {err_fr, err_par, sout};
         endcase
     end
 

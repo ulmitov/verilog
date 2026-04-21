@@ -32,6 +32,15 @@
 #define UART_FCR_RXCLR 1
 #define UART_FCR_TXCLR 2
 
+typedef enum {
+        PARITY_DISABLED = 0,
+        PARITY_ODD = 1,
+        PARITY_EVEN = 3,
+        PARITY_STICK_0 = 7,
+        PARITY_STICK_1 = 5
+} PARITY_ENUM;
+
+
 /**
  * uart driver
  */
@@ -91,8 +100,9 @@ class UartDriver {
         *
         * @param data data byte to be transmitted
         * @param timeout how much clock ticks to attempt to send
+        * @return 1 if data was accepted by uart, 0 otherwise
         */
-        void tx_byte(uint8_t data, unsigned short timeout = 1000);
+        int tx_byte(uint8_t data, unsigned short timeout = 1000);
 
         /**
         * raw receive byte from RBR, without polling
@@ -102,14 +112,14 @@ class UartDriver {
         unsigned char rx_byte();
 
         /**
-        * receive a string, with polling
+        * receive bytes with polling
         *
-        * @param txt string array pointer
+        * @param arr uint8 uint8_t pointer
         */
-        void recv_str(char *txt);
+        void recv(uint8_t *arr);
 
         /**
-        * receive a char, with polling
+        * receive a char with polling
         *
         * @param timeout max clocks to wait for char
         * @return null if no data received; char otherwise
@@ -122,6 +132,14 @@ class UartDriver {
         * @param ch char to send
         */
         void send_ch(char ch);
+
+        /**
+        * send an array of bytes
+        *
+        * @param arr pointer to the bytes array
+        * @param length data length
+        */
+        void send(const uint8_t *arr, int length);
 
         /**
         * send (print) a string via uart
@@ -145,13 +163,19 @@ class UartDriver {
         int get_line_status();
 
         /**
-        * poll for rx fifo to become empty
+        * poll for rx fifo to be empty
         *
-        * @return 1: if rx fifo empty; 0: otherwise
+        * @return 1: if fifo empty; 0: otherwise
         */
         short poll_rx(unsigned short timeout = 1000);
-    protected:
-        uint32_t line_status = 0;   // LSR is saved here each read
+
+        /**
+        * poll for tx fifo to be empty
+        *
+        * @return 1: if fifo empty; 0: otherwise
+        */
+        short poll_tx(unsigned short timeout = 1000);
+
         /**
          * read an io register.
          * This actually should be an external function
@@ -167,4 +191,6 @@ class UartDriver {
         * @param data 32-bit data
         */
         virtual void io_write(uint32_t addr, uint32_t data);
+    protected:
+        uint32_t line_status = 0;   // LSR is saved here each read
 };

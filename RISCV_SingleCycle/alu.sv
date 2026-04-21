@@ -37,8 +37,12 @@ module alu #(parameter XLEN = RISCV_XLEN) (
         );
 
         initial $display("*** SYNTHESISED GATEFLOW ALU ***");
-        `ifdef VERILATOR
-        always #2 $display("[%0t]: ALU GATEFLOW: X=%8h Y=%8h Nadd_sub=%b: sum=%8h (out_sh %8h) lt=%0b, ltu=%0b  carry=%0b  of=%0b", $time, alu_a, alu_b, nadd_sub, sum, out_sh, lt, ltu, carry, of);
+        `ifdef SV_TB
+            `ifdef DEBUG_RUN
+            always #2 $display("[%0t]: ALU GATEFLOW: X=%8h Y=%8h Nadd_sub=%b: sum=%8h (out_sh %8h) lt=%0b, ltu=%0b  carry=%0b  of=%0b", $time, alu_a, alu_b, nadd_sub, sum, out_sh, lt, ltu, carry, of);
+            `else
+            always #1;
+            `endif
         `endif
 
         assign shifts_num = {1'b0, alu_b[4:0]};
@@ -103,8 +107,12 @@ module alu_dataflow #(parameter XLEN = RISCV_XLEN) (
             OP_ALU_SLTU:alu_res = alu_a < alu_b ? {XLEN{1'b1}} : {XLEN{1'b0}};
             default:    alu_res = {XLEN{1'b0}};
         endcase
-        `ifdef VERILATOR
-        #2 $display("[%0t]: ALU DATAFLOW: X=%8h Y=%8h RES=%0h", $time, alu_a, alu_b, alu_res);
+        `ifdef SV_TB
+            `ifdef DEBUG_RUN
+            #2 $display("[%0t]: ALU DATAFLOW: X=%8h Y=%8h RES=%0h", $time, alu_a, alu_b, alu_res);
+            `else
+            always #1;
+            `endif
         `endif
     end
 endmodule

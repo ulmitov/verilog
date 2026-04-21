@@ -10,19 +10,19 @@ vvp vcd/baud_tb.vvp
 */
 module baud_tb;
     logic clk;
-    logic res_n;
+    logic res;
     logic clk_out2, clk_out3, clk_out4, clk_out5, clk_out6, clk_out7, clk_out8, clk_out9, clk_out10;
     integer cnt2 = 0, cnt3 = 0, cnt4 = 0, cnt5 = 0, cnt6 = 0, cnt7 = 0, cnt8 = 0, cnt9 = 0, cnt10 = 0;
 
-    clock_divider uut2 (.clk_in(clk), .res_n(res_n), .div(16'd2), .clk_out(clk_out2));
-    clock_divider uut3 (.clk_in(clk), .res_n(res_n), .div(16'd3), .clk_out(clk_out3));
-    clock_divider uut4 (.clk_in(clk), .res_n(res_n), .div(16'd4), .clk_out(clk_out4));
-    clock_divider uut5 (.clk_in(clk), .res_n(res_n), .div(16'd5), .clk_out(clk_out5));
-    clock_divider uut6 (.clk_in(clk), .res_n(res_n), .div(16'd6), .clk_out(clk_out6));
-    clock_divider uut7 (.clk_in(clk), .res_n(res_n), .div(16'd7), .clk_out(clk_out7));
-    clock_divider uut8 (.clk_in(clk), .res_n(res_n), .div(16'd8), .clk_out(clk_out8));
-    clock_divider uut9 (.clk_in(clk), .res_n(res_n), .div(16'd9), .clk_out(clk_out9));
-    clock_divider uut10 (.clk_in(clk), .res_n(res_n), .div(16'd10), .clk_out(clk_out10));
+    clock_divider uut2 (.clk_in(clk), .res(res), .div(16'd2), .clk_out(clk_out2));
+    clock_divider uut3 (.clk_in(clk), .res(res), .div(16'd3), .clk_out(clk_out3));
+    clock_divider uut4 (.clk_in(clk), .res(res), .div(16'd4), .clk_out(clk_out4));
+    clock_divider uut5 (.clk_in(clk), .res(res), .div(16'd5), .clk_out(clk_out5));
+    clock_divider uut6 (.clk_in(clk), .res(res), .div(16'd6), .clk_out(clk_out6));
+    clock_divider uut7 (.clk_in(clk), .res(res), .div(16'd7), .clk_out(clk_out7));
+    clock_divider uut8 (.clk_in(clk), .res(res), .div(16'd8), .clk_out(clk_out8));
+    clock_divider uut9 (.clk_in(clk), .res(res), .div(16'd9), .clk_out(clk_out9));
+    clock_divider uut10 (.clk_in(clk), .res(res), .div(16'd10), .clk_out(clk_out10));
 
     always #`TCLK clk = ~clk;
     always @(posedge clk_out2) cnt2 = cnt2 + 1;
@@ -39,10 +39,10 @@ module baud_tb;
         $dumpfile("vcd/baud_tb.vcd");
         $dumpvars(0);
         clk = 1'b1;
-        res_n = 1'b1;
-        @(posedge clk) res_n = 1'b0;
+        res = 1'b0;
+        @(posedge clk) res = 1'b1;
         @(posedge clk);
-        @(posedge clk) res_n = 1'b1;
+        @(posedge clk) res = 1'b0;
         repeat(24) @(posedge clk);
         // each clock initial state is 1, so adding 1 to counters
         if (cnt2 != 13) $display("*** [baud_tb] ERROR: cnt2 %0d is not 13", cnt2);
@@ -78,7 +78,7 @@ module uart_rx_tb;
     localparam DIV = 16'h4;
     localparam baud_wait = `TCLK*2*16*DIV;
 
-    clock_divider rx_baud (.clk_in(clk), .res_n(res_n), .div(DIV), .clk_out(b_tick));
+    clock_divider rx_baud (.clk_in(clk), .res(~res_n), .div(DIV), .clk_out(b_tick));
 
     uart_rx dut (
         .clk(clk),
@@ -154,7 +154,7 @@ module uart_tx_tb;
     logic sreg_clk;
     logic [3:0] cnt;
 
-    clock_divider tx_baud (.clk_in(clk), .res_n(res_n), .div(DIV), .clk_out(b_tick));
+    clock_divider tx_baud (.clk_in(clk), .res(~res_n), .div(DIV), .clk_out(b_tick));
 
     shift_reg #(.N(12)) tb_thr (
         .clk(sreg_clk),

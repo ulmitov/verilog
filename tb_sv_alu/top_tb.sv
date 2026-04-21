@@ -6,7 +6,7 @@ import risc_pkg::*;
 `else
 `define TPD (`T_DELAY_PD*(3*32))
 `endif
-
+`define SV_TB
 `include "consts.vh"
 `include "environment.sv"
 

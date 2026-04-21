@@ -147,7 +147,7 @@ uartcpp:
 	tb=uart_top
 	src="./UART/testbench/uart_tb.cpp ./UART/driver/uart_driver.cpp ./UART/testbench/uart_verilated.cpp"
 	args="$(VERILATOR_ARGS) $(ARG) --public-flat-rw -DCONST_DELAYS_OFF -CFLAGS "-I../UART/driver" -IUART --exe"
-	verilator $$args --top $$tb $$src $(uart_src) && ./obj_dir/V$$tb
+	verilator $$args --top $$tb $$src $(uart_src) && ./obj_dir/V$$tb &&
 	mv coverage.dat cov_uartcpp.dat || true
 	# for debugging add: ARG='-CFLAGS "-g -DDEBUG_MODE"'
 

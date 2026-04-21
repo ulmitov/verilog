@@ -7,7 +7,7 @@ f="clock_divider.sv"; m="clock_divider";
 yosys -p "read_verilog -sv ${f}; hierarchy -check -top $m; proc; opt; clean; show -format svg -prefix ${m} ${m}; show ${m}"
 */
 module clock_divider #(parameter DIV_WIDTH = 16) (
-    input res_n,
+    input res,
     input clk_in,
     input [DIV_WIDTH-1:0] div,
     output logic clk_out
@@ -21,16 +21,16 @@ module clock_divider #(parameter DIV_WIDTH = 16) (
     assign switch_clk   = cycle_full | half_cycle;              // odd dividers will not get exact 50% phase
     assign next_count   = counter + 1;
 
-    always_ff @(posedge clk_in or negedge res_n) begin
-        if (~res_n)
+    always_ff @(posedge clk_in or posedge res) begin
+        if (res)
             counter <= 1;
         else if (cycle_full)
             counter <= 1;
         else
             counter <= next_count;
     end
-    always_ff @(posedge clk_in or negedge res_n) begin
-        if (~res_n)
+    always_ff @(posedge clk_in or posedge res) begin
+        if (res)
             clk_out <= 1'b1;
         else if (switch_clk)
             clk_out <= ~clk_out;

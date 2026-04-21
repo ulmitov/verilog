@@ -26,6 +26,7 @@ module uart_top (
     logic [`UART_DATA_WIDTH-1:0] data_in;
     logic ren, wen;
     logic dlab;
+    logic baud_load;
     logic fifo_en, lsr_rd;
     logic thr_wr, rbr_rd;
     logic rx_ready;
@@ -49,8 +50,9 @@ module uart_top (
         .res_n(~res),
         .lcreg(lcr),
         .fcreg(fcr),
+        .baud_res(baud_load),
         .divisor(divisor),
-        .wr_data(data_in),
+        .wr_data(data_in[7:0]),
         .rd_uart(rbr_rd),
         .wr_uart(thr_wr),
         .rx_ext(sin),
@@ -76,6 +78,8 @@ module uart_top (
     assign rx_pull = rbr_rd & ~rx_empty;
     assign data_bus = (~ddis & ren) ? rd_data : {`UART_DATA_WIDTH{1'bZ}};
     assign data_in = (ddis & wen) ? data_bus : {`UART_DATA_WIDTH{1'bZ}};
+    // When either of the divisor latches is loaded, a 16-bit baud counter is also loaded to prevent long counts on initial load.
+    assign baud_load = wen & dlab;
 
 
     // LSR error flags
@@ -184,13 +188,18 @@ module uart_top (
                 `UART_REG_RBR: begin
                     if (dlab)
                         rd_data = dll;
-                    else if (rbr_rd)
-                        rd_data = rx_fifo_out[`UART_DATA_WIDTH-1:0];
+                    else if (rbr_rd) begin
+                        case (lcr[`UART_LCR_WLS])
+                            2'b00: rd_data = {{(`UART_DATA_WIDTH - 8){1'b0}}, rx_fifo_out[4:0]};
+                            2'b01: rd_data = {{(`UART_DATA_WIDTH - 8){1'b0}}, rx_fifo_out[5:0]};
+                            2'b10: rd_data = {{(`UART_DATA_WIDTH - 8){1'b0}}, rx_fifo_out[6:0]};
+                            2'b11: rd_data = {{(`UART_DATA_WIDTH - 8){1'b0}}, rx_fifo_out[7:0]};
+                        endcase
+                    end
                 end
             endcase
         end
     end
-
 
     // Write regs
     always_ff @(posedge clk) begin
@@ -230,7 +239,7 @@ module uart_top (
 
     // Write divisor latches
     always_comb begin
-        if (wen & dlab) begin
+        if (baud_load) begin
             case (addr)
                 `UART_REG_THR: dll = data_in;
                 `UART_REG_IER: dlm = data_in;

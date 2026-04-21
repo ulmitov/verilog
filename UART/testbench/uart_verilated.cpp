@@ -16,6 +16,8 @@ UartVerilated::UartVerilated(const char * vcd_path, int argc, char **argv):
  }
 
 UartVerilated::~UartVerilated() {
+    wait_ticks(10);
+    printf("End time: %d\n", timestamp);
     top->eval();
     vcd->close();
     top->final();
@@ -58,7 +60,7 @@ uint32_t UartVerilated::io_read(uint32_t addr) {
 }
 
 void UartVerilated::io_write(uint32_t addr, uint32_t data) {
-    printf("%ld ns: io_write addr %x val 0x%x (%c)\n", timestamp, addr, data, data);
+    printf("%ld ns: io_write addr %x val 0x%x\n", timestamp, addr, data);
     top->ddis = 1;
     top->cs = 1;
     top->wr = 1;

@@ -83,29 +83,37 @@ short UartDriver::poll_rx(unsigned short timeout) {
     return !res;
 }
 
-void UartDriver::recv_str(char *txt) {
-    // in fifo mode can just poll for rx fifo empty.
-    // in polling mode should check local flag.
-    while (poll_rx() && (*txt++ = recv_ch()));
-    *txt = UART_EOM;
-}
-
-void UartDriver::tx_byte(uint8_t data, unsigned short timeout) {
-    while (timeout--) {
-        if (tx_fifo_empty()) {
-            io_write(UART_REG_THR, data);
-            break;
-        }
+short UartDriver::poll_tx(unsigned short timeout) {
+    short res;
+    while (timeout-- && !(res = tx_fifo_empty())) {
         #ifdef DEBUG_MODE
         printf("T");
         #endif
     }
+    return res;
+}
+
+void UartDriver::recv(uint8_t *arr) {
+    // in fifo mode can just poll for rx fifo empty.
+    // in polling mode should check local flag.
+    while (poll_rx() && (*arr++ = rx_byte()));
+    *arr = UART_EOM;
+}
+
+int UartDriver::tx_byte(uint8_t data, unsigned short timeout) {
+    if (!poll_tx(timeout)) return 0;
+    io_write(UART_REG_THR, data);
+    return 1;
 }
 
 void UartDriver::send_ch(char ch) {
-    tx_byte((int) ch);
+    tx_byte((uint8_t) ch);
 }
 
 void UartDriver::send_str(const char *str) {
     while (*str) tx_byte(*str++);
+}
+
+void UartDriver::send(const uint8_t *arr, int length) {
+    while (length--) tx_byte(*arr++);
 }
