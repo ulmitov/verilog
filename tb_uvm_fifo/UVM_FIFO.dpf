@@ -5,29 +5,39 @@ version: '0.2'
 work_dir: .
 design_root_dir: .
 simulations:
+  - name: Elab+Sim MXD
+    options: >-
+      -top work.top_tb -code-cov a -waves dir/waves.mxd -uvm 1.2
+      +UVM_NO_RELNOTES +UVM_VERBOSITY=UVM_HIGH +UVM_TESTNAME=test_regression
   - name: Elaborate
     options: '-top work.top_tb -genimage image -uvm 1.2 -dump-agg +acc+b'
   - name: Sim DEBUG
     options: >-
-      -image image -code-cov a -waves dir/waves.mxd -dump-agg +acc+b -uvm 1.2
+      -image image -code-cov a -dump-agg +acc+b -waves dir/waves.mxd -uvm 1.2
       +UVM_NO_RELNOTES +UVM_CONFIG_DB_TRACE +UVM_VERBOSITY=UVM_HIGH
       +UVM_TESTNAME=test_regression
   - name: Sim Vcd
     options: >-
-      -image image -code-cov a -waves dir/waves.vcd +acc+b -dump-agg -uvm 1.2
+      -image image -code-cov a -dump-agg +acc+b -waves dir/waves.vcd -uvm 1.2
       +UVM_NO_RELNOTES +UVM_TESTNAME=test_regression
   - name: Sim Mxd
     options: >-
-      -image image -code-cov a -waves dir/waves.mxd -dump-agg +acc+b -uvm 1.2
+      -image image -waves dir/waves.mxd -code-cov a -dump-agg +acc+b -uvm 1.2
       +UVM_NO_RELNOTES +UVM_TESTNAME=test_random
-  - name: Sim no waves
+  - name: Sim Debug no waves
     options: >-
-      -image image -code-cov a -uvm 1.2 +UVM_NO_RELNOTES
+      -image image -code-cov a -uvm 1.2 +UVM_NO_RELNOTES +UVM_VERBOSITY=UVM_HIGH
+      -debug-verbose pp:hier:lib +UVM_CONFIG_DB_TRACE
       +UVM_TESTNAME=test_regression
+  - name: Elab+Sim Debug MXD
+    options: >-
+      -top work.top_tb -code-cov a -dump-agg +acc+b -waves dir/waves.mxd -uvm
+      1.2 +UVM_NO_RELNOTES -debug-verbose pp:hier:lib +UVM_CONFIG_DB_TRACE
+      +UVM_VERBOSITY=UVM_HIGH +UVM_TESTNAME=test_regression
 source_files:
   - language: verilog
     path: ../modules/fifo.v
-    options: '-incdir ../modules/ -vlog_sv2012'
+    options: '-incdir ../modules/'
   - language: verilog
     path: fifo_config.sv
     options: '-uvm 1.2'

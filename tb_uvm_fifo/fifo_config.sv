@@ -15,8 +15,8 @@ class fifo_config extends uvm_object;
     static int DEPTH        = FIFO_DEPTH;
 
     // TEST params
-    static int T_CLK        = SETUP_TIME + 1;       // Taking max+1 of setup and hold. Fifo uses T_DELAY_FF from consts with same value as HOLD_TIME
-    static int FREQ         = 10**3 / (T_CLK * 2);  // Mhz (timescale is ns in tb)
+    static int TCLK         = SETUP_TIME + 2;      // Taking max+2 of setup and hold. Fifo uses T_DELAY_FF from consts with same value as HOLD_TIME
+    static int FREQ         = 10**3 / (TCLK * 2);  // Mhz (timescale is ns in tb)
 
     // Sequence params
     static int SEQ_REPEAT   = FIFO_DEPTH * $clog2(DATA_WIDTH);
@@ -24,7 +24,7 @@ class fifo_config extends uvm_object;
     `uvm_object_utils_begin(fifo_config)
         `uvm_field_int(WIDTH, UVM_DEFAULT | UVM_DEC)
         `uvm_field_int(DEPTH, UVM_DEFAULT | UVM_DEC)
-        `uvm_field_int(T_CLK, UVM_DEFAULT | UVM_DEC)
+        `uvm_field_int(TCLK, UVM_DEFAULT | UVM_DEC)
         `uvm_field_int(FREQ, UVM_DEFAULT | UVM_DEC)
         `uvm_field_int(SEQ_REPEAT, UVM_DEFAULT | UVM_DEC)
     `uvm_object_utils_end

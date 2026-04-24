@@ -28,3 +28,7 @@ module mux_tb;
         $finish;
     end
 endmodule
+
+module mux_behavioral_tb;
+    mux_tb mux_test();
+endmodule

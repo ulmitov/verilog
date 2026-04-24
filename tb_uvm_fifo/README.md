@@ -4,19 +4,12 @@ The implemented ![fifo.v](../modules/fifo.v) module is of a synchronous type (si
 So TB has a single interface and a single agent enviroment with a configuration class.
 Monitor broadcasts transactions to Scoreboard analysis FIFO export port
 and also to Coverage collector's analysis export port.
-Scoreboard uses a queue as a Ref model.
+Scoreboard uses a queue as a Reference model.
 
 # UVM testbench design:
 
 ![uvm testbench diagram](./dir/uvm_diagram.png)
 
-
-Run via Dsim studio (Compile -> Elab -> Sim): ![project dpf](./UVM_FIFO.dpf)
-
-Process coverage metrics:
-```
-dcreport -out_dir dir metrics.db
-```
 
 
 ## Test plan:

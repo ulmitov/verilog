@@ -11,13 +11,13 @@ _mkvcdir := $(shell mkdir -p vcd)
 export UVM_HOME := $(HOME)/dev/sda6/UVM/UVM1.2/src
 
 VERILATOR_ARGS := 	-Wno-lint -Wno-TIMESCALEMOD -Wno-SELRANGE -Wno-UNOPTFLAT -Wno-SPLITVAR \
-					--assert --coverage --pins-inout-enables \
+					--coverage --pins-inout-enables \
 					--trace --timing -y modules -Imodules -j 1 --build --cc
 
 define get_coverage
 	pwd
-	verilator_coverage --write coverage_merged.dat $$(find . -type f -name "cov_*.dat" | xargs)
-	grep -v -E "testbench|verilated_std.sv|tb_sv_alu" coverage_merged.dat > coverage_merged_notb.dat
+	verilator_coverage --write coverage_merged.dat $$(find ./vcd -type f -name "cov_*.dat" | xargs)
+	grep -v -E "UVM/|testbench|verilated_std.sv|tb_sv_alu" coverage_merged.dat > coverage_merged_notb.dat
 	verilator_coverage --write-info coverage_merged.info coverage_merged_notb.dat
 	# sed -i 's|../modules|modules|g' coverage_merged.info
 	# verilator_coverage --annotate-all obj_dir_merged merged_coverage.dat
@@ -27,11 +27,12 @@ endef
 
 define run_verilator
 	if [ "$(RM_OBJDIR)" = "true" ]; then find . -type d -name "obj_dir" -exec rm -rf {} +; fi
-	cmd="verilator $(ARG) $(VERILATOR_ARGS) --binary --top $(1) $(2) && ./obj_dir/V$(1)"
-	echo $$cmd; eval "$$cmd" && mv coverage.dat cov_$(1).dat || true
+	cmd="verilator $(ARG) $(VERILATOR_ARGS) --binary --top $(1) $(2) && ./obj_dir/V$(1) +verilator+coverage+file+vcd/cov_$(1).dat"
+	echo $$cmd; eval "$$cmd"
 endef
 
 define run_sim
+	# out param can be used to specify output to non vcd folder using 3rd arg
 	if [[ "$(SIM)" == "iverilog" ]]; then
 		if [[ "$(2)" == *".sv"* ]]; then sysv="-g2012"; else sysv=""; fi
 		out=$(if $(3),$(3)$(1).vvp,vcd/$(1).vvp)
@@ -43,7 +44,6 @@ define run_sim
 endef
 
 define run_module
-	#cd modules || true;
 	$(call run_sim,$(1),modules/testbench/$(2) $(foreach x,$(3),modules/$(x)))
 endef
 
@@ -80,11 +80,11 @@ lint-uart:
 
 
 # Modules Regression suite
-grep_err := 2>&1 |grep -a -v -E 'timescale|time unit|dangling|Not enough words|Part select' |grep -a -i -E 'error|end of|warning|assertion|fault|fatal|fail' || true
+grep_err := 2>&1 |grep -H -a -i -E 'error|end of|warning|assertion|segmentation|fatal|fail' |grep -a -v -E 'timescale|time unit|dangling|Not enough words|Part select' || true
 all:
-	@$(MAKE) -s regression uart risc $(grep_err)
+	@$(MAKE) -s regression uart risc &> all.log; cat all.log $(grep_err)
 regression:
-	$(MAKE) -s adder half_adder fastadder mux decoder priority_enc mux_cmos
+	$(MAKE) -s adder half_adder fastadder mux decoder priority_enc mux_cmos mux_behavioral_tb
 	$(MAKE) -s sequence counters fifo memory shift_reg shift
 uart:
 	$(MAKE) -s uart_baud_tb uart_rx_tb uart_tx_tb uart_tb uart_top_tb uartcpp
@@ -111,8 +111,9 @@ half_adder:
 	$(call run_module,half_adder_tb,half_adder_tb.v,adder.v)
 mux:
 	$(call run_module,mux_tb,mux_tb.v,mux.v)
+mux_behavioral_tb:
 	$(eval ARG = -DBEHAVIORAL)
-	$(call run_module,mux_tb,mux_tb.v,mux.v)
+	$(call run_module,mux_behavioral_tb,mux_tb.v,mux.v)
 decoder:
 	$(call run_module,decoder_tb,decoder_tb.v,mux.v)
 priority_enc:
@@ -129,6 +130,9 @@ ifeq ($(SIM), iverilog)
 mux_cmos:
 	$(call run_module,mux_cmos_tb,mux_cmos_tb.v,mux_cmos.v)
 endif
+
+apb:
+	$(call run_sim,apb_slave_tb,./AMBA/apb_slave.sv)
 
 
 # UART
@@ -147,8 +151,8 @@ uartcpp:
 	tb=uart_top
 	src="./UART/testbench/uart_tb.cpp ./UART/driver/uart_driver.cpp ./UART/testbench/uart_verilated.cpp"
 	args="$(VERILATOR_ARGS) $(ARG) --public-flat-rw -DCONST_DELAYS_OFF -CFLAGS "-I../UART/driver" -IUART --exe"
-	verilator $$args --top $$tb $$src $(uart_src) && ./obj_dir/V$$tb &&
-	mv coverage.dat cov_uartcpp.dat || true
+	verilator $$args --top $$tb $$src $(uart_src) && ./obj_dir/V$$tb
+	mv coverage.dat vcd/cov_uartcpp.dat || true
 	# for debugging add: ARG='-CFLAGS "-g -DDEBUG_MODE"'
 
 
@@ -174,7 +178,9 @@ alu:
 
 # FIFO UVM TB
 uvm-fifo:
-	cd tb_uvm_fifo;
-	verilator $(VERILATOR_ARGS) --binary --top-module top_tb \
-	+define+UVM_NO_DPI \+incdir+$(UVM_HOME)+$$(pwd)+../RISCV_SingleCycle \
-	$(UVM_HOME)/uvm_pkg.sv ../modules/fifo.v top_tb.sv 
+	find . -type d -name "obj_dir" -exec rm -rf {} +
+	verilator $(VERILATOR_ARGS) --top-module top_tb --exe --main \
+	+define+UVM_NO_DPI +incdir+$(UVM_HOME)+$$(pwd)+modules+tb_uvm_fifo \
+	$(UVM_HOME)/uvm_pkg.sv modules/fifo.v tb_uvm_fifo/top_tb.sv;
+	./obj_dir/Vtop_tb +UVM_VERBOSITY=UVM_HIGH +UVM_TESTNAME=test_regression
+	mv coverage.dat vcd/cov_uvmfifo.dat || true

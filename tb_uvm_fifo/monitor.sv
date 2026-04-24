@@ -32,8 +32,9 @@ class monitor extends uvm_monitor;
             req.dout    = vif.MONITOR_MP.cb_mon.dout;
             req.empty   = vif.MONITOR_MP.cb_mon.empty;
             req.full    = vif.MONITOR_MP.cb_mon.full;
-            uvm_report_info("MON got item", req.convert2string(), UVM_HIGH);
             mon_port.write(req);
+            if (req.pull || req.push)
+                uvm_report_info("MON got item", req.convert2string(), UVM_HIGH);
         end
     endtask
 endclass

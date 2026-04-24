@@ -15,6 +15,25 @@ Spec references:
 - https://www.ti.com/lit/ds/symlink/tl16c550c.pdf
 
 
+
+## Block diagram:
+The modem features are not implemented for now.
+
+![arch.png](./dir/arch.png)
+
+
+## Baud generator
+The Baud clock is generated in `clock_divider.sv`.
+This module produces an output clock based on the input clock frequency divided by a Divisor number.
+For example for 100Mhz clock, for baud rate 9600bps, 16 samples per clock, with a parity bit and two stop bits (+3 bits),
+set divisor to: 100 / (16 * 9600 * (8+2+1/8)) which is a rounded 470.
+
+`DIVIDER = Freq / ((M + PAR + N)/8) × OSR × Brate)`
+
+![clock_div.png](./dir/clock_div.png)
+
+
+
 ## Run C++ driver testbench:
 ```
 make uartcpp
@@ -33,13 +52,6 @@ make uart_top_tb
 ```
 
 
-## Block diagram:
-The modem features are not implemented for now.
-
-![arch.png](./dir/arch.png)
-
-
-
 ## Simulation results:
 ![uart_rx_tb.vcd viewer](https://wavedrom.live/?github=ulmitov/verilog/main/UART/vcd/uart_rx_tb.vcd)
 ![uart_tx_tb.vcd viewer](https://wavedrom.live/?github=ulmitov/verilog/main/UART/vcd/uart_tx_tb.vcd)
@@ -49,13 +61,3 @@ The modem features are not implemented for now.
 uart_tb.vcd: see the input values in the tx_din signal versus the outputs in rx_out signal each tick of rx_done signal:
 ![uart_tb](./dir/uart_tb_2stopbits.png)
 
-
-## Baud generator
-The Baud clock is generated in `clock_divider.sv`.
-This module produces an output clock based on the input clock frequency divided by a Divisor number.
-For example for 100Mhz clock, for baud rate 9600bps, 16 samples per clock, with a parity bit and two stop bits (+3 bits),
-set divisor to: 100 / (16 * 9600 * (8+2+1/8)) which is a rounded 470.
-
-`DIVIDER = Freq / ((M + PAR + N)/8) × OSR × Brate)`
-
-![clock_div.png](./dir/clock_div.png)

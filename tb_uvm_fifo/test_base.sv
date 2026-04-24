@@ -8,11 +8,10 @@ import uvm_pkg::*;
 class test_base #(type REQ = base_sequence) extends uvm_test;
     `uvm_component_utils(test_base)
 
+    REQ seq;
     environment env;
     fifo_config cfg;
     uvm_factory factory;
-    REQ seq;
-
     int num_to_full;
 
     function new(string name, uvm_component parent);
@@ -43,12 +42,12 @@ class test_base #(type REQ = base_sequence) extends uvm_test;
     endfunction
 
     virtual task run_phase(uvm_phase phase);
+        phase.phase_done.set_drain_time(this, fifo_config::TCLK * 4);
         phase.raise_objection(this);
-        `uvm_info(get_name(), "Raised objection", UVM_HIGH)
+        `uvm_info(get_name(), "run_phase: Raised objection", UVM_HIGH)
         start_sequences();
         phase.drop_objection(this);
-        `uvm_info(get_name(), "Dropped objection", UVM_HIGH)
-        phase.phase_done.set_drain_time(this, fifo_config::T_CLK * 4);
+        `uvm_info(get_name(), "run_phase: Dropped objection", UVM_HIGH)
     endtask
 
     virtual function void check_phase(uvm_phase phase);

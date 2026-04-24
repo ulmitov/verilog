@@ -26,9 +26,9 @@ class scoreboard extends uvm_scoreboard;
         string strvar;
         forever begin
             scb_fifo.get(ftr);
-            uvm_report_info("SCB_FIFO_PORT", ftr.convert2string());
             if (!ftr.pull && !ftr.push) continue;
             this.count++;
+            uvm_report_info("SCB_FIFO_PORT", $sformatf("#%0d: %s", this.count, ftr.convert2string()));
             msize = mem.size();
 
             // check empty sig
@@ -55,14 +55,9 @@ class scoreboard extends uvm_scoreboard;
             // print mem status
             strvar = "";
             foreach (mem[i]) strvar = { strvar, $sformatf("0x%0h ,", mem[i]) };
-            uvm_report_info(get_name(), $sformatf("Current scb mem: [%s]", strvar), UVM_HIGH);
+            uvm_report_info(get_name(), $sformatf("Current mem: [%s]", strvar), UVM_HIGH);
 
-            // since pull pops mem, then if both are 1 we should push first
-            if (ftr.push) begin
-                if (mem.size() < exp_full)
-                    mem.push_back(ftr.din);
-            end
-
+            // since pull pops mem, then if both are 1 we should pull first
             // check pull dout
             if (ftr.pull && msize) begin
                 tx_dout = mem.pop_front();
@@ -70,6 +65,10 @@ class scoreboard extends uvm_scoreboard;
                     this.passed(tx_dout, ftr.dout);
                 else
                     this.failed(tx_dout, ftr.dout);
+            end
+            if (ftr.push) begin
+                if (mem.size() < exp_full)
+                    mem.push_back(ftr.din);
             end
         end
     endtask

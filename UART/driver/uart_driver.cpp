@@ -18,14 +18,20 @@ uint32_t UartDriver::io_read(uint32_t addr) {
 void UartDriver::set_baud_rate(unsigned int baud, unsigned char stop_bits, unsigned char parity, unsigned char word_len) {
     float rate = CLK_FREQ_MHZ * (word_len + 5);
     rate = rate * 1000000 / baud / BAUD_OSRATE;
-    short total_bits = parity != 0;
-    total_bits = word_len + 5 + stop_bits + 1 + total_bits;
-    freq_divisor = (rate + total_bits - 1) / total_bits;        // round up: (a + b - 1) / b
-    ticks_per_word = freq_divisor * BAUD_OSRATE * total_bits;
+    short total_bits = word_len + 5 + stop_bits + 1 + (parity & 1);
+    int freq_divisor = (rate + total_bits - 1) / total_bits;        // round up: (a + b - 1) / b
     io_write(UART_REG_LCR, 1 << UART_LCR_DL);
     io_write(UART_REG_DLL, (uint8_t) freq_divisor);
     io_write(UART_REG_DLM, (uint8_t) (freq_divisor >> 8));
     io_write(UART_REG_LCR, (word_len << UART_LCR_WLS) | (stop_bits << UART_LCR_STB) | (parity << UART_LCR_PEN));
+}
+
+unsigned short UartDriver::get_divisor() {
+    int lcr = io_read(UART_REG_LCR);
+    io_write(UART_REG_LCR, 1 << UART_LCR_DL);
+    unsigned short freq_divisor = io_read(UART_REG_DLL) | (io_read(UART_REG_DLM) << 8);
+    io_write(UART_REG_LCR, lcr);
+    return freq_divisor;
 }
 
 int UartDriver::get_line_status() {

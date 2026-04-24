@@ -17,7 +17,7 @@ UartVerilated::UartVerilated(const char * vcd_path, int argc, char **argv):
 
 UartVerilated::~UartVerilated() {
     wait_ticks(10);
-    printf("End time: %d\n", timestamp);
+    printf("End time: %ld\n", timestamp);
     top->eval();
     vcd->close();
     top->final();

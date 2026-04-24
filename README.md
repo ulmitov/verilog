@@ -2,7 +2,7 @@
 
 Please navigate to each folder to view the project description Readme
 
- - ![UART module](./UART) according to PC16550D spec and a C++ driver which is used in a Verilator testbench
+ - ![UART 16550 module](./UART) according to PC16550D spec and a C++ driver which is used in a Verilator testbench
  - ![RISCV implementation](./RISCV_SingleCycle) with some assembly code to check functionality
  - ![SystemVerilog testbench for ALU](./tb_sv_alu)
  - ![UVM testbench for FIFO](./tb_uvm_fifo)
@@ -18,8 +18,10 @@ Please navigate to each folder to view the project description Readme
 # Run suites:
 - `make regression`: modules testbenches
 - `make uart`: UART testbenches
-- `make uartcpp`: UART C++ driver testbench
+- `make uartcpp`: UART C++ driver tests
 - `make riscv`: RISCV testbenches
-- `make all`: all testbenches except for Fifo UVM
+- `make uvm-fifo`: FIFO UVM testbench
+- `make alu`: ALU SystemVerilog testbench
+- `make all`: all testbenches
 
 

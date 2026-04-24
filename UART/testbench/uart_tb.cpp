@@ -1,5 +1,9 @@
 /*
     Simulation tests with uart driver
+TODO:
+1. issue with override
+2. IIR mode
+3. UVM like testbench
 */
 #include <iostream>
 #include <string.h>
@@ -10,8 +14,8 @@
 #include "uart_driver.h"
 #endif
 
-uint8_t buffer[1024];
 const PARITY_ENUM parity_vals[5] = {PARITY_DISABLED, PARITY_ODD, PARITY_EVEN, PARITY_STICK_0, PARITY_STICK_1};
+uint8_t buffer[1024];
 
 
 void print_header(const char *header) {
@@ -21,11 +25,13 @@ void print_header(const char *header) {
 
 void setup(UartDriver *obj, int baud, int stop_bits, int parity, int word_len) {
     std::string result = "";
-    std::cout << "################### SETUP ######################" << std::endl;
+    std::cout << "################## SETUP #####################" << std::endl;
     obj->set_baud_rate(baud, stop_bits, parity, word_len);
     word_len += 5;
-    std::cout << "Frequency Divisor = " << obj->freq_divisor << std::endl;
-    std::cout << "clock ticks_per_word = " << obj->ticks_per_word << std::endl;
+    int freq_divisor = obj->get_divisor();
+    int ticks_per_word = freq_divisor * BAUD_OSRATE * (word_len + stop_bits + 1 + (parity & 1));
+    std::cout << "Frequency Divisor = " << freq_divisor << std::endl;
+    std::cout << "clock ticks_per_word = " << ticks_per_word << std::endl;
     std::cout << "Baud rate = " << baud << std::endl;
     result += "Word len " + std::to_string(word_len);
     result += ", Parity ";
@@ -264,14 +270,13 @@ int main (int argc, char **argv, char **env) {
 
             setup(dut, 115200, 1, 3, 0);
             if (test_send_data(dut, data_8bit, 16, 0)) goto finish;
-
-            setup(dut, 115200, 1, 1, 3);
-            if (test_send_string_truncated(dut, "Expected 4xF: FFFFFF", "Expected 4xF: FFFF")) goto finish;
         }
     }
 
+    setup(dut, 115200, 1, 1, 3);
+    if (test_send_string_truncated(dut, "Expected 4xF: FFFFFF", "Expected 4xF: FFFF")) goto finish;
+
     dut->set_fifo_mode(0);
-    setup(dut, 115200, 0, 0, 3);
     if (test_chars_override(dut)) goto finish;
     dut->flush_fifo();
 

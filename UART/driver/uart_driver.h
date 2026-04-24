@@ -46,9 +46,6 @@ typedef enum {
  */
 class UartDriver {
     public:
-        unsigned short freq_divisor;
-        unsigned short ticks_per_word;
-
         /**
         * constructor
         */
@@ -175,6 +172,13 @@ class UartDriver {
         * @return 1: if fifo empty; 0: otherwise
         */
         short poll_tx(unsigned short timeout = 1000);
+
+        /**
+        * read divisor from DLL and DLM
+        *
+        * @return divisor
+        */
+        unsigned short get_divisor();
 
         /**
          * read an io register.

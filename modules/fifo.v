@@ -34,12 +34,12 @@ module fifo #(
     output wire full,
     output reg [ADDR_WIDTH:0] count     // items counter
 );
-    reg [DATA_WIDTH-1:0] mem [2**ADDR_WIDTH-1:0];
+    reg [DATA_WIDTH-1:0] mem [2**ADDR_WIDTH-1:0]; // TODO: can replace with memory module
     reg [ADDR_WIDTH-1:0] w_ptr, r_ptr;
     reg [ADDR_WIDTH-1:0] next_w, next_r;
     wire ren, wen;
 
-    assign wen = push & ~full;
+    assign wen = push & (~full | pull);
     assign ren = pull & ~empty;
 
     /* WRITE */
@@ -58,8 +58,8 @@ module fifo #(
     always @(posedge clk) begin
         if (~res & wen) mem[w_ptr] <= #`T_DELAY_FF din;
         `ifdef DEBUG_RUN
-            if (push)
-                $display("DEBUG: %s PUSH:  w_ptr=%0d  next_w=%0d  din=%0h  full=%0b  empty=%0b", name, w_ptr, next_w, din, full, empty);
+            if (push) $display("DEBUG: %s PUSH:  w_ptr=%0d  next_w=%0d  din=%0h  full=%0b  empty=%0b", 
+                                name, w_ptr, next_w, din, full, empty);
         `endif
     end
 
@@ -75,28 +75,29 @@ module fifo #(
     always @(posedge clk) begin
         if (res)
             r_ptr <= 0;
-        else if (ren)
+        else if (ren) begin
             r_ptr <= #`T_DELAY_FF next_r;
-        `ifdef DEBUG_RUN
-            if (ren)
-                $display("DEBUG: %s PULL:  r_ptr=%0d  next_r=%0d  dout=%0h  empty=%0b", name, r_ptr, next_r, dout, empty);
-        `endif
-    end
-    /*
-        reg pushed;
-        wire ptmet;              // pointers met
-        assign ptmet = &(r_ptr ~^ w_ptr);
-        assign empty = ptmet & ~pushed;     // if pointers met but there was no push then we are empty
-        assign full  = ptmet & pushed;     // if pointers met and there was a push means we are full
-        //assign half_full = w_ptr == r_ptr << 1;
-        always @(posedge clk) begin
-            if (res)
-                pushed <= 1'b0;
-            else if (wen | (push & pull))
-                pushed <= 1'b1;
-            else if (ren)           // also when push and pull both set
-                pushed <= 1'b0;
+            `ifdef DEBUG_RUN
+                $display("DEBUG: %s PULL:  r_ptr=%0d  next_r=%0d  dout=%0h  empty=%0b",
+                        name, r_ptr, next_r, dout, empty);
+            `endif
         end
+    end
+    /* This code works same as with counter:
+    reg pushed;
+    wire ptmet;              // pointers met
+    assign ptmet = &(r_ptr ~^ w_ptr);
+    assign empty = ptmet & ~pushed;     // if pointers met but there was no push then we are empty
+    assign full  = ptmet & pushed;     // if pointers met and there was a push means we are full
+    //assign half_full = w_ptr == r_ptr << 1;
+    always @(posedge clk) begin
+        if (res)
+            pushed <= 1'b0;
+        else if (wen | (push & pull))
+            pushed <= 1'b1;
+        else if (ren)           // also when push and pull both set
+            pushed <= 1'b0;
+    end
     */
     reg [ADDR_WIDTH:0] count_add;
 

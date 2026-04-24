@@ -30,13 +30,20 @@ class driver extends uvm_driver#(transaction);
 
     virtual task drive_task();
         // reset was done in top_tb
-        wait(!vif.DRIVER_MP.res);
+        if (vif.DRIVER_MP.res) begin
+            wait(!vif.DRIVER_MP.res);
+            `ifdef VERILATOR
+            @(vif.DRIVER_MP.cb_drv);
+            `endif
+        end
         @(vif.DRIVER_MP.cb_drv);
         vif.DRIVER_MP.cb_drv.push <= req.push;
         vif.DRIVER_MP.cb_drv.pull <= req.pull;
         vif.DRIVER_MP.cb_drv.din <= req.din;
-        if (req.push || req.pull) this.count++;
-        uvm_report_info("DRV sent item", req.convert2string());
+        if (req.push || req.pull) begin
+            this.count++;
+            uvm_report_info("DRV sent item", $sformatf("#%0d: %s", this.count, req.convert2string()));
+        end
     endtask
 endclass
 
