@@ -28,18 +28,18 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y lcov
           curl -L https://github.com/YosysHQ/oss-cad-suite-build/releases/download/2026-04-19/oss-cad-suite-linux-x64-20260419.tgz -o oss.tgz
-          mkdir -p $HOME/dev/sda6/oss-cad-suite/
-          tar -xzf oss.tgz -C $HOME/dev/sda6/
           wget https://www.accellera.org/images/downloads/standards/uvm/uvm-1.2.tar.gz
+          mkdir -p $HOME/dev/sda6/oss-cad-suite/
           mkdir -p $HOME/dev/sda6/UVM/UVM1.2/
+          tar -xzf oss.tgz -C $HOME/dev/sda6/
           tar -xzf uvm-1.2.tar.gz -C $HOME/dev/sda6/UVM/UVM1.2/ --strip-components=1
           ls $HOME/dev/sda6
           ls $HOME/dev/sda6/UVM/UVM1.2/src
 
-      - name: Regression with GATE_FLOW = OFF (iverilog)
+      - name: Regression with GATE_FLOW OFF (iverilog)
         run: make all ARG="-DGATE_FLOW_OFF" &> dataflow.log; cat dataflow.log
 
-      - name: Regression with GATE_FLOW = ON (iverilog)
+      - name: Regression with GATE_FLOW ON (iverilog)
         run: make all &> gateflow.log; cat gateflow.log
 
       - name: Modules regression (verilator)
@@ -52,16 +52,16 @@ jobs:
         run: make risc SIM=v RM_OBJDIR=true &> riscv.log; cat riscv.log
 
       - name: ALU SystemVerilog testbench (verilator)
-        run: make alu RM_OBJDIR=true &> alusv.log; cat alusv.log
+        run: make alu ARG=-UDEBUG_RUN RM_OBJDIR=true &> alusv.log; cat alusv.log
 
       - name: FIFO UVM testbench (verilator)
         run: make uvm-fifo &> fifouvm.log; cat fifouvm.log
 
       - name: Grep Results Summary
-        run: grep -H -a -i -E 'error|end of|warning|assertion|segmentation|fatal|fail' ./*.log | grep -a -v -i -E 'timescale|time unit|dangling|Not enough words|Part select'
+        run: make grep_err
 
       - name: Get coverage report
-        run: make get_coverage || cat coverage_merged_notb.dat
+        run: make get_coverage; cat coverage_merged_notb.dat
 
       - name: Upload
         uses: actions/upload-pages-artifact@v3

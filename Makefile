@@ -17,7 +17,7 @@ VERILATOR_ARGS := 	-Wno-lint -Wno-TIMESCALEMOD -Wno-SELRANGE -Wno-UNOPTFLAT -Wno
 define get_coverage
 	pwd
 	verilator_coverage --write coverage_merged.dat $$(find ./vcd -type f -name "cov_*.dat" | xargs)
-	grep -v -E "UVM/|testbench|verilated_std.sv|tb_sv_alu" coverage_merged.dat > coverage_merged_notb.dat
+	grep -v -E "UVM/|testbench|verilated_std.sv|tb_sv_alu|tb_uvm_fifo" coverage_merged.dat > coverage_merged_notb.dat
 	verilator_coverage --write-info coverage_merged.info coverage_merged_notb.dat
 	# sed -i 's|../modules|modules|g' coverage_merged.info
 	# verilator_coverage --annotate-all obj_dir_merged merged_coverage.dat
@@ -79,10 +79,11 @@ lint-uart:
 	cd UART; verilator --lint-only -Wall -y $(pwd)modules -I$(pwd)modules/ $(uart_src)
 
 
-# Modules Regression suite
-grep_err := 2>&1 |grep -H -a -i -E 'error|end of|warning|assertion|segmentation|fatal|fail' |grep -a -v -E 'timescale|time unit|dangling|Not enough words|Part select' || true
+# Regression suites
+grep_err:
+	grep -H -a -i -E 'error|end of|warning|assertion|segmentation|fatal|fail' ./*.log | grep -a -v -i -E 'timescale|time unit|dangling|Not enough words|Part select'
 all:
-	@$(MAKE) -s regression uart risc &> all.log; cat all.log $(grep_err)
+	$(MAKE) -s regression uart risc
 regression:
 	$(MAKE) -s adder half_adder fastadder mux decoder priority_enc mux_cmos mux_behavioral_tb
 	$(MAKE) -s sequence counters fifo memory shift_reg shift
@@ -152,7 +153,7 @@ uartcpp:
 	src="./UART/testbench/uart_tb.cpp ./UART/driver/uart_driver.cpp ./UART/testbench/uart_verilated.cpp"
 	args="$(VERILATOR_ARGS) $(ARG) --public-flat-rw -DCONST_DELAYS_OFF -CFLAGS "-I../UART/driver" -IUART --exe"
 	verilator $$args --top $$tb $$src $(uart_src) && ./obj_dir/V$$tb
-	mv coverage.dat vcd/cov_uartcpp.dat || true
+	mv coverage.dat vcd/cov_uartcpp.dat
 	# for debugging add: ARG='-CFLAGS "-g -DDEBUG_MODE"'
 
 
@@ -179,8 +180,8 @@ alu:
 # FIFO UVM TB
 uvm-fifo:
 	find . -type d -name "obj_dir" -exec rm -rf {} +
-	verilator $(VERILATOR_ARGS) --top-module top_tb --exe --main \
-	+define+UVM_NO_DPI +incdir+$(UVM_HOME)+$$(pwd)+modules+tb_uvm_fifo \
+	verilator $(VERILATOR_ARGS) $(ARG) --top-module top_tb --exe --main \
+	-DUVM_NO_DPI -I$(UVM_HOME) -Itb_uvm_fifo \
 	$(UVM_HOME)/uvm_pkg.sv modules/fifo.v tb_uvm_fifo/top_tb.sv;
 	./obj_dir/Vtop_tb +UVM_VERBOSITY=UVM_HIGH +UVM_TESTNAME=test_regression
-	mv coverage.dat vcd/cov_uvmfifo.dat || true
+	mv coverage.dat vcd/cov_uvmfifo.dat
