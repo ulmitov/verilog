@@ -37,31 +37,31 @@ jobs:
           ls $HOME/dev/sda6/UVM/UVM1.2/src
 
       - name: Regression with GATE_FLOW OFF (iverilog)
-        run: make all ARG="-DGATE_FLOW_OFF" &> dataflow.log; cat dataflow.log
+        run: make all ARG="-DGATE_FLOW_OFF" 2>&1 | tee dataflow.log
 
       - name: Regression with GATE_FLOW ON (iverilog)
-        run: make all &> gateflow.log; cat gateflow.log
+        run: make all 2>&1 | tee gateflow.log
 
       - name: Modules regression (verilator)
-        run: make regression SIM=v RM_OBJDIR=true &> modules.log; cat modules.log
+        run: make regression SIM=v RM_OBJDIR=true 2>&1 | tee modules.log
 
       - name: UART C++ and verilog tests (verilator)
-        run: make uart SIM=v RM_OBJDIR=true &> uart.log; cat uart.log
+        run: make uart SIM=v RM_OBJDIR=true 2>&1 | tee uart.log
 
       - name: RISCV tests (verilator)
-        run: make risc SIM=v RM_OBJDIR=true &> riscv.log; cat riscv.log
+        run: make risc SIM=v RM_OBJDIR=true 2>&1 | tee riscv.log
 
       - name: ALU SystemVerilog testbench (verilator)
-        run: make alu ARG=-UDEBUG_RUN RM_OBJDIR=true &> alusv.log; cat alusv.log
+        run: make alu ARG=-UDEBUG_RUN RM_OBJDIR=true 2>&1 | tee alusv.log
 
       - name: FIFO UVM testbench (verilator)
-        run: make uvm-fifo &> fifouvm.log; cat fifouvm.log
+        run: make uvm-fifo 2>&1 | tee fifouvm.log
 
       - name: Grep Results Summary
         run: make grep_err
 
       - name: Get coverage report
-        run: make get_coverage; cat coverage_merged_notb.dat
+        run: make get_coverage || cat coverage_merged_notb.dat
 
       - name: Upload
         uses: actions/upload-pages-artifact@v3

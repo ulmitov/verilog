@@ -13,8 +13,9 @@ module baud_tb;
     logic res;
     logic clk_out2, clk_out3, clk_out4, clk_out5, clk_out6, clk_out7, clk_out8, clk_out9, clk_out10;
     integer cnt2 = 0, cnt3 = 0, cnt4 = 0, cnt5 = 0, cnt6 = 0, cnt7 = 0, cnt8 = 0, cnt9 = 0, cnt10 = 0;
+    logic [15:0] div2;
 
-    clock_divider uut2 (.clk_in(clk), .res(res), .div(16'd2), .clk_out(clk_out2));
+    clock_divider uut2 (.clk_in(clk), .res(res), .div(div2), .clk_out(clk_out2));
     clock_divider uut3 (.clk_in(clk), .res(res), .div(16'd3), .clk_out(clk_out3));
     clock_divider uut4 (.clk_in(clk), .res(res), .div(16'd4), .clk_out(clk_out4));
     clock_divider uut5 (.clk_in(clk), .res(res), .div(16'd5), .clk_out(clk_out5));
@@ -36,24 +37,27 @@ module baud_tb;
     always @(posedge clk_out10) cnt10 = cnt10 + 1;
 
     initial begin
-        $dumpfile("vcd/baud_tb.vcd");
+        $dumpfile("vcd/baud_tbv.vcd");
         $dumpvars(0);
         clk = 1'b1;
         res = 1'b0;
         @(posedge clk) res = 1'b1;
-        @(posedge clk);
         @(posedge clk) res = 1'b0;
+        @(negedge clk);
+        assert(clk_out2 === 1'b1) $display("Initial Baud clock is correct");
+        else $error("Initial value of Baud clock %0b is not 1", clk_out2);
+        div2 = 16'd2;
         repeat(24) @(posedge clk);
-        // each clock initial state is 1, so adding 1 to counters
-        if (cnt2 != 13) $display("*** [baud_tb] ERROR: cnt2 %0d is not 13", cnt2);
-        if (cnt3 != 9) $display("*** [baud_tb] ERROR: cnt3 %0d is not 9", cnt3);
-        if (cnt4 != 7) $display("*** [baud_tb] ERROR: cnt4 %0d is not 7", cnt4);
-        if (cnt5 != 5) $display("*** [baud_tb] ERROR: cnt5 %0d is not 5", cnt5);
-        if (cnt6 != 5) $display("*** [baud_tb] ERROR: cnt6 %0d is not 5", cnt6);
-        if (cnt7 != 4) $display("*** [baud_tb] ERROR: cnt7 %0d is not 4", cnt7);
-        if (cnt8 != 4) $display("*** [baud_tb] ERROR: cnt8 %0d is not 4", cnt8);
-        if (cnt9 != 3) $display("*** [baud_tb] ERROR: cnt9 %0d is not 3", cnt9);
-        if (cnt10 != 3) $display("*** [baud_tb] ERROR: cnt10 %0d is not 3", cnt10);
+        // each clock initial state is 1, so adding 1 to counters, except for cnt2 which had initial delay of 1 clock
+        if (cnt2 != 12) $error("cnt2 %0d is not 12", cnt2);
+        if (cnt3 != 9) $error("cnt3 %0d is not 9", cnt3);
+        if (cnt4 != 7) $error("cnt4 %0d is not 7", cnt4);
+        if (cnt5 != 5) $error("cnt5 %0d is not 5", cnt5);
+        if (cnt6 != 5) $error("cnt6 %0d is not 5", cnt6);
+        if (cnt7 != 4) $error("cnt7 %0d is not 4", cnt7);
+        if (cnt8 != 4) $error("cnt8 %0d is not 4", cnt8);
+        if (cnt9 != 3) $error("cnt9 %0d is not 3", cnt9);
+        if (cnt10 != 3) $error("cnt10 %0d is not 3", cnt10);
         $display("End of testbench: baud_tb.vcd");
         $finish;
     end
@@ -108,9 +112,9 @@ module uart_rx_tb;
             #baud_wait din = 1'b1;
             #baud_wait din = 1'b1;
             if (uart_rx_out != {err_fr, err_par, tx_data})
-                $display("*** [uart_rx_tb] ERROR: uart_rx_out %0h is not as expected %0h", uart_rx_out, {err_fr, err_par, tx_data});
+                $error("uart_rx_out %0h is not as expected %0h", uart_rx_out, {err_fr, err_par, tx_data});
             if (^uart_rx_out[8:0])
-                $display("*** [uart_rx_tb] ERROR: parity bit %0b is not correct", err_par);
+                $error("parity bit %0b is not correct", err_par);
             // some wait
             #baud_wait;
             #baud_wait;
@@ -203,13 +207,13 @@ module uart_tx_tb;
         @(posedge valid);
         @(posedge valid);
         if (tsr_data !== 'b110110000100)
-            $display("*** [uart_tx_tb] ERROR: tx dout %0b is not as expected", tsr_data);
+            $error("tx dout %0b is not as expected", tsr_data);
         else
             $display("PASSED: tx dout %0h is correct!", tsr_data);
         din = 8'hA9;
         @(posedge valid);
         if (tsr_data !== 'b111101010010)
-            $display("*** [uart_tx_tb] ERROR: tx dout %0b is not as expected", tsr_data);
+            $error("tx dout %0b is not as expected", tsr_data);
         else 
             $display("PASSED: tx dout %0h is correct!", tsr_data);
         repeat(48*DIV) @(posedge clk);
@@ -270,7 +274,7 @@ module uart_tb;
         begin
             wait(rx_empty == 1'b0);
             wait(rx_empty == 1'b1);
-            if (rd_data !== exp_val) $display("*** [uart_tb] ERROR: rd_data %0h is not %0h", rd_data, exp_val);
+            if (rd_data !== exp_val) $error("rd_data %0h is not %0h", rd_data, exp_val);
             else $display("PASSED: rd_data 0x%0h is correct!", rd_data);
         end
     endtask
@@ -358,21 +362,18 @@ module uart_top_tb;
         wr = 1;
         addr = 3;   // lcr
         dutin = 'h80;
-        @(negedge clk) if (dutout != 'h80)
-            $display("*** [uart_top_tb] ERROR: uart_top data_bus is not 0x80");
+        @(negedge clk) if (dutout != 'h80) $error("uart_top data_bus is not 0x80");
         
         // input to DLL:
         addr = 0; dutin = 'h40;
-        @(negedge clk) if (dutout != 'h40)
-            $display("*** [uart_top_tb] ERROR: uart_top data_bus is not 0x80");
+        @(negedge clk) if (dutout != 'h40) $error("uart_top data_bus is not 0x80");
     
         // output LCR:
         ddis = 0;
         wr = 0;
         rd = 1;
         addr = 3;
-        @(negedge clk) if (dutout != 'h80)
-            $display("*** [uart_top_tb] ERROR: uart data_bus is not 0x80");
+        @(negedge clk) if (dutout != 'h80) $error("uart data_bus is not 0x80");
         $display("End of testbench: uart_top_tb.vcd");
         $finish;
     end

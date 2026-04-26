@@ -18,15 +18,15 @@ module priority_enc_tb;
 
     priority_enc_8to3 DUT ( .in(din), .out(out), .valid(valid) );
 
-    // expected results
+    // scoreboard
     always begin
         #`T_CLK exp_v = din ? 1 : 0;
-        #1 if (exp_v !== 1'bX && valid !== exp_v) $display("ERROR: valid %0b is not as expected %0b", valid, exp_v);
+        #1 if (exp_v !== 1'bX && valid !== exp_v) $error("valid %0b is not as expected %0b", valid, exp_v);
         br = 0;
         for (j = 7; j >= 0; j = j - 1) begin
             if (!br && din[j] === 1) begin
                 br = 1;
-                #1 if (out !== j) $display("ERROR: out is not as expected %3b", j);
+                #1 if (out !== j) $error("out is not as expected %3b", j);
             end
         end
     end
@@ -35,9 +35,8 @@ module priority_enc_tb;
         $dumpfile(`VCD);
         $dumpvars(0);
         $monitor("%4d: din=%b, out=%b, valid=%b", $time, din, out, valid);
-
         for (i = 0; i < 2**8 ; i = i + 1) #`T_CLK din = i;
-        $display("End of testbench: %s", `VCD);
-        #`T_CLK $finish;
+        #`T_CLK $display("End of testbench: %s", `VCD);
+        $finish;
     end
 endmodule

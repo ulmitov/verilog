@@ -20,7 +20,7 @@ module half_adder_tb;
         a = x; \
         b = y; \
         #T_DELAY if ((sum !== es) || (carry !== ec)) \
-            $display("ERROR: sum %d !== %d || carry %d !== %d", sum, es, carry, ec); \
+            $error("sum %d !== %d || carry %d !== %d", sum, es, carry, ec); \
     end
 
     // expected results

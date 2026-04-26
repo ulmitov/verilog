@@ -4,7 +4,6 @@
 /* verilator lint_off DECLFILENAME */
 /* verilator lint_off MULTITOP */
 /* verilator lint_off GENUNNAMED */
-`timescale 1ns / 1ns
 
 /*
     m="sequence_detector"
@@ -51,16 +50,10 @@ module sequence_detector #(parameter OVERLAP = 1) (
 
     always @(*) begin
         case (state)
-            S0:
-                next_state = din === seq[3] ? S1 : S0;
-            S1:
-                next_state = din === seq[2] ? S2 : r1;
-            S2:
-                next_state = din === seq[1] ? S3 : r2;
-            S3:
-                next_state = din === seq[0] ? c3 : r3;
-            default:
-                next_state = S0;
+            S1:         next_state = din === seq[2] ? S2 : r1;
+            S2:         next_state = din === seq[1] ? S3 : r2;
+            S3:         next_state = din === seq[0] ? c3 : r3;
+            default:    next_state = din === seq[3] ? S1 : S0; // S0 state
         endcase
     end
 endmodule
@@ -126,16 +119,10 @@ module sequence_detector_1010 (
 
     always @(*) begin
         case (state)
-            S0:
-                next_state = din ^~ pass[3] ? S1 : S0;
-            S1:
-                next_state = din ^~ pass[2] ? S2 : S1;
-            S2:
-                next_state = din ^~ pass[1] ? S3 : S0;
-            S3:
-                next_state = din ^~ pass[0] ? S2 : S1;
-            default:
-                next_state = S0;
+            S1: next_state = din ^~ pass[2] ? S2 : S1;
+            S2: next_state = din ^~ pass[1] ? S3 : S0;
+            S3: next_state = din ^~ pass[0] ? S2 : S1;
+            default: next_state = din ^~ pass[3] ? S1 : S0; // S0 state
         endcase
     end
 endmodule
@@ -151,8 +138,6 @@ module sequence_detector_1010_mealy(
     output reg dout
 );
     reg s2, s1;
-
-    // DFF update. Reset is async.
     always @(posedge clk or negedge res_n) begin
         if (!res_n) begin
             s1 <= 0;

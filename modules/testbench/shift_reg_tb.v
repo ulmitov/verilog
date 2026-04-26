@@ -46,7 +46,7 @@ module shift_reg_tb;
                 if (out_serial === exp_out[0])
                     $display("%0t: OK: out_serial is %0b", $time, out_serial);
                 else begin
-                    $display("%0t [shift_reg_tb] ERROR: out_serial %0b is not as expected %0b on iteration %0d", $time, out_serial, exp_out[0], j);
+                    $error("%0t [shift_reg_tb] out_serial %0b is not as expected %0b on iteration %0d", $time, out_serial, exp_out[0], j);
                     err = err + 1;
                 end
                 in = in >> 1;
@@ -70,7 +70,7 @@ module shift_reg_tb;
                 if (out_serial === exp_out[0])
                     $display("%0t: OK: out_serial is %0b", $time, out_serial);
                 else begin
-                    $display("%0t [shift_reg_tb] ERROR: out_serial %0b is not as expected %0b on iteration %0d", $time, out_serial, exp_out[0], j);
+                    $error("%0t [shift_reg_tb] out_serial %0b is not as expected %0b on iteration %0d", $time, out_serial, exp_out[0], j);
                     err = err + 1;
                 end
                 @(negedge clk);
@@ -92,7 +92,7 @@ module shift_reg_tb;
                 if (out_cyclic === exp_out[0])
                     $display("%0t: OK: out_cyclic is %0b", $time, out_cyclic);
                 else begin
-                    $display("%0t [shift_reg_tb] ERROR: out_cyclic %0b is not as expected %0b on iteration %0d", $time, out_cyclic, exp_out[0], j);
+                    $error("%0t [shift_reg_tb] out_cyclic %0b is not as expected %0b on iteration %0d", $time, out_cyclic, exp_out[0], j);
                     err = err + 1;
                 end
                 @(negedge clk);
@@ -146,7 +146,7 @@ module shift_reg_tb;
         repeat(N) begin
             @(negedge clk);
             if (out_parallel != load) begin
-                $display("%0t: ERROR: out_parallel %0b is not as expected %0b", $time, out_parallel, load);
+                $error("[%0t] out_parallel %0b is not as expected %0b", $time, out_parallel, load);
                 err = err + 1;
             end
         end

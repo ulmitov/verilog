@@ -17,12 +17,12 @@ module mux_tb;
         $monitor("%d: din=%16b  sel=%0b  out=%0b  exp=%0b", $time, din, sel, out, exp);
 
         #`TDELAY sel = 0; din = 0; exp = 0;
-        #`TDELAY if (out != exp) $display("ERROR: mux out %0b is not as expected %0b", out, exp);
+        #`TDELAY if (out != exp) $error("mux out %0b is not as expected %0b", out, exp);
         for (i = 0; i < 16; i = i + 1) begin
             sel = i; din = 2 ** i; exp = din[i];
-            #`TDELAY if (out != exp) $display("ERROR: mux out %0b with sel %0b is not as expected %0b", out, sel, exp);
+            #`TDELAY if (out != exp) $error("mux out %0b with sel %0b is not as expected %0b", out, sel, exp);
             sel = i; din = 'hFFFF - 2 ** i; exp = din[i];
-            #`TDELAY if (out != exp) $display("ERROR: mux out %0b with sel %0b is not as expected %0b", out, sel, exp);
+            #`TDELAY if (out != exp) $error("mux out %0b with sel %0b is not as expected %0b", out, sel, exp);
         end
         $display("End of testbench: vcd/mux_tb.vcd");
         $finish;

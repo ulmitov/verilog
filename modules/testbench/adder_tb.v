@@ -35,9 +35,9 @@ module adder_tb #(parameter FAST_ADDER = 0, parameter N = 4, parameter VCD = "vc
         sum_s = $signed({msb, sum});
         $display("%8d INFO: X=%4b Y=%4b Nadd_sub=%b: sum=%4d (%4b with sign %0b) overflow=%0b, carry=%0d, eq=%0b, lt=%0b, ltu=%0b", $time, X, Y, mode, sum_s, sum, msb, of, carry, eq, lt, ltu);
         if (sum !== ex_sum)
-            $display("*** ERROR: sum %0d (%0b) is not equal to expected %0d", sum, sum, ex_sum);
+            $error("sum %0d (%0b) is not equal to expected %0d", sum, sum, ex_sum);
         if (carry != ex_carry)
-            $display("*** ERROR: carry %0b is not equal to expected %0b", carry, ex_carry);
+            $error("carry %0b is not equal to expected %0b", carry, ex_carry);
     end
     endtask
 
@@ -48,13 +48,13 @@ module adder_tb #(parameter FAST_ADDER = 0, parameter N = 4, parameter VCD = "vc
         input ex_ltu;
     begin
         if (of != ex_overflow)
-            $display("*** ERROR: overflow %0b is not equal to expected %0d", of, ex_overflow);
+            $error("overflow %0b is not equal to expected %0d", of, ex_overflow);
         if (eq != ex_eq)
-            $display("*** ERROR: eq %0b is not equal to expected %0b", of, ex_eq);
+            $error("eq %0b is not equal to expected %0b", of, ex_eq);
         if (lt != ex_lt)
-            $display("*** ERROR: lt %0b is not equal to expected %0b", of, ex_lt);
+            $error("lt %0b is not equal to expected %0b", of, ex_lt);
         if (ltu != ex_ltu)
-            $display("*** ERROR: ltu %0b is not equal to expected %0b", of, ex_ltu);
+            $error("ltu %0b is not equal to expected %0b", of, ex_ltu);
     end
     endtask
 

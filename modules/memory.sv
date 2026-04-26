@@ -11,20 +11,19 @@ Data are read from the RAM memory space at RAddress into Q after some delay when
 The behavior of the memory is unknown if you write and read at the same addr.
 The output Q depends on the time relationship between the write clock and the read addr signal.
 
-f="RAM"; m="RAM";
-yosys -p "read_verilog ${f}.v; hierarchy -check -top $m; proc; opt; clean; show -format svg -prefix synth/${m} ${m}; show ${m}"
+m="memory"; yosys -p "read_verilog ${m}.sv; hierarchy -check -top $m; proc; opt; clean; show -format svg -prefix synth/${m} ${m}; show ${m}"
 */
 `include "consts.vh"
 import risc_pkg::*;
 
 
 module memory #(
-    parameter DEPTH      = 2**4, // Memory depth
-    parameter DATA_WIDTH = 32,   // Memory data word width
-    parameter ADDR_WIDTH = 32,   // Memory address width
-    parameter SYNC_READ  = 0,    // 0 is async read (without rclk)
-    parameter ENDIANESS  = 0,    // 0 is Little endian
-    parameter MEM_FILE   = ""    // machine hex code file path for init
+    parameter DEPTH      = 2**4,    // Memory depth
+    parameter DATA_WIDTH = 32,      // Memory data word width
+    parameter ADDR_WIDTH = 32,      // Memory address width
+    parameter SYNC_READ  = 0,       // 0 is async read (without rclk)
+    parameter ENDIANESS  = 0,       // 0 is Little endian
+    parameter MEM_FILE   = ""       // machine hex code file path for init
 ) (
     input logic wclk,/* verilator lint_off UNUSEDSIGNAL */
     input logic rclk,/* verilator lint_on UNUSEDSIGNAL */

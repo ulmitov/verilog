@@ -54,7 +54,9 @@ clean:
 	find . -type f -name "dvlcom.*" -delete
 	find . -type f -name "cov*.dat" -delete
 	find . -type f -name "*.info" -delete
+	find . -type f -name "*.log" -delete
 	find . -type d -name "obj_dir" -exec rm -rf {} +
+	find . -type d -name "dsim_work" -exec rm -rf {} +
 	find . -type d -name "covhtml" -exec rm -rf {} +
 
 ver:
@@ -158,7 +160,7 @@ uartcpp:
 
 
 # RISCV
-risc_src := risc_pkg.sv tb_riscv.sv riscv.sv fetch.sv decode.sv register_file.sv branch_control.sv control.sv alu.sv data_memory.sv
+risc_src := risc_pkg.sv tb_riscv.sv riscv.sv riscv_core.sv fetch.sv decode.sv register_file.sv branch_control.sv control.sv alu.sv data_memory.sv
 risc_mod := memory.sv adder.v shift.v mux.v
 define run_risc
 	$(call run_sim,$(1),$(foreach x,$(risc_src),RISCV_SingleCycle/$(x)) $(foreach x,$(risc_mod),modules/$(x)))

@@ -49,7 +49,7 @@ module counter_tb #(parameter N = 4, parameter TYPE = "dff");
 
     always @(negedge clk) begin
         if (expected !== 'bX && expected !== count) begin
-            $display("%0t: [counter_tb] ERROR: count=%0d not as expected %0d", $time, count, expected);
+            $error("[%0t] [counter_tb]: count=%0d not as expected %0d", $time, count, expected);
             err <= 1'b1;
         end else err <= 1'b0;
     end

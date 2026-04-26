@@ -1,10 +1,9 @@
-// assuming Little endian
+/*
+m="data_memory"; yosys -p "read_verilog -sv ${m}.sv; hierarchy -check -top $m; proc; opt; simplemap; clean; show -format svg -prefix synth/${m} ${m}; show ${m}"
+*/
 import risc_pkg::*;
 
-/*
-f="data_memory"; m="data_memory";
-yosys -p "read_verilog -sv ${f}.sv; hierarchy -check -top $m; proc; opt; simplemap; clean; show -format svg -prefix synth/${m} ${m}; show ${m}"
-*/
+
 module data_memory #(
     parameter DEPTH      = 2**4, // Memory depth
     parameter DATA_WIDTH = 32,   // Memory data word width
@@ -46,7 +45,7 @@ module data_memory #(
     );
 
     // Sign extension
-    always_comb begin: set_read_sign_bit
+    always_comb begin: get_sign_bit
         if (zero_ex)
             sign = 1'b0;
         else begin
@@ -54,16 +53,32 @@ module data_memory #(
                 OP_DMEM_BYTE: sign = temp_rd[7];
                 OP_DMEM_HALF: sign = temp_rd[15];
                 OP_DMEM_TRPL: sign = temp_rd[23];
-                default: sign = 1'b0;
+                OP_DMEM_WORD: sign = temp_rd[31];
+                //OP_DMEM_DUBL: sign = DATA_WIDTH > 32 ? temp_rd[63] : temp_rd[31];
+                default: sign = temp_rd[DATA_WIDTH-1]; // default and OP_DMEM_QUAD
             endcase
         end 
     end
 
-    always_comb begin: extend_to_requested_size
+    always_comb begin: sign_extend
         case (blsize)
-            OP_DMEM_BYTE: rd_data = {{24{sign}}, temp_rd[7:0]};
-            OP_DMEM_HALF: rd_data = {{16{sign}}, temp_rd[15:0]};
-            OP_DMEM_TRPL: rd_data = {{ 8{sign}}, temp_rd[23:0]};
+            OP_DMEM_BYTE: rd_data = {{(DATA_WIDTH -8){sign}}, temp_rd[7:0]};
+            OP_DMEM_HALF: rd_data = {{(DATA_WIDTH-16){sign}}, temp_rd[15:0]};
+            OP_DMEM_TRPL: rd_data = {{(DATA_WIDTH-24){sign}}, temp_rd[23:0]};
+            /*
+            OP_DMEM_WORD: begin
+                if (DATA_WIDTH == 32)
+                    rd_data = temp_rd;
+                else
+                    rd_data = {{(DATA_WIDTH-32){sign}}, temp_rd[31:0]};
+            end
+            OP_DMEM_DUBL: begin
+                if (DATA_WIDTH != 128)
+                    rd_data = temp_rd;
+                else
+                    rd_data = {{(DATA_WIDTH-64){sign}}, temp_rd[63:0]};
+            end
+            */
             default: rd_data = temp_rd;
         endcase
     end

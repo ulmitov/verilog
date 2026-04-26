@@ -29,7 +29,7 @@ module shift_tb;
         end else
             exp = data << shifts;
         if (out !== exp)
-            $display("ERROR: %8d: signed=%0b, right=%0b, data=%8b, shifts=%0d (%3b), out=%8b, exp=%8b", $time, sign, right, data, shifts, shifts, out, exp);
+            $error("%8d: signed=%0b, right=%0b, data=%8b, shifts=%0d (%3b), out=%8b, exp=%8b", $time, sign, right, data, shifts, shifts, out, exp);
     end
     endtask
 

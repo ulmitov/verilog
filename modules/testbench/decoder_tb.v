@@ -13,8 +13,7 @@ module decoder_tb;
 
     decoder4to16 DUT ( .en(en), .w(din), .y(out) );
 
-    always
-        #(`CLK_MONITOR) if (out !== exp) $display("%4d: ERROR: exp=%16b, out=%16b", $time, exp, out);
+    always #(`CLK_MONITOR) if (out !== exp) $error("[%4d] exp=%16b, out=%16b", $time, exp, out);
 
     initial begin
         $dumpfile(`VCD);
@@ -32,7 +31,7 @@ module decoder_tb;
             #`CLK_DRIVE din = i;
             exp = 2 ** i;
         end
-        $display("End of testbench: %s", `VCD);
-        #`CLK_DRIVE $finish;
+        #`CLK_DRIVE $display("End of testbench: %s", `VCD);
+        $finish;
     end
 endmodule

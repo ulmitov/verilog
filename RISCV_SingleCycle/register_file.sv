@@ -32,7 +32,7 @@ module register_file #(parameter XLEN = 32) (
 
     always_ff @(posedge clk or negedge res_n) begin
         if (!res_n) begin
-            for (i = 0; i < XLEN; i = i + 1)
+            for (i = 0; i < 32; i = i + 1)
                 reg_mem[i] <= {XLEN{1'b0}};
         end else if (rf_wr_en && rd_addr != 5'b0)
             reg_mem[rd_addr] <= wr_data;

@@ -71,7 +71,7 @@ module memory_tb;
                 #`T_CLK re = 1'b0; // if async then wait flip flop delay ?
             else
                 #`T_CLK re = 1'b0;
-            if (out !== din) $display("%0d: ERROR: addr=%0h: out=%0h not as expected %0h", $time, addr, out, din);
+            if (out !== din) $error("%0d: addr=%0h: out=%0h not as expected %0h", $time, addr, out, din);
         end
     endtask
 

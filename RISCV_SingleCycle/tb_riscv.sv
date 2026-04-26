@@ -36,7 +36,7 @@ module tb_riscv #(parameter mem_file = `BUBBLES, parameter FINISH = 1);
     end
 
     always @(posedge clk)
-        $strobe("%6d: DEBUG: PC=%3h: INSTRUCTION=%8h: OPCODE=%7b funct3=%3b, rd_addr=0x%0h, rs1_addr=0x%0h, rs2_addr=0x%0h, IMM=0x%0h", $time, dut.pc, dut.instruction, dut.opcode, dut.funct3, dut.rd_addr, dut.rs1_addr, dut.rs2_addr, dut.immediate);
+        $strobe("%6d: DEBUG: PC=%3h: INSTRUCTION=%8h: OPCODE=%7b funct3=%3b, rd_addr=0x%0h, rs1_addr=0x%0h, rs2_addr=0x%0h, IMM=0x%0h", $time, dut.pc, dut.instruction, dut.core.opcode, dut.core.funct3, dut.rd_addr, dut.rs1_addr, dut.rs2_addr, dut.core.immediate);
 
     initial begin
         $dumpfile({`VCD_PATH, mem_file, ".vcd"});
