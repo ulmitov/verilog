@@ -71,7 +71,7 @@ module uart #(
         .dout(rx_fifo_out),
         .empty(rx_empty),
         .full(rx_fifo_full),
-        .count(rx_fifo_count)
+        //.count(rx_fifo_count)
     );
 
     // Tx: CPU push wr_data when ~tx_full -> TxFIFO outputs tx_data to TxUUT

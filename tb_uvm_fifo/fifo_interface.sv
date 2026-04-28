@@ -1,6 +1,5 @@
 interface fifo_interface (
-    input logic clk,
-    input logic res
+    input logic clk
 );
     logic [fifo_config::DATA_WIDTH-1:0] din;
     logic [fifo_config::DATA_WIDTH-1:0] dout;
@@ -8,6 +7,7 @@ interface fifo_interface (
     logic pull;
     logic empty;
     logic full;
+    logic res;
     logic [fifo_config::ADDR_WIDTH:0] counter;
 
     clocking cb_drv @(posedge clk);
@@ -20,6 +20,7 @@ interface fifo_interface (
         output push;
         output pull;
         output din;
+        input res;
         input dout;
         input empty;
         input full;
@@ -28,6 +29,7 @@ interface fifo_interface (
 
     clocking cb_mon @(posedge clk);
         default input #(fifo_config::SETUP_TIME+1);
+        input res;
         input push;
         input pull;
         input din;
@@ -37,8 +39,8 @@ interface fifo_interface (
         input counter;
     endclocking
 
-    modport DRIVER_MP(clocking cb_drv, input clk, input res);
-    modport MONITOR_MP(clocking cb_mon, input clk, input res);
+    modport DRIVER_MP(clocking cb_drv, input clk);
+    modport MONITOR_MP(clocking cb_mon, input clk);
 
     /* ASSERTIONS */
     static int THRESH_FULL = fifo_config::FIFO_DEPTH;
@@ -64,11 +66,11 @@ interface fifo_interface (
     ) else log("assert_counter");
 
     assert_empty_on_res: assert property (
-        @(negedge res) res |-> empty
+        @(negedge res) disable iff (res) empty
     ) else log("assert_empty_on_res");
 
     assert_unfull_on_res: assert property (
-        @(negedge res) res |-> ~full
+        @(negedge res) disable iff (res) ~full
     ) else log("assert_unfull_on_res");
 
     assert_empty_full: assert property (

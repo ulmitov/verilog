@@ -37,11 +37,18 @@ module memory #(
     output logic [DATA_WIDTH-1:0] rd_data
 );       
     logic [7:0] MEMX [0:DEPTH-1];    // Each mem address holds 1 byte
+    logic [DATA_WIDTH-1:0] reg_rd;
+    logic rd_en;
+    logic wr_en;
+
+    assign wr_en = ~res & req & wen;
+    assign rd_en = req & ren;
+
 
     task initmem;
         input string path;
         begin
-            $display("*** LOADING %s ***", path);
+            $display("--- MEMORY LOADING %s ---", path);
             $readmemh(path, MEMX);
         end
     endtask
@@ -51,42 +58,195 @@ module memory #(
         initial initmem(MEM_FILE);
     end
 
-    // WR operation: TODO: add ENDIANESS
+    // set suitbale block size value according to requested block size and predefined DATA_WIDTH
+    parameter MAXBL = DATA_WIDTH / 8;
+    logic [2:0] block_size;
+    always_comb begin
+        case(blsize)
+            OP_DMEM_QUAD: block_size = MAXBL > 8 ? 6 : 0; // 16 bytes
+            OP_DMEM_DUBL: block_size = MAXBL > 4 ? 5 : 0; // 8 bytes
+            OP_DMEM_WORD: block_size = MAXBL > 3 ? 4 : 0; // 4 bytes
+            OP_DMEM_TRPL: block_size = MAXBL > 2 ? 3 : 0; // 3 bytes
+            OP_DMEM_HALF: block_size = MAXBL > 1 ? 2 : 0; // 2 bytes
+            OP_DMEM_BYTE: block_size = 1;
+            default: block_size = 0;
+        endcase
+    end
+
+
+    // WR operation: TODO: add BIG ENDIAN
     always_ff @(posedge wclk) begin
-        if (~res & req & wen) begin
-            if (blsize == OP_DMEM_BYTE)
-                MEMX[addr] <= #`T_DELAY_FF wr_data[7:0];
-            else if (blsize == OP_DMEM_HALF)
-                {MEMX[addr+1], MEMX[addr]} <= #`T_DELAY_FF wr_data[15:0];
-            else if (blsize == OP_DMEM_TRPL)
-                {MEMX[addr+2], MEMX[addr+1], MEMX[addr]} <= #`T_DELAY_FF wr_data[23:0];
-            else if (blsize == OP_DMEM_WORD)
-                {MEMX[addr+3], MEMX[addr+2], MEMX[addr+1], MEMX[addr]} <= #`T_DELAY_FF wr_data;
+        if (wr_en) begin
+            MEMX[addr] <= #`T_DELAY_FF wr_data[7:0];
         end
     end
 
+    generate
+        if (DATA_WIDTH >= 16) begin
+            always_ff @(posedge wclk) begin
+                if (wr_en) begin
+                    if (block_size > 1) begin
+                        if (!ENDIANESS)
+                            MEMX[addr+1] <= #`T_DELAY_FF wr_data[15:8];
+                    end
+                end
+            end
+        end
+
+        if (DATA_WIDTH >= 24) begin
+            always_ff @(posedge wclk) begin
+                if (wr_en) begin
+                    if (block_size > 2) begin
+                        if (!ENDIANESS)
+                            MEMX[addr+2] <= #`T_DELAY_FF wr_data[23:16];
+                    end
+                end
+            end
+        end
+
+        if (DATA_WIDTH >= 32) begin
+            always_ff @(posedge wclk) begin
+                if (wr_en) begin
+                    if (block_size > 3) begin
+                        if (!ENDIANESS)
+                            MEMX[addr+3] <= #`T_DELAY_FF wr_data[31:24];
+                    end
+                end
+            end
+        end
+
+        if (DATA_WIDTH >= 64) begin
+            always_ff @(posedge wclk) begin
+                if (wr_en) begin
+                    if (block_size > 4) begin
+                        if (!ENDIANESS)
+                            {MEMX[addr+7], MEMX[addr+6], MEMX[addr+5], MEMX[addr+4]} <= #`T_DELAY_FF wr_data[63:32];
+                    end
+                end
+            end
+        end
+
+        if (DATA_WIDTH >= 128) begin
+            always_ff @(posedge wclk) begin
+                if (wr_en) begin
+                    if (block_size > 5) begin
+                        if (!ENDIANESS) begin
+                            {MEMX[addr+11], MEMX[addr+10], MEMX[addr+9], MEMX[addr+8]}  <= #`T_DELAY_FF wr_data[95:64];
+                            {MEMX[addr+15], MEMX[addr+14], MEMX[addr+13], MEMX[addr+12]}<= #`T_DELAY_FF wr_data[127:96];
+                        end
+                    end
+                end
+            end
+        end
+    endgenerate
+
+
     // RD operation
-    if (!SYNC_READ) begin: async_read
+    generate
+        if (!SYNC_READ) begin: async_read
+            assign rd_data = reg_rd;
+        end
+        else
+        begin: sync_read
+            always_ff @(posedge rclk) begin
+                if (res)
+                    rd_data <= 0;
+                else if (rd_en) begin
+                    rd_data <= #`T_DELAY_FF reg_rd;
+                end
+            end
+        end
+    endgenerate
+
+
+    generate
+        if (DATA_WIDTH >= 128) begin
+            always_latch begin
+                if (rd_en) begin
+                    if (block_size == 6) begin
+                        if (ENDIANESS) begin
+                            reg_rd[127:96] = {MEMX[addr], MEMX[addr+1], MEMX[addr+2], MEMX[addr+3]};
+                            reg_rd[95:64]  = {MEMX[addr+4], MEMX[addr+5], MEMX[addr+6], MEMX[addr+7]};
+                            reg_rd[63:32]  = {MEMX[addr+8], MEMX[addr+9], MEMX[addr+10], MEMX[addr+11]};
+                            reg_rd[31:0]   = {MEMX[addr+12], MEMX[addr+13], MEMX[addr+14], MEMX[addr+15]};
+                        end else begin
+                            reg_rd[127:96] = {MEMX[addr+15], MEMX[addr+14], MEMX[addr+13], MEMX[addr+12]};
+                            reg_rd[95:64]  = {MEMX[addr+11], MEMX[addr+10], MEMX[addr+9], MEMX[addr+8]};
+                            reg_rd[63:32]  = {MEMX[addr+7], MEMX[addr+6], MEMX[addr+5], MEMX[addr+4]};
+                            reg_rd[31:0]   = {MEMX[addr+3], MEMX[addr+2], MEMX[addr+1], MEMX[addr]};
+                        end
+                    end
+                    if (block_size == 5) reg_rd[DATA_WIDTH-1:64] = 0;
+                end
+            end
+        end
+
+        if (DATA_WIDTH >= 64) begin
+            always_latch begin
+                if (rd_en) begin
+                    if (block_size == 5) begin
+                        if (ENDIANESS) begin
+                            reg_rd[63:32]  = {MEMX[addr], MEMX[addr+1], MEMX[addr+2], MEMX[addr+3]};
+                            reg_rd[31:0]   = {MEMX[addr+4], MEMX[addr+5], MEMX[addr+6], MEMX[addr+7]};
+                        end else begin
+                            reg_rd[63:32]  = {MEMX[addr+7], MEMX[addr+6], MEMX[addr+5], MEMX[addr+4]};
+                            reg_rd[31:0]   = {MEMX[addr+3], MEMX[addr+2], MEMX[addr+1], MEMX[addr]};
+                        end
+                    end
+                    if (block_size == 4) reg_rd[DATA_WIDTH-1:32] = 0;
+                end
+            end
+        end
+
+        if (DATA_WIDTH >= 32) begin
+            always_latch begin
+                if (rd_en) begin
+                    if (block_size == 4) begin
+                        if (ENDIANESS)
+                            reg_rd[31:0] = {MEMX[addr], MEMX[addr+1], MEMX[addr+2], MEMX[addr+3]};
+                        else
+                            reg_rd[31:0] = {MEMX[addr+3], MEMX[addr+2], MEMX[addr+1], MEMX[addr]};
+                    end
+                    if (block_size == 3) reg_rd[DATA_WIDTH-1:24] = 0;
+                end
+            end
+        end
+
+
+        if (DATA_WIDTH >= 24) begin
+            always_latch begin
+                if (rd_en) begin
+                    if (block_size == 3) begin
+                        if (ENDIANESS)
+                            reg_rd[23:0] = {MEMX[addr], MEMX[addr+1], MEMX[addr+2]};
+                        else
+                            reg_rd[23:0] = {MEMX[addr+2], MEMX[addr+1], MEMX[addr]};
+                    end
+                    if (block_size == 2) reg_rd[DATA_WIDTH-1:16] = 0;
+                end
+            end
+        end
+
+        if (DATA_WIDTH >= 16) begin
+            always_latch begin
+                if (rd_en) begin
+                    if (block_size == 2) begin
+                        if (ENDIANESS)
+                            reg_rd[15:0] = {MEMX[addr], MEMX[addr+1]};
+                        else
+                            reg_rd[15:0] = {MEMX[addr+1], MEMX[addr]};
+                    end
+                    if (block_size < 2) reg_rd[DATA_WIDTH-1:8] = 0;
+                end
+            end
+        end
+
         always_latch begin
-            if (res)
-                rd_data = 0;
-            else if (req & ren) begin
-                if (ENDIANESS)
-                    rd_data = {MEMX[addr], MEMX[addr+1], MEMX[addr+2], MEMX[addr+3]};
-                else
-                    rd_data = {MEMX[addr+3], MEMX[addr+2], MEMX[addr+1], MEMX[addr]};
+            if (rd_en) begin
+                if (block_size < 2) begin
+                    reg_rd[7:0] = MEMX[addr];
+                end
             end
         end
-    end else begin: sync_read
-        always_ff @(posedge rclk) begin
-            if (res)
-                rd_data <= 0;
-            else if (req & ren) begin
-                if (ENDIANESS)
-                    rd_data <= #`T_DELAY_FF {MEMX[addr], MEMX[addr+1], MEMX[addr+2], MEMX[addr+3]};
-                else
-                    rd_data <= #`T_DELAY_FF {MEMX[addr+3], MEMX[addr+2], MEMX[addr+1], MEMX[addr]};
-            end
-        end
-    end
+    endgenerate
 endmodule

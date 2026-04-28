@@ -13,8 +13,8 @@ Scoreboard uses a queue as a Reference model.
 
 
 ## Test plan:
- - Strategy: logic is verified using a ref model in the scoreboard and additionaly with ![assertions coverage](./fifo_interface.sv) and ![functional coverage](./coverage.sv)
- - Regression ![test suite](./tests.sv) runs all tests using `uvm_sequence_library`
+ - Strategy: logic is verified using a queue reference model in the scoreboard and additionaly with ![assertions coverage](./fifo_interface.sv) and ![functional coverage](./coverage.sv)
+ - Regression suite runs all tests using `uvm_sequence_library`
  - Tests:
     - Push 0x00 until full, pull until empty
     - Push 0xFF until full, pull until empty
@@ -29,6 +29,7 @@ Scoreboard uses a queue as a Reference model.
     - Push and pull in parallel while empty, data_in alternates with 0x00 and 0xFF
 
     - Randomized transactions test
+    - Reset test
 
 
 

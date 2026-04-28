@@ -38,7 +38,7 @@ module alu #(parameter XLEN = RISCV_XLEN) (
 
         initial $display("*** SYNTHESISED GATEFLOW ALU ***");
         `ifdef SV_TB
-            `ifdef DEBUG_RUN
+            `ifndef DEBUG_RUN
             always #2 $display("[%0t]: ALU GATEFLOW: X=%8h Y=%8h Nadd_sub=%b: sum=%8h (out_sh %8h) lt=%0b, ltu=%0b  carry=%0b  of=%0b", $time, alu_a, alu_b, nadd_sub, sum, out_sh, lt, ltu, carry, of);
             `else
             always #1;
@@ -108,10 +108,10 @@ module alu_dataflow #(parameter XLEN = RISCV_XLEN) (
             default:    alu_res = {XLEN{1'b0}};
         endcase
         `ifdef SV_TB
-            `ifdef DEBUG_RUN
+            `ifndef DEBUG_RUN
             #2 $display("[%0t]: ALU DATAFLOW: X=%8h Y=%8h RES=%0h", $time, alu_a, alu_b, alu_res);
             `else
-            always #1;
+            #1;
             `endif
         `endif
     end

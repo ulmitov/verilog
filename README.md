@@ -5,6 +5,7 @@ Please navigate to each folder to view the project description Readme
  - ![UART 16550 module](./UART) according to PC16550D spec and a C++ driver which is used in a Verilator testbench
  - ![RISCV implementation](./RISCV_SingleCycle) with some assembly code to check functionality
  - ![SystemVerilog testbench for ALU](./tb_sv_alu)
+ - ![UVM testbench for Memory module](./tb_uvm_mem)
  - ![UVM testbench for FIFO](./tb_uvm_fifo)
  - ![modules](./modules) folder includes different verilog modules and their testbenches
 

@@ -17,7 +17,7 @@ VERILATOR_ARGS := 	-Wno-lint -Wno-TIMESCALEMOD -Wno-SELRANGE -Wno-UNOPTFLAT -Wno
 define get_coverage
 	pwd
 	verilator_coverage --write coverage_merged.dat $$(find ./vcd -type f -name "cov_*.dat" | xargs)
-	grep -v -E "UVM/|testbench|verilated_std.sv|tb_sv_alu|tb_uvm_fifo" coverage_merged.dat > coverage_merged_notb.dat
+	grep -v -E "UVM/|testbench|verilated_std.sv|tb_sv_alu|tb_uvm_fifo|tb_uvm_mem" coverage_merged.dat > coverage_merged_notb.dat
 	verilator_coverage --write-info coverage_merged.info coverage_merged_notb.dat
 	# sed -i 's|../modules|modules|g' coverage_merged.info
 	# verilator_coverage --annotate-all obj_dir_merged merged_coverage.dat
@@ -187,3 +187,13 @@ uvm-fifo:
 	$(UVM_HOME)/uvm_pkg.sv modules/fifo.v tb_uvm_fifo/top_tb.sv;
 	./obj_dir/Vtop_tb +UVM_VERBOSITY=UVM_HIGH +UVM_TESTNAME=test_regression
 	mv coverage.dat vcd/cov_uvmfifo.dat
+
+
+# Memory UVM TB
+uvm-mem:
+	find . -type d -name "obj_dir" -exec rm -rf {} +
+	verilator $(VERILATOR_ARGS) $(ARG) --top-module top_tb --exe --main \
+	-DUVM_NO_DPI -I$(UVM_HOME) -Itb_uvm_mem \
+	$(UVM_HOME)/uvm_pkg.sv RISCV_SingleCycle/risc_pkg.sv modules/memory.sv tb_uvm_mem/top_tb.sv;
+	./obj_dir/Vtop_tb +UVM_VERBOSITY=UVM_HIGH +UVM_TESTNAME=test_regression
+	mv coverage.dat vcd/cov_uvmmem.dat

@@ -120,7 +120,7 @@ class seq_lib extends uvm_sequence_library #(transaction);
     function new(string name = "SEQ_LIB");
         super.new(name);
         selection_mode = UVM_SEQ_LIB_USER;
-        min_random_count = 6;
+        min_random_count = 1;
         max_random_count = 7;
         add_sequence(sequence_push_pull_00::get_type());
         add_sequence(sequence_push_pull_ff::get_type());
@@ -130,13 +130,16 @@ class seq_lib extends uvm_sequence_library #(transaction);
         add_sequence(sequence_rand::get_type());
         init_sequence_library();
     endfunction
+    `ifdef UVM_MAJOR_VERSION_1_2
+    // Overriding, since for some reason uvm 1.2 passes max minus 1
+    // so last index will never run! UVM 1.8 does not have this issue
     function int unsigned select_sequence(int unsigned max);
-        // UVM1.2 function override, since for some reason they pass max minus 1, so last index will never run!
         static int unsigned counter = 0;
         select_sequence = counter;
         counter++;
         if (counter > max) counter = 0;
     endfunction
+    `endif
 endclass
 
 

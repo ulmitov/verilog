@@ -19,9 +19,9 @@ import uvm_pkg::*;
 
 module top_tb;
     bit clk = 0;
-    bit res = 1;
+    bit res;
 
-    fifo_interface IF(.clk(clk), .res(res));
+    fifo_interface IF(.clk(clk));
 
     fifo #(
         .ADDR_WIDTH(fifo_config::ADDR_WIDTH),
@@ -43,8 +43,6 @@ module top_tb;
         uvm_config_db#(virtual fifo_interface)::set(null, "*", "vif", IF);
         $dumpfile("fifo_top_tb.vcd");
         $dumpvars(0, top_tb);
-        #(fifo_config::TCLK*2) res = 1'b0;
-        uvm_report_info("TOP", "RESET FINISHED");
     end
     initial run_test("test_regression");
 endmodule

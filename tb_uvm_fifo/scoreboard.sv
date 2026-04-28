@@ -16,6 +16,10 @@ class scoreboard extends uvm_scoreboard;
         super.new(name, parent);
     endfunction
 
+    function void flush();
+        mem.delete();
+    endfunction
+
     virtual function void build_phase(uvm_phase phase);
         super.build_phase(phase);
         scb_fifo = new("scb_fifo", this);

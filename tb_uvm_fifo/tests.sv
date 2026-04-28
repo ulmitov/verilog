@@ -10,10 +10,23 @@ class test_regression extends test_base#(seq_lib);
     function new(string name = "test_regression", uvm_component parent = null);
         super.new(name, parent);
     endfunction
+    task start_sequences;
+        /*
+            Each test will start sequences here
+            then run_phase task will run this task
+        */
+        reset();
+        seq.sequence_count = 6;
+        seq.print();
+        seq.start(env.agt.sqr);
+        repeat(2) reset();
+        env.scb.flush();
+        seq.sequence_count = 2;
+        seq.start(env.agt.sqr);
+        seq.print();
+    endtask
     task configure_phase(uvm_phase phase);
         super.configure_phase(phase);
-        seq.sequence_count = 10;
-        // todo randomize num of transaction for each seq
    endtask
 endclass
 
