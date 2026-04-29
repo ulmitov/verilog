@@ -8,7 +8,6 @@ module data_memory #(
     parameter DEPTH      = 2**4, // Memory depth
     parameter DATA_WIDTH = 32,   // Memory data word width
     parameter ADDR_WIDTH = 32,   // Memory address width
-    parameter SYNC_READ  = 0,    // 0 is async read (without rclk)
     parameter ENDIANESS  = 0     // 0 is Little endian
 ) (
     input logic clk,
@@ -32,7 +31,6 @@ module data_memory #(
         .ENDIANESS(ENDIANESS),
         .MEM_FILE("")
     ) mem_block (
-        .rclk(clk),
         .wclk(clk),
         .res(res),
         .ren(ren),

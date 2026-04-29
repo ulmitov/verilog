@@ -38,6 +38,10 @@ class transaction extends uvm_sequence_item;
             !(blsize inside {OP_DMEM_QUAD});
         }
     }
+    // TODO: For now not verifying out of bound addresses 
+    constraint c_addr_limit {
+        if (mem_config::DEPTH - addr < 16) !(blsize inside {OP_DMEM_QUAD});
+    }
 
     function new(string name="seq_item");
         super.new(name);

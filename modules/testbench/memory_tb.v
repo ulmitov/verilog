@@ -12,17 +12,16 @@ iverilog -Wall -g2012 -o ./vcd/${tb}.vvp -s ${tb} ${msrc} && vvp ./vcd/${tb}.vvp
 
 `define VCD "vcd/memory_tb.vcd"
 `define T_WR 10
-`define T_RD 10
 `define T_CLK (`T_WR * 2)
 
 `define OP_DMEM_BYTE 3'b000
 `define D_WIDTH 8   // Memory data word width
 `define D_DEPTH 4   // Memory depth
-// TODO: simultaneous read\write test? two clocks test? minimum f test? `define RO_DELAY (`T_DELAY_FF + `T_WR)
+// TODO: `define RO_DELAY (`T_DELAY_FF + `T_WR)
 
 
 module memory_tb;
-    reg clk, rclk, we, re, res;
+    reg clk, we, re, res;
     reg [$clog2(`D_DEPTH)-1:0] addr;
     reg [`D_WIDTH-1:0] data, exp;
     reg [`D_WIDTH-1:0] exp_ram [`D_DEPTH-1:0];
@@ -31,7 +30,6 @@ module memory_tb;
 
     memory #( .DATA_WIDTH(`D_WIDTH), .ADDR_WIDTH($clog2(`D_DEPTH)), .DEPTH(`D_DEPTH) ) uut (
         .wclk(clk),
-        .rclk(rclk),
         .req(1'b1),
         .res(res),
         .wen(we),
@@ -44,7 +42,6 @@ module memory_tb;
 
     // clock generation
     always #`T_WR clk = ~clk;
-    always #`T_RD rclk = ~rclk;
 
     // write operation
     task w_op;
@@ -92,7 +89,6 @@ module memory_tb;
         for (a = 0; a < `D_DEPTH; a = a + 1)
             exp_ram[a] = {`D_WIDTH{1'b1}};
         clk = 1'b0;
-        rclk = 1'b0;
         res = 1'b0;
         #`T_CLK res = 1'b1;
         #`T_CLK res = 1'b0;

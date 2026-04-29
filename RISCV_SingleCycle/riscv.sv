@@ -56,7 +56,8 @@ module riscv #(
         .MEM_FILE(MEM_FILE),
         .ENDIANESS(1)       // readmemh is big endian
     ) instruction_mem (
-        .rclk(), .wclk(), .res(),  .wen(), .wr_data(),
+        .wen(), .wr_data(),
+        .wclk(clk), .res(~res_n),
         .req(1'b1),
         .blsize(op_enum_dmem_size'(OP_DMEM_WORD)),
         .ren(imem_req),

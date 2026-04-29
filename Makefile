@@ -185,7 +185,8 @@ uvm-fifo:
 	verilator $(VERILATOR_ARGS) $(ARG) --top-module top_tb --exe --main \
 	-DUVM_NO_DPI -I$(UVM_HOME) -Itb_uvm_fifo \
 	$(UVM_HOME)/uvm_pkg.sv modules/fifo.v tb_uvm_fifo/top_tb.sv;
-	./obj_dir/Vtop_tb +UVM_VERBOSITY=UVM_HIGH +UVM_TESTNAME=test_regression
+	./obj_dir/Vtop_tb +UVM_TESTNAME=test_regression
+	#+UVM_VERBOSITY=UVM_HIGH
 	mv coverage.dat vcd/cov_uvmfifo.dat
 
 
@@ -195,5 +196,6 @@ uvm-mem:
 	verilator $(VERILATOR_ARGS) $(ARG) --top-module top_tb --exe --main \
 	-DUVM_NO_DPI -I$(UVM_HOME) -Itb_uvm_mem \
 	$(UVM_HOME)/uvm_pkg.sv RISCV_SingleCycle/risc_pkg.sv modules/memory.sv tb_uvm_mem/top_tb.sv;
-	./obj_dir/Vtop_tb +UVM_VERBOSITY=UVM_HIGH +UVM_TESTNAME=test_regression
+	./obj_dir/Vtop_tb +UVM_NO_RELNOTES +UVM_TESTNAME=test_regression
+	#+UVM_VERBOSITY=UVM_HIGH
 	mv coverage.dat vcd/cov_uvmmem.dat

@@ -1,5 +1,5 @@
 /*
-    Base class for all tests 
+    Tests Base class
 */
 `include "uvm_macros.svh"
 import uvm_pkg::*;
@@ -8,12 +8,11 @@ import uvm_pkg::*;
 class test_base #(type REQ = base_sequence) extends uvm_test;
     `uvm_component_utils(test_base)
 
-    environment env;
+    REQ seq;
     mem_config cfg;
+    environment env;
     uvm_factory factory;
     virtual mem_interface vif;
-    REQ seq;
-
     int num_to_full;
 
     function new(string name, uvm_component parent);
@@ -25,11 +24,17 @@ class test_base #(type REQ = base_sequence) extends uvm_test;
             Each test will start sequences here
             then run_phase task will run this task
         */
-        vif.res = 1'b1;
-        #(mem_config::T_CLK*2) vif.res = 1'b0;
-        `uvm_info(get_name(), "*** RESET DONE ***", UVM_MEDIUM)
+        vif.req = 1'b1;
+        reset();
         seq.start(env.agt.sqr);
         seq.print();
+    endtask
+
+    virtual task reset;
+        vif.res = 1'b1;
+        repeat(2) @(posedge vif.clk);
+        vif.res = 1'b0;
+        uvm_report_info(get_name(), "***** RESET DONE *****");
     endtask
 
     virtual function void build_phase(uvm_phase phase);
@@ -41,11 +46,6 @@ class test_base #(type REQ = base_sequence) extends uvm_test;
             uvm_report_fatal(get_name(), "build_phase: virtual interface was not set");
         // Test parameter passed to sequence via DB:
         uvm_config_db #(int)::set(null, "*", "num_to_full", mem_config::DEPTH);
-
-        // Register Config class in db. For now not used in this TB:
-        //uvm_config_db#(mem_config)::set(null, "*", "CFG", cfg);
-        //if (!uvm_config_db#(mem_config)::get(this, "", "CFG", cfg))
-        //    uvm_report_fatal(get_name(), "mem_config was not created in test build_phase");
     endfunction
 
     virtual task run_phase(uvm_phase phase);

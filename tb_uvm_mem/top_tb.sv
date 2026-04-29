@@ -18,10 +18,8 @@ import uvm_pkg::*;
 
 module top_tb;
     bit wclk = 0;
-    bit res;
-    bit req;
 
-    mem_interface mif(.clk(wclk), .req(req));
+    mem_interface mif(.clk(wclk));
 
     memory #(
         .MEM_FILE(""),
@@ -30,7 +28,6 @@ module top_tb;
         .DATA_WIDTH((mem_config::DATA_WIDTH)),
         .ENDIANESS(0)
     ) ram (
-        .rclk(mif.clk),
         .wclk(mif.clk),
         .res(mif.res),
         .ren(mif.ren),
@@ -43,14 +40,10 @@ module top_tb;
     );
 
     always  #(mem_config::T_CLK) wclk = ~wclk;
+
     initial begin
         $dumpfile("top_tb.vcd");
         $dumpvars(0, top_tb);
-        //res = 1'b1;
-        req = 1'b1;
-        //#(mem_config::T_CLK*2) res = 1'b0;
-    end
-    initial begin
         uvm_config_db #(virtual mem_interface)::set(null, "*", "vif", mif);
         run_test("test_regression");
     end

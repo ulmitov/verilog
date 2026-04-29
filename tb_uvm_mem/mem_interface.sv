@@ -1,7 +1,8 @@
-interface mem_interface (input logic clk, req);
+interface mem_interface (input logic clk);
     logic wen;
     logic ren;
     logic res;
+    logic req;
     logic [mem_config::ADDR_WIDTH-1:0] addr;
     logic [mem_config::DATA_WIDTH-1:0] wr_data;
     logic [mem_config::DATA_WIDTH-1:0] rd_data;
@@ -14,13 +15,15 @@ interface mem_interface (input logic clk, req);
         output blsize;
         output addr;
         output wr_data;
-        input  rd_data;
-        input  res;
+        input rd_data;
+        input res;
+        input req;
     endclocking
 
     clocking cb_mon @(posedge clk);
         default input #mem_config::SETUP_TIME;
         input res;
+        input req;
         input wen;
         input ren;
         input blsize;

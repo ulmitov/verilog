@@ -12,12 +12,10 @@ class test_regression extends test_base#(seq_lib);
     endfunction
     task configure_phase(uvm_phase phase);
         super.configure_phase(phase);
-        `uvm_info("CFG_PHASE", "Sequences library:", UVM_MEDIUM)
         seq.sequence_count = 6;
         // todo randomize num of transaction for each seq
    endtask
 endclass
-
 
 
 /*
@@ -29,6 +27,7 @@ class test_random extends test_base#(sequence_random);
         super.new(name, parent);
     endfunction
 endclass
+
 
 /*
 Fill with 0x00 then read
