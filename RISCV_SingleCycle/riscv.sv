@@ -47,21 +47,22 @@ module riscv #(
 
     memory #(
         `ifdef DEBUG_RUN
-        .DEPTH(2**10),       // 2**10/4 = 256 instructions (for non DEBUG set to 32)
+        .DEPTH(2**10),       // 2**10/4 = 256 instructions
         `else
-        .DEPTH(2**32),
+        .DEPTH(2**14),      // 16kb, 4k instructions
         `endif
         .DATA_WIDTH(32),
         .ADDR_WIDTH(32),
         .MEM_FILE(MEM_FILE),
-        .ENDIANESS(1)       // readmemh is big endian
+        .ENDIANESS(1)       // images in big endian
     ) instruction_mem (
         .wen(), .wr_data(),
-        .wclk(clk), .res(~res_n),
+        .wclk(clk),
+        .res(~res_n),
         .req(1'b1),
+        .addr(pc),
         .blsize(op_enum_dmem_size'(OP_DMEM_WORD)),
         .ren(imem_req),
-        .addr(pc),
         .rd_data(instruction)
     );
 

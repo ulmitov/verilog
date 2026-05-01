@@ -37,40 +37,43 @@ jobs:
           ls $HOME/dev/sda6/UVM/UVM1.2/src
 
       - name: Regression with GATE_FLOW OFF (iverilog)
-        run: make all ARG="-DGATE_FLOW_OFF" 2>&1 | tee dataflow.log
+        run: make all ARG="-DGATE_FLOW_OFF" 2>&1 | tee tb_dataflow.log
 
       - name: Regression with GATE_FLOW ON (iverilog)
-        run: make all 2>&1 | tee gateflow.log
+        run: make all 2>&1 | tee tb_gateflow.log
 
       - name: Modules regression (verilator)
-        run: make regression SIM=v RM_OBJDIR=true 2>&1 | tee modules.log
+        run: make regression SIM=v RM_OBJDIR=true 2>&1 | tee tb_modules.log
 
       - name: UART C++ and verilog tests (verilator)
-        run: make uart SIM=v RM_OBJDIR=true 2>&1 | tee uart.log
+        run: make uart SIM=v RM_OBJDIR=true 2>&1 | tee tb_uart.log
 
       - name: RISCV tests (verilator)
-        run: make risc SIM=v RM_OBJDIR=true 2>&1 | tee riscv.log
+        run: make risc SIM=v RM_OBJDIR=true 2>&1 | tee tb_riscv.log
 
       - name: ALU SystemVerilog testbench (verilator)
-        run: make alu ARG=-UDEBUG_RUN RM_OBJDIR=true 2>&1 | tee alusv.log
+        run: make alu ARG=-UDEBUG_RUN RM_OBJDIR=true 2>&1 | tee sv_alu.log
 
       - name: FIFO UVM testbench (verilator)
-        run: make uvm-fifo 2>&1 | tee fifouvm.log
+        run: make uvm-fifo 2>&1 | tee uvm_fifo.log
+
+      - name: RISCV Instruction Memory UVM test (verilator)
+        run: make uvm-inst 2>&1 | tee uvm_inst.log
 
       - name: Memory UVM testbench DATA_WIDTH=8 (verilator)
-        run: make uvm-mem ARG=-DDATA_WIDTH=8 2>&1 | tee memuvm8.log
+        run: make uvm-mem ARG=-DDATA_WIDTH=8 2>&1 | tee uvm_mem8.log
 
       - name: Memory UVM testbench DATA_WIDTH=16 (verilator)
-        run: make uvm-mem ARG=-DDATA_WIDTH=16 2>&1 | tee memuvm16.log
+        run: make uvm-mem ARG=-DDATA_WIDTH=16 2>&1 | tee uvm_mem16.log
 
       - name: Memory UVM testbench DATA_WIDTH=32 (verilator)
-        run: make uvm-mem ARG=-DDATA_WIDTH=32 2>&1 | tee memuvm32.log
+        run: make uvm-mem ARG=-DDATA_WIDTH=32 2>&1 | tee uvm_mem32.log
 
       - name: Memory UVM testbench DATA_WIDTH=64 (verilator)
-        run: make uvm-mem ARG=-DDATA_WIDTH=64 2>&1 | tee memuvm64.log
+        run: make uvm-mem ARG=-DDATA_WIDTH=64 2>&1 | tee uvm_mem64.log
 
       - name: Memory UVM testbench DATA_WIDTH=128 (verilator)
-        run: make uvm-mem ARG=-DDATA_WIDTH=128 2>&1 | tee memuvm128.log
+        run: make uvm-mem ARG=-DDATA_WIDTH=128 2>&1 | tee uvm_mem128.log
 
       - name: Grep Results Summary
         run: make grep_err

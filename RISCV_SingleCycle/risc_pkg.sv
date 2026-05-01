@@ -40,9 +40,9 @@ typedef enum logic [2:0] {
     OP_DMEM_WORD = 3'b010,
     OP_DMEM_DUBL = 3'b011,
     OP_DMEM_QUAD = 3'b100,
-    OP_DMEM_TRPL = 3'b111
-//    LHU = 101,
-//    LWU = 110
+    OP_DMEM_TRPL = 3'b111,
+    OP_UNUSEDLHU = 3'b101,
+    OP_UNUSEDLWU = 3'b110 
 } op_enum_dmem_size;
 
 

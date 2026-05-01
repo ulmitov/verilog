@@ -30,21 +30,23 @@ class driver extends uvm_driver#(transaction);
     endtask
 
     virtual task drive_task();
-        if (vif.mp_drv.cb_drv.res) begin
-            wait(~vif.mp_drv.cb_drv.res);
+        if (`DMP.res) begin
+            `DMP.wen <= 0;
+            `DMP.ren <= 0;
+            wait(~`DMP.res);
             `ifdef VERILATOR
-            @(vif.mp_drv.cb_drv);
+            @(`DMP);
             `endif
         end
         @(`DMP);
-        `DMP.wen <= req.wen;
-        `DMP.ren <= req.ren;
+        `DMP.wen    <= req.wen;
+        `DMP.ren    <= req.ren;
         `DMP.blsize <= req.blsize;
-        `DMP.addr <= req.addr;
+        `DMP.addr   <= req.addr;
         `DMP.wr_data <= req.wr_data;
         if (req.wen | req.ren) begin
-            this.count++;
-            uvm_report_info("DRV_SEQ", req.convert2string());
+            count++;
+            uvm_report_info("DRV_SEQ", $sformatf("[#%0d] %s", count, req.convert2string()));
         end
     endtask
 endclass

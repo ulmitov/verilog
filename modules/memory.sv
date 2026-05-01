@@ -33,6 +33,7 @@ module memory #(
     output logic [DATA_WIDTH-1:0] rd_data
 );
     parameter MAXBL = DATA_WIDTH / 8;
+    parameter BSIZE = get_block_size(MAXBL);
     logic [7:0] MEMX [0:DEPTH-1];    // Each mem address holds 1 byte
     logic [DATA_WIDTH-1:0] reg_rd;
     logic rd_en;
@@ -45,9 +46,16 @@ module memory #(
     task initmem;
         input string path;
         begin
-            $display("--- MEMORY LOADING %s ---", path);
+            $display("--- BOOT LOAD MEMORY %s ---", path);
             $readmemh(path, MEMX);
         end
+    endtask
+
+    task automatic dump;
+        int i;
+        string strvar = "";
+        foreach (MEMX[i]) strvar = { strvar, $sformatf("[0x%0h]%2h ", i, MEMX[i]) };
+        $display("DUMP: [%s]", strvar);
     endtask
 
     // Init memory
@@ -55,16 +63,17 @@ module memory #(
         initial initmem(MEM_FILE);
     end
 
-    // set suitbale block size value according to requested block size and predefined DATA_WIDTH
+    // set suitable block size value according to requested block size and bus width
     logic [2:0] block_size;
     always_comb begin
         case(blsize)
-            OP_DMEM_QUAD: block_size = MAXBL > 8 ? 5 : 0; // 16 bytes
-            OP_DMEM_DUBL: block_size = MAXBL > 4 ? 4 : 0; // 8 bytes
-            OP_DMEM_WORD: block_size = MAXBL > 3 ? 3 : 0; // 4 bytes
-            OP_DMEM_TRPL: block_size = MAXBL > 2 ? 2 : 0; // 3 bytes
-            OP_DMEM_HALF: block_size = MAXBL > 1 ? 1 : 0; // 2 bytes
-            default: block_size = 0;    // OP_DMEM_BYTE
+            OP_DMEM_QUAD: block_size = MAXBL > 8 ? 5 : BSIZE;   // 16 bytes
+            OP_DMEM_DUBL: block_size = MAXBL > 4 ? 4 : BSIZE;   // 8
+            OP_DMEM_WORD: block_size = MAXBL > 3 ? 3 : BSIZE;   // 4
+            OP_DMEM_TRPL: block_size = MAXBL > 2 ? 2 : BSIZE;   // 3
+            OP_DMEM_HALF: block_size = MAXBL > 1 ? 1 : 0;       // 2
+            OP_DMEM_BYTE: block_size = 0;                       // 1
+            default: block_size = BSIZE;
         endcase
     end
 
@@ -139,7 +148,7 @@ module memory #(
     // RD operation
     generate
         if (!SYNC_READ) begin: async_read
-            assign rd_data = reg_rd;
+            assign rd_data = addr > DEPTH ? 0 : reg_rd;
         end
         else
         begin: sync_read
@@ -147,7 +156,10 @@ module memory #(
                 if (res)
                     rd_data <= 0;
                 else if (rd_en) begin
-                    rd_data <= #`T_DELAY_FF reg_rd;
+                    if (addr > DEPTH)
+                        rd_data <= 0;
+                    else
+                        rd_data <= #`T_DELAY_FF reg_rd;
                 end
             end
         end
@@ -245,3 +257,18 @@ module memory #(
         end
     endgenerate
 endmodule
+
+
+function int unsigned get_block_size(int unsigned blocks);
+    int unsigned bl;
+    case (blocks)
+        01: bl = 0;
+        02: bl = 1;
+        03: bl = 2;
+        04: bl = 3;
+        08: bl = 4;
+        16: bl = 5;
+        default: bl = 0;
+    endcase
+    return bl;
+endfunction

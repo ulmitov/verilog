@@ -13,6 +13,7 @@ class test_base #(type REQ = base_sequence) extends uvm_test;
     environment env;
     uvm_factory factory;
     virtual mem_interface vif;
+    sequence_read_all seq_read;
     int num_to_full;
 
     function new(string name, uvm_component parent);
@@ -34,6 +35,7 @@ class test_base #(type REQ = base_sequence) extends uvm_test;
         vif.res = 1'b1;
         repeat(2) @(posedge vif.clk);
         vif.res = 1'b0;
+        //env.scb.flush(); this should be done from the calling task
         uvm_report_info(get_name(), "***** RESET DONE *****");
     endtask
 
@@ -42,6 +44,7 @@ class test_base #(type REQ = base_sequence) extends uvm_test;
         env = environment::type_id::create("ENV", this);
         cfg = mem_config::type_id::create("CFG", this);
         seq = REQ::type_id::create("SEQ");
+        seq_read = sequence_read_all::type_id::create("SEQ_RD");
         if (!uvm_config_db #(virtual mem_interface)::get(this, "", "vif", vif))
             uvm_report_fatal(get_name(), "build_phase: virtual interface was not set");
         // Test parameter passed to sequence via DB:
@@ -76,4 +79,12 @@ class test_base #(type REQ = base_sequence) extends uvm_test;
         factory = uvm_factory::get();
         factory.print();
     endfunction
+
+    task boot_load;
+        uvm_event ev;
+        sequence_read_all seq_read;
+        env.scb.boot_load(mem_config::MEM_FILE);
+        ev = uvm_event_pool::get_global_pool().get("EV_INIT");
+        ev.trigger();
+    endtask
 endclass

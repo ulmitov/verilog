@@ -18,6 +18,7 @@ import uvm_pkg::*;
 
 module top_tb;
     bit wclk = 0;
+    uvm_event ev_init, ev_dump;
 
     mem_interface mif(.clk(wclk));
 
@@ -25,9 +26,9 @@ module top_tb;
         .MEM_FILE(""),
         .DEPTH(mem_config::DEPTH),
         .ADDR_WIDTH(mem_config::ADDR_WIDTH),
-        .DATA_WIDTH((mem_config::DATA_WIDTH)),
-        .ENDIANESS(0)
-    ) ram (
+        .DATA_WIDTH(mem_config::DATA_WIDTH),
+        .ENDIANESS(mem_config::ENDIANESS)
+    ) dut (
         .wclk(mif.clk),
         .res(mif.res),
         .ren(mif.ren),
@@ -40,11 +41,27 @@ module top_tb;
     );
 
     always  #(mem_config::T_CLK) wclk = ~wclk;
-
+    initial run_test("test_regression");
     initial begin
-        $dumpfile("top_tb.vcd");
+        $dumpfile("top_tb_mem.vcd");
         $dumpvars(0, top_tb);
         uvm_config_db #(virtual mem_interface)::set(null, "*", "vif", mif);
-        run_test("test_regression");
+        // Wait for memory init task event
+        ev_init = uvm_event_pool::get_global_pool().get("EV_INIT");
+        ev_dump = uvm_event_pool::get_global_pool().get("EV_DUMP");
+        forever begin
+            fork
+                ev_init.wait_trigger();
+                ev_dump.wait_trigger();
+            join_any
+            if (ev_init.is_on()) begin
+                dut.initmem(mem_config::MEM_FILE);
+                ev_init.reset();
+            end
+            if (ev_dump.is_on()) begin
+                dut.dump();
+                ev_dump.reset();
+            end
+        end
     end
 endmodule

@@ -196,6 +196,13 @@ uvm-mem:
 	verilator $(VERILATOR_ARGS) $(ARG) --top-module top_tb --exe --main \
 	-DUVM_NO_DPI -I$(UVM_HOME) -Itb_uvm_mem \
 	$(UVM_HOME)/uvm_pkg.sv RISCV_SingleCycle/risc_pkg.sv modules/memory.sv tb_uvm_mem/top_tb.sv;
-	./obj_dir/Vtop_tb +UVM_NO_RELNOTES +UVM_TESTNAME=test_regression
-	#+UVM_VERBOSITY=UVM_HIGH
+	./obj_dir/Vtop_tb +UVM_NO_RELNOTES +UVM_TESTNAME=test_regression +UVM_VERBOSITY=UVM_HIGH
 	mv coverage.dat vcd/cov_uvmmem.dat
+
+uvm-inst:
+	find . -type d -name "obj_dir" -exec rm -rf {} +
+	verilator $(VERILATOR_ARGS) $(ARG) -DENDIANESS=1 -DDATA_WIDTH=32 --top-module top_tb --exe --main \
+	-DUVM_NO_DPI -I$(UVM_HOME) -Itb_uvm_mem \
+	$(UVM_HOME)/uvm_pkg.sv RISCV_SingleCycle/risc_pkg.sv modules/memory.sv tb_uvm_mem/top_tb.sv;
+	./obj_dir/Vtop_tb +UVM_NO_RELNOTES +UVM_TESTNAME=test_boot_load +UVM_VERBOSITY=UVM_HIGH
+	mv coverage.dat vcd/cov_uvminst.dat

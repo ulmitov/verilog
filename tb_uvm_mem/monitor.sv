@@ -26,12 +26,13 @@ class monitor extends uvm_monitor;
         forever begin
             req = transaction::type_id::create("req");
             @(`MIF);
-            req.wen = `MIF.wen;
-            req.ren = `MIF.ren;
-            req.addr = `MIF.addr;
+            if (`MIF.res) continue;
+            req.wen     = `MIF.wen;
+            req.ren     = `MIF.ren;
+            req.addr    = `MIF.addr;
+            req.blsize  = `MIF.blsize;
             req.wr_data = `MIF.wr_data;
             req.rd_data = `MIF.rd_data;
-            req.blsize = `MIF.blsize;
             uvm_report_info("MON_SEQ", req.convert2string(), UVM_HIGH);
             mon_port.write(req);
         end

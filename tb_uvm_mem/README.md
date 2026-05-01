@@ -5,12 +5,19 @@ In the deployment actions can view this test suite run over **8 to 128** bits bu
 
 
 ## Test plan
-- TODO: Sanity: Check init and read operation, reset test: Init memory with a hex file => then read all bytes per each block_size
-- Check stuck 1's: Fill memory with 0x00 => then read each byte
-- Check stuck 0's: Fill memory with 0xFF => then read each byte
-- Block size test: per each block size do writes and reads. TODO: Switch endianess and repeat test
-- Full data width test: write random data using all data bits, then read
-- Random transactions. TODO: Repeat for sync read
+
+- Stuck bits verification: Consequent write and read back-to-back operations with alternating data bits for all addresses
+
+- Address/Coupling Faults: write in opposite direction of addresses with different block sizes
+
+- Stress pattern test: Write 0x55 and 0xAA to same address then read
+
+- Functionality: Random transactions
+
+- Negative: Read/Write invalid addresses
+
+- Init test: Boot load hex file and read whole memmory
+
 
 
 ## Design
