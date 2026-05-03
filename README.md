@@ -22,6 +22,7 @@ Please navigate to each folder to view the project description Readme
 - `make uartcpp`: UART C++ driver tests
 - `make riscv`: RISCV testbenches
 - `make uvm-fifo`: FIFO UVM testbench
+- `make uvm-mem`: Memory UVM testbench
 - `make alu`: ALU SystemVerilog testbench
 - `make all`: all testbenches
 

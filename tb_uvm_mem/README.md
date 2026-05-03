@@ -1,7 +1,7 @@
 # Memory UVM testbench
 The DUT is a one port ![memory module](../memory.v) which is used in RISCV implementation.
-The testbench is designed so that it would be possible to verify different bus widths.
-In the deployment actions can view this test suite run over **8 to 128** bits busses.
+The testbench verifies 8, 16, 24, 32, 64, and 128 bus widths.
+In the deployment actions can view this test suite runnning on **8 to 128** bit busses.
 
 
 ## Test plan
@@ -23,9 +23,6 @@ In the deployment actions can view this test suite run over **8 to 128** bits bu
 ## Design
 UVM design with one agent, scoreboard and coverage collector.
 The scoreboard uses a two-dimension array variable as a memory Reference model.
-The memory has two types - sync and async read operation.
-Also has two modes of endianess.
-These modes are tested and can be modified in ![mem_config.sv](./mem_config.sv)
 
 ![uvm testbench diagram](../tb_uvm_fifo/dir/uvm_diagram.png)
 

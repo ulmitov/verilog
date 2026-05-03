@@ -7,6 +7,7 @@ RM_OBJDIR := false
 DEBUG_ARG := -CFLAGS \"-g -DDEBUG_MODE\"
 RUNTIME_DBG := --prof-cfuncs -CFLAGS -DVL_DEBUG --stats --debug --runtime-debug
 _mkvcdir := $(shell mkdir -p vcd)
+RM_OBJDIR_CMD := find . -type d -name "obj_dir" -exec rm -rf {} +
 #export UVM_HOME := $(HOME)/dev/sda6/UVM/1800.2-2020/src
 export UVM_HOME := $(HOME)/dev/sda6/UVM/UVM1.2/src
 
@@ -26,8 +27,8 @@ define get_coverage
 endef
 
 define run_verilator
-	if [ "$(RM_OBJDIR)" = "true" ]; then find . -type d -name "obj_dir" -exec rm -rf {} +; fi
-	cmd="verilator $(ARG) $(VERILATOR_ARGS) --binary --top $(1) $(2) && ./obj_dir/V$(1) +verilator+coverage+file+vcd/cov_$(1).dat"
+	if [ "$(RM_OBJDIR)" = "true" ]; then $(RM_OBJDIR_CMD); fi
+	cmd="verilator $(ARG) $(VERILATOR_ARGS) --binary --top $(1) $(2) && ./obj_dir/V$(1) +verilator+coverage+file+vcd/cov_$$(date +%s).dat"
 	echo $$cmd; eval "$$cmd"
 endef
 
@@ -179,30 +180,29 @@ alu:
 	$(call run_verilator,top_tb,-DBEHAVIORAL=1 -DCONST_DELAYS_OFF -Itb_sv_alu $(alu_src))
 
 
+VERILATOR_UVM_NO_DPI := verilator $(ARG) $(VERILATOR_ARGS) --binary -I$(UVM_HOME) -DUVM_NO_DPI
+
 # FIFO UVM TB
 uvm-fifo:
-	find . -type d -name "obj_dir" -exec rm -rf {} +
-	verilator $(VERILATOR_ARGS) $(ARG) --top-module top_tb --exe --main \
-	-DUVM_NO_DPI -I$(UVM_HOME) -Itb_uvm_fifo \
+	$(RM_OBJDIR_CMD)
+	$(VERILATOR_UVM_NO_DPI) --top top_tb -Itb_uvm_fifo \
 	$(UVM_HOME)/uvm_pkg.sv modules/fifo.v tb_uvm_fifo/top_tb.sv;
 	./obj_dir/Vtop_tb +UVM_TESTNAME=test_regression
-	#+UVM_VERBOSITY=UVM_HIGH
 	mv coverage.dat vcd/cov_uvmfifo.dat
+	#+UVM_VERBOSITY=UVM_HIGH
 
 
 # Memory UVM TB
 uvm-mem:
-	find . -type d -name "obj_dir" -exec rm -rf {} +
-	verilator $(VERILATOR_ARGS) $(ARG) --top-module top_tb --exe --main \
-	-DUVM_NO_DPI -I$(UVM_HOME) -Itb_uvm_mem \
+	$(RM_OBJDIR_CMD)
+	$(VERILATOR_UVM_NO_DPI) --top top_tb -Itb_uvm_mem \
 	$(UVM_HOME)/uvm_pkg.sv RISCV_SingleCycle/risc_pkg.sv modules/memory.sv tb_uvm_mem/top_tb.sv;
-	./obj_dir/Vtop_tb +UVM_NO_RELNOTES +UVM_TESTNAME=test_regression +UVM_VERBOSITY=UVM_HIGH
-	mv coverage.dat vcd/cov_uvmmem.dat
+	./obj_dir/Vtop_tb +UVM_TESTNAME=test_regression
+	mv coverage.dat vcd/cov_$$(date +%s).dat
 
 uvm-inst:
-	find . -type d -name "obj_dir" -exec rm -rf {} +
-	verilator $(VERILATOR_ARGS) $(ARG) -DENDIANESS=1 -DDATA_WIDTH=32 --top-module top_tb --exe --main \
-	-DUVM_NO_DPI -I$(UVM_HOME) -Itb_uvm_mem \
+	$(RM_OBJDIR_CMD)
+	$(VERILATOR_UVM_NO_DPI) --top-module top_tb -Itb_uvm_mem -DENDIANESS=1 \
 	$(UVM_HOME)/uvm_pkg.sv RISCV_SingleCycle/risc_pkg.sv modules/memory.sv tb_uvm_mem/top_tb.sv;
-	./obj_dir/Vtop_tb +UVM_NO_RELNOTES +UVM_TESTNAME=test_boot_load +UVM_VERBOSITY=UVM_HIGH
-	mv coverage.dat vcd/cov_uvminst.dat
+	./obj_dir/Vtop_tb +UVM_TESTNAME=test_boot_load
+	mv coverage.dat vcd/cov_$$(date +%s).dat

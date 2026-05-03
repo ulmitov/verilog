@@ -18,6 +18,8 @@ import uvm_pkg::*;
 
 module top_tb;
     bit wclk = 0;
+    int i;
+    string str;
     uvm_event ev_init, ev_dump;
 
     mem_interface mif(.clk(wclk));
@@ -59,7 +61,9 @@ module top_tb;
                 ev_init.reset();
             end
             if (ev_dump.is_on()) begin
-                dut.dump();
+                str = "";
+                foreach (dut.MEMX[i]) str = { str, $sformatf("[0x%0h]%2h ", i, dut.MEMX[i]) };
+                $display("DUMP: [%s]", str);
                 ev_dump.reset();
             end
         end

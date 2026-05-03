@@ -34,9 +34,4 @@ interface mem_interface (input logic clk);
 
     modport mp_drv(clocking cb_drv, input clk, input req);
     modport mp_mon(clocking cb_mon, input clk, input req);
-/*
-    assert_wen_not_x: assert property (@(posedge wclk) disable iff (res) !$isunknown(wen));
-    assert_ren_not_x: assert property (@(posedge wclk) disable iff (res) !$isunknown(ren));
-    assert_msz_not_x: assert property (@(posedge wclk) disable iff (res) !$isunknown(blsize));
-*/
 endinterface

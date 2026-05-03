@@ -36,12 +36,7 @@ module memory #(
     parameter BSIZE = get_block_size(MAXBL);
     logic [7:0] MEMX [0:DEPTH-1];    // Each mem address holds 1 byte
     logic [DATA_WIDTH-1:0] reg_rd;
-    logic rd_en;
-    logic wr_en;
-
-    assign wr_en = ~res & req & wen;
-    assign rd_en = req & ren;
-
+    logic rd_en, wr_en;
 
     task initmem;
         input string path;
@@ -49,13 +44,6 @@ module memory #(
             $display("--- BOOT LOAD MEMORY %s ---", path);
             $readmemh(path, MEMX);
         end
-    endtask
-
-    task automatic dump;
-        int i;
-        string strvar = "";
-        foreach (MEMX[i]) strvar = { strvar, $sformatf("[0x%0h]%2h ", i, MEMX[i]) };
-        $display("DUMP: [%s]", strvar);
     endtask
 
     // Init memory
@@ -77,6 +65,8 @@ module memory #(
         endcase
     end
 
+    assign wr_en = ~res & req & wen;
+    assign rd_en = req & ren;
 
     // WR operation: TODO: add BIG ENDIAN
     always_ff @(posedge wclk) begin

@@ -118,12 +118,13 @@ class scoreboard extends uvm_scoreboard;
 
     function void dump_mem;
         uvm_event ev;
-        string strvar = "";
+        string strvar;
         int i;
+        strvar = "";
         foreach (mem_ref[i]) strvar = { strvar, $sformatf("%2h ", mem_ref[i]) };
         ev = uvm_event_pool::get_global_pool().get("EV_DUMP");
         ev.trigger();
-        uvm_report_info(get_name(), $sformatf("Reference mem: [%s]", strvar), UVM_HIGH);
+        uvm_report_info(get_name(), $sformatf("Reference mem: [%s]", strvar));
         uvm_report_info(get_name(), $sformatf("-------------------"));
     endfunction
 endclass

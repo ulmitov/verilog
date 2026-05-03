@@ -4,7 +4,7 @@ import uvm_pkg::*;
 `include "consts.vh"
 
 `ifndef DATA_WIDTH
-`define DATA_WIDTH 128
+`define DATA_WIDTH 32
 `endif
 `ifndef ENDIANESS
 `define ENDIANESS 0
