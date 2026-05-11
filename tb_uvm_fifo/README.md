@@ -8,7 +8,7 @@ Scoreboard uses a queue as a Reference model.
 
 # UVM testbench design:
 
-![uvm testbench diagram](./dir/uvm_diagram.png)
+![uvm testbench diagram](./doc/uvm_diagram.png)
 
 
 
@@ -34,14 +34,10 @@ Scoreboard uses a queue as a Reference model.
 
 
 ## Results:
-![dsim log](./dir/dsim.log)
-
-![coverage html](./dir/index.html)
-
-![coverage png](./dir/coverage.png)
+![coverage png](./doc/coverage.png)
 
 
-![waves.vcd:](./dir/waves.vcd)
+![waves.vcd:](./doc/waves.vcd)
 
 
-![waves.vcd](./dir/waves.png)
+![waves.vcd](./doc/waves.png)

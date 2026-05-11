@@ -38,6 +38,10 @@ module memory #(
     logic [DATA_WIDTH-1:0] reg_rd;
     logic rd_en, wr_en;
 
+    `ifdef VERILATOR
+    export "DPI-C" task initmem;
+    `endif
+
     task initmem;
         input string path;
         begin

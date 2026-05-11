@@ -1,7 +1,7 @@
 # RISCV RV32I single cycle implementation
 
  - `asm` folder contains assembly programs and their hex code mem files
- - `dir` folder contains simulation results of `tb_riscv.sv`
+ - `vcd` folder contains simulation results of `testbench.sv`
 
 
 ## Run:
@@ -18,35 +18,36 @@ make riscver;
 ```
 
 ## Architecture:
-![arch.png](./dir/arch.png)
+![arch.png](./doc/arch.png)
 
 
 ##  Testbench files:
  - `alu.sv` unit has a **SystemVerilog** testbench in ![tb_sv_alu](../tb_sv_alu) folder
- - `memory.sv` and other small modules have testbenches in ![/modules/testbench](../modules/testbench) folder
- - `riscv_tb.sv` is a Verilog application level testbench which runs the following **assembly programs**:
+ - `memory.sv` is verified in ![UMV testbench](../tb_uvm_mem)
+ - other small modules have testbenches in ![/modules/testbench](../modules/testbench) folder
+ - `testbench.sv` is a Verilog application level testbench which runs the following **assembly programs**:
 
 
 
 ## bubble_sort.asm
 See array values each rf_wr_en
-![Bubble sort result](./dir/bubble_sort_in.png)
+![Bubble sort result](./doc/bubble_sort_in.png)
 See sorted values in reg_file address 0x0B through 0x0E (x11-x14)
-![Bubble sort result](./dir/bubble_sort_out.png)
+![Bubble sort result](./doc/bubble_sort_out.png)
 
 
 
 ## fibonacci_sequence.asm
 See values each ram.wen in ram.wr_data
-![Fibonacci result](./dir/fibonacci_out.png)
+![Fibonacci result](./doc/fibonacci_out.png)
 
 
 
 ## find_max_in_array.asm
 See array values each ram.wen
-![Find max result](./dir/find_max_in_array_in.png)
+![Find max result](./doc/find_max_in_array_in.png)
 Wrote max value 2A to ram address 0x18:
-![Find max result](./dir/find_max_in_array_out.png)
+![Find max result](./doc/find_max_in_array_out.png)
 
 
 

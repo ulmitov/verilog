@@ -7,34 +7,34 @@ class coverage;
         cp_opcode: coverpoint req.alu_op;
         cp_data_wr_a: coverpoint req.alu_a {
             bins zero = {0};
-            bins ones = {{32{1'b1}}};
-            bins low_to_high = (0 => {32{1'b1}});
-            bins high_to_low = ({32{1'b1}} => 0);
-            bins each_bit[] = {[31:0]};
+            bins ones = {{(RISCV_XLEN-1){1'b1}}};
+            bins low_to_high = (0 => {(RISCV_XLEN-1){1'b1}});
+            bins high_to_low = ({(RISCV_XLEN-1){1'b1}} => 0);
+            bins each_bit[] = {[0:RISCV_XLEN-1]};
         }
         cp_data_wr_b: coverpoint req.alu_b {
             bins zero = {0};
-            bins ones = {{32{1'b1}}};
-            bins low_to_high = (0 => {32{1'b1}});
-            bins high_to_low = ({32{1'b1}} => 0);
-            bins each_bit[] = {[31:0]};
+            bins ones = {{(RISCV_XLEN-1){1'b1}}};
+            bins low_to_high = (0 => {(RISCV_XLEN-1){1'b1}});
+            bins high_to_low = ({(RISCV_XLEN-1){1'b1}} => 0);
+            bins each_bit[] = {[0:RISCV_XLEN-1]};
         }
         cp_data_wr_res: coverpoint req.alu_res {
             bins zero = {0};
-            bins ones = {{32{1'b1}}};
-            bins low_to_high = (0 => {32{1'b1}});
-            bins high_to_low = ({32{1'b1}} => 0);
-            bins each_bit[] = {[31:0]};
+            bins ones = {{(RISCV_XLEN-1){1'b1}}};
+            bins low_to_high = (0 => {(RISCV_XLEN-1){1'b1}});
+            bins high_to_low = ({(RISCV_XLEN-1){1'b1}} => 0);
+            bins each_bit[] = {[0:RISCV_XLEN]};
         }
-        cp_msb_a: coverpoint req.alu_a[31] {
+        cp_msb_a: coverpoint req.alu_a[RISCV_XLEN-1] {
             bins msb_high = {1};
             bins msb_low  = {0};
         }
-        cp_msb_b: coverpoint req.alu_b[31] {
+        cp_msb_b: coverpoint req.alu_b[RISCV_XLEN-1] {
             bins msb_high = {1};
             bins msb_low  = {0};
         }
-        cp_msb_res: coverpoint req.alu_res[31] {
+        cp_msb_res: coverpoint req.alu_res[RISCV_XLEN-1] {
             bins msb_high = {1};
             bins msb_low  = {0};
         }
@@ -43,8 +43,8 @@ class coverage;
     endgroup
 
     function new;
+        $display("Starting Coverage");
         cg_alu = new();
-        $display("Started Coverage");
     endfunction
 
     function void sample(transaction tr);

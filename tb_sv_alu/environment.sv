@@ -39,10 +39,12 @@ class environment;
         join
     endtask
 
-    task test_bit_by_bit(int num);
+    task test_bit_by_bit();
+        int num = gen.count;
         $display("Testing a and b toggled bit by bit only for ADD operation to check sum and carry of each FA at each stage");
+        gen.toogle_bits_add();
+        num = gen.count - num;
         fork
-            gen.rand_bits_add(num);
             drv.main(num);
             mon.main(num);
             scb.main(num);
@@ -51,8 +53,8 @@ class environment;
 
     task test_random_bit(int num);
         $display("Testing bits randomly toggled in a and b for all opcodes except for ADD: this will check the shifts, xors and the rest");
+        gen.rand_bits_non_add(num);
         fork
-            gen.rand_bits_non_add(num);
             drv.main(num);
             mon.main(num);
             scb.main(num);
@@ -61,13 +63,14 @@ class environment;
 
     task test_manual_val();
         int i;
-        int num = 10; // as amount of opcodes
+        int num = gen.count;
         $display("Testing manual inputs: checking stuck 1's or 0's, crosstalk and boundary values");
+        gen.manual(10);    // 10 as the amount of opcodes
+        num = gen.count - num;
         fork
-            gen.manual(num);   // each time have 5 transaction
-            drv.main(num * 5);
-            mon.main(num * 5);
-            scb.main(num * 5);
+            drv.main(num);
+            mon.main(num);
+            scb.main(num);
         join
     endtask
 
@@ -82,13 +85,13 @@ class environment;
         `endif
         assert(scb.count)
         else $error("Scoreboard: Got 0 transactions");
-        assert(scb.count == gen.count)
-            $display("Scoreboard: proccessed all %0d transactions", gen.count);
-        else
-            $error("Scoreboard: %d scb count is not %d", scb.count, gen.count);
         assert(scb.fails == 0)
             $display("Scoreboard: PASSED");
         else
             $display("Scoreboard: FAILED: %0d transaction errors", scb.fails);
+        assert(scb.count == gen.count)
+            $display("Scoreboard: proccessed all %0d transactions", gen.count);
+        else
+            $error("Scoreboard: scb count %0d is not %0d", scb.count, gen.count);
     endtask
 endclass

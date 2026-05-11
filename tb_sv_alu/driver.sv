@@ -21,22 +21,23 @@ class driver;
             // lock VIF from all threads until alu produces result
             `ifdef VERILATOR
             @(posedge vif.clk) vif.lock();
-            $display("DRV LOCKED");
+            //$display("DRV LOCKED");
             `else
             vif.lock();
             `endif
             `VIF.alu_a = req.alu_a;
             `VIF.alu_b = req.alu_b;
             `VIF.alu_op = req.alu_op;
-            req.display("DRV");
             `ifdef VERILATOR
             @(negedge vif.clk) vif.unlock();
-            $display("DRV UNLOCK");
+            //$display("DRV UNLOCK");
             `else
                 `ifdef TPD
                 #`TPD vif.unlock();
                 `endif
             `endif
+            req.display("DRV");
+            //$display("DRV UNLOCK");
         end
     endtask
 endclass

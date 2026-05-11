@@ -1,7 +1,7 @@
 /*
     Constants definitions
 */
-`define DEBUG_RUN             // uncomment to see some debug messages
+//`define DEBUG_RUN             // uncomment to see some debug messages
 //`define GATE_FLOW_OFF       // uncomment to use data flow logic (should be commented by default)
 //`define CONST_DELAYS_OFF    // uncomment to disable delays in combinational and sequential logic
 

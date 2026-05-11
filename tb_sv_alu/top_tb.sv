@@ -14,17 +14,17 @@ import risc_pkg::*;
 module top_tb;
     logic clk = 0;
     intf itf(clk);
-    // TBD: remove the clock when threading issues fixed
+    // TODO: remove the clock when verilator threading issues fixed
     always #`TPD clk = ~clk;
 
-    alu DUT (
+    alu #(.XLEN(RISCV_XLEN)) DUT (
         .alu_a(itf.alu_a),
         .alu_b(itf.alu_b),
         .alu_op(itf.alu_op),
         .alu_res(itf.alu_res)
     );
 
-    alu_dataflow REF (
+    alu_dataflow #(.XLEN(RISCV_XLEN)) REF (
         .alu_a(itf.alu_a),
         .alu_b(itf.alu_b),
         .alu_op(itf.alu_op),
@@ -45,10 +45,10 @@ program main_test(intf itf);
     initial begin
         env = new(itf);
         env.pre_test();
+        env.test_bit_by_bit();
+        env.test_random_bit(RISCV_XLEN * 10);
+        env.test_random_val(RISCV_XLEN * 10);
         env.test_manual_val();
-        env.test_bit_by_bit(32);
-        env.test_random_bit(10*32);
-        env.test_random_val(1000);
         env.post_test();
         $display("End of testbench: top_tb_alu.vcd");
         $finish;

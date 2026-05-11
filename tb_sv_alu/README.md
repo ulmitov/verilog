@@ -1,7 +1,6 @@
 # ALU SystemVerilog testbench
 Design verification of ![alu.sv](../RISCV_SingleCycle/alu.sv) that is used in RISCV implementation.
 
-TODO: expand to 128 bits.
 
 ```
 # run:
@@ -14,7 +13,7 @@ make alu
  - The monitor passes each transaction to scoreboard.
  - Then, scoreboard compares the received result from ALU with a Reference model ALU result.
 
-![ALU SV testbench diagram](./dir/sv_tb_diagram.png)
+![ALU SV testbench diagram](./doc/sv_tb_diagram.png)
 
 
 ## Testplan:
@@ -25,8 +24,5 @@ make alu
  - Random transactions to verify functionality (for all ALU operations)
  
 
-# Results:
-![ALU log](./dsim.log)
-
-`waves.mxd`
-![ALU tb](./waves.png)
+`./doc/tb_top_alu.mxd`
+![ALU tb](./doc/waves.png)

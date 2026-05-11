@@ -16,7 +16,7 @@ module alu #(parameter XLEN = RISCV_XLEN) (
         logic carry, of;
         logic [XLEN-1:0] sum;
         logic [XLEN-1:0] out_sh;
-        logic [5:0] shifts_num;
+        logic [$clog2(XLEN):0] shifts_num;
 
         adder #(XLEN) alu_fa (
             .Nadd_sub(nadd_sub),
@@ -38,14 +38,14 @@ module alu #(parameter XLEN = RISCV_XLEN) (
 
         initial $display("*** SYNTHESISED GATEFLOW ALU ***");
         `ifdef SV_TB
-            `ifndef DEBUG_RUN
+            `ifdef DEBUG_RUN
             always #2 $display("[%0t]: ALU GATEFLOW: X=%8h Y=%8h Nadd_sub=%b: sum=%8h (out_sh %8h) lt=%0b, ltu=%0b  carry=%0b  of=%0b", $time, alu_a, alu_b, nadd_sub, sum, out_sh, lt, ltu, carry, of);
             `else
             always #1;
             `endif
         `endif
 
-        assign shifts_num = {1'b0, alu_b[4:0]};
+        assign shifts_num = {1'b0, alu_b[$clog2(XLEN)-1:0]};
 
         always_comb begin
             case (alu_op)
@@ -97,9 +97,9 @@ module alu_dataflow #(parameter XLEN = RISCV_XLEN) (
         case (alu_op)
             OP_ALU_ADD: alu_res = alu_a + alu_b;
             OP_ALU_SUB: alu_res = alu_a - alu_b;
-            OP_ALU_SLL: alu_res = alu_a << alu_b[4:0];
-            OP_ALU_SRL: alu_res = alu_a >> alu_b[4:0];
-            OP_ALU_SRA: alu_res = $signed(alu_a) >>> alu_b[4:0];
+            OP_ALU_SLL: alu_res = alu_a << alu_b[$clog2(XLEN)-1:0];
+            OP_ALU_SRL: alu_res = alu_a >> alu_b[$clog2(XLEN)-1:0];
+            OP_ALU_SRA: alu_res = $signed(alu_a) >>> alu_b[$clog2(XLEN)-1:0];
             OP_ALU_XOR: alu_res = alu_a ^ alu_b;
             OP_ALU_AND: alu_res = alu_a & alu_b;
             OP_ALU_OR:  alu_res = alu_a | alu_b;
@@ -108,7 +108,7 @@ module alu_dataflow #(parameter XLEN = RISCV_XLEN) (
             default:    alu_res = {XLEN{1'b0}};
         endcase
         `ifdef SV_TB
-            `ifndef DEBUG_RUN
+            `ifdef DEBUG_RUN
             #2 $display("[%0t]: ALU DATAFLOW: X=%8h Y=%8h RES=%0h", $time, alu_a, alu_b, alu_res);
             `else
             #1;

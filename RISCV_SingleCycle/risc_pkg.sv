@@ -1,6 +1,11 @@
+`ifndef XLEN
+`define XLEN 32
+`endif
+
+
 package risc_pkg;
 /* verilator lint_off UNUSEDPARAM */
-parameter RISCV_XLEN = 32;
+parameter RISCV_XLEN = `XLEN;
 parameter RESET_PC = 32'h0;     // instructions loaded via readmemh start at 0x00
 parameter NOP_CMD = 'h00000013;
 /* verilator lint_on UNUSEDPARAM */

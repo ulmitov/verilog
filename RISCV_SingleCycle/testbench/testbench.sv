@@ -6,7 +6,7 @@
 `define VCD_PATH "vcd/"
 
 string path = `__FILE__;
-`define ASM_PATH {path.substr(0, path.len() - 12), "asm/"}
+`define ASM_PATH {path.substr(0, path.len() - 13), "../asm/"}
 
 // see max value 2A in the end in ram dmem address d24 (h18)
 `define ARR_MAX "find_max_in_array.mem"
@@ -36,7 +36,9 @@ module tb_riscv #(parameter mem_file = `BUBBLES, parameter FINISH = 1);
     end
 
     always @(posedge clk)
-        $strobe("%6d: DEBUG: PC=%3h: INSTRUCTION=%8h: OPCODE=%7b funct3=%3b, rd_addr=0x%0h, rs1_addr=0x%0h, rs2_addr=0x%0h, IMM=0x%0h", $time, dut.pc, dut.instruction, dut.core.opcode, dut.core.funct3, dut.rd_addr, dut.rs1_addr, dut.rs2_addr, dut.core.immediate);
+        $strobe("%6d: DEBUG: PC=%3h: INSTRUCTION=%8h: OPCODE=%7b funct3=%3b, rd_addr=0x%0h, rs1_addr=0x%0h, rs2_addr=0x%0h, IMM=0x%0h",
+                $time, dut.imem_addr, dut.instruction, dut.core.opcode, dut.core.funct3,
+                dut.rd_addr, dut.rs1_addr, dut.rs2_addr, dut.core.immediate);
 
     initial begin
         $dumpfile({`VCD_PATH, mem_file, ".vcd"});

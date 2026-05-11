@@ -10,7 +10,7 @@ module riscv #(
     input logic clk,
     input logic res_n
 );
-    logic [31:0] pc;
+    logic [31:0] imem_addr;
     logic [31:0] instruction;
     logic [31:0] dmem_addr;
     logic [XLEN-1:0] dmem_wr_data, dmem_rd_data;
@@ -25,7 +25,7 @@ module riscv #(
     riscv_core #(.XLEN(XLEN)) core (
         .clk(clk),
         .res_n(res_n),
-        .pc(pc),
+        .pc(imem_addr),
         .instruction(instruction),
         .imem_req(imem_req),
         .rs1_data(rs1_data),
@@ -60,7 +60,7 @@ module riscv #(
         .wclk(clk),
         .res(~res_n),
         .req(1'b1),
-        .addr(pc),
+        .addr(imem_addr),
         .blsize(op_enum_dmem_size'(OP_DMEM_WORD)),
         .ren(imem_req),
         .rd_data(instruction)

@@ -19,7 +19,7 @@ Spec references:
 ## Block diagram:
 The modem features are not implemented for now.
 
-![arch.png](./dir/arch.png)
+![arch.png](./doc/arch.png)
 
 
 ## Baud generator
@@ -30,7 +30,7 @@ set divisor to: 100 / (16 * 9600 * (8+2+1/8)) which is a rounded 470.
 
 `DIVIDER = Freq / ((M + PAR + N)/8) × OSR × Brate)`
 
-![clock_div.png](./dir/clock_div.png)
+![clock_div.png](./doc/clock_div.png)
 
 
 
@@ -59,5 +59,5 @@ make uart_top_tb
 ![baud_tb.vcd viewer](https://wavedrom.live/?github=ulmitov/verilog/main/UART/vcd/baud_tb.vcd)
 
 uart_tb.vcd: see the input values in the tx_din signal versus the outputs in rx_out signal each tick of rx_done signal:
-![uart_tb](./dir/uart_tb_2stopbits.png)
+![uart_tb](./doc/uart_tb_2stopbits.png)
 

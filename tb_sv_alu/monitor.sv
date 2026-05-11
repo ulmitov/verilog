@@ -9,6 +9,7 @@ class monitor;
     mailbox #(transaction) mon2scb_mail;
     transaction req;
     virtual intf vif;
+    int count = 0;
 
     function new(virtual intf vif_init, mailbox #(transaction) mb);
         vif = vif_init;
@@ -18,10 +19,11 @@ class monitor;
     task main(int num);
         repeat(num) begin
             req = new();
+            count++;
             // lock VIF to avoid driver access
             `ifdef VERILATOR
             @(negedge `VIF.clk) vif.lock();
-            $display("MON locked drv");
+            //$display("MON locked drv");
             `else
             vif.lock();
             `endif
@@ -32,7 +34,7 @@ class monitor;
             req.res_exp = `VIF.res_exp;
             vif.unlock();
             mon2scb_mail.put(req);
-            req.display("MON");
+            req.display($sformatf("MON %0d", count));
         end
     endtask
 endclass

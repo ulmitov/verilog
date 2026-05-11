@@ -17,18 +17,18 @@ class scoreboard;
     task main(int num);
         trans = new();
         repeat(num) begin
+            count++;
             #1 mon2scb_mail.get(trans);
-            assert(trans.alu_res !== 32'bX && trans.alu_res !== 32'bZ)
+            assert(trans.alu_res !== 'bX && trans.alu_res !== 'bZ)
             else $error("ERROR: ALU RESULT is invalid");
             if (trans.alu_res == trans.res_exp)
-                trans.display("SCB");
+                trans.display($sformatf("SCB %0d", count));
             else begin
                 $display("----------------------");
                 trans.display("SCB: ERROR");
                 $display("----------------------");
                 fails++;
             end
-            count++;
             `ifndef VERILATOR
             cov.sample(trans);
             `endif

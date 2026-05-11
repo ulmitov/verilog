@@ -84,7 +84,9 @@ lint-uart:
 
 # Regression suites
 grep_err:
-	grep -H -a -i -E 'error|end of|warning|assertion|segmentation|fatal|fail' ./*.log | grep -a -v -i -E 'timescale|time unit|dangling|Not enough words|Part select'
+	grep -H -a -i -E 'error|end of|warning|assertion|segmentation|fatal|fail' $(if $(ARG),$(ARG),*.log) | grep -a -v -i -E 'timescale|time unit|dangling|Not enough words|Part select'
+	! grep -H -a -i -E 'error|assertion|segmentation|fatal|fail' $(if $(ARG),$(ARG),*.log) | grep -a -v -i -E 'UVM_ERROR :    0|UVM_FATAL :    0'
+
 all:
 	$(MAKE) -s regression uart risc
 regression:
@@ -161,10 +163,10 @@ uartcpp:
 
 
 # RISCV
-risc_src := risc_pkg.sv tb_riscv.sv riscv.sv riscv_core.sv fetch.sv decode.sv register_file.sv branch_control.sv control.sv alu.sv data_memory.sv
+risc_src := risc_pkg.sv riscv.sv riscv_core.sv fetch.sv decode.sv register_file.sv branch_control.sv control.sv alu.sv data_memory.sv
 risc_mod := memory.sv adder.v shift.v mux.v
 define run_risc
-	$(call run_sim,$(1),$(foreach x,$(risc_src),RISCV_SingleCycle/$(x)) $(foreach x,$(risc_mod),modules/$(x)))
+	$(call run_sim,$(1),RISCV_SingleCycle/testbench/testbench.sv $(foreach x,$(risc_src),RISCV_SingleCycle/$(x)) $(foreach x,$(risc_mod),modules/$(x)))
 endef
 risc_tb_arr:
 	$(call run_risc,tb_asm_arr)
@@ -172,6 +174,15 @@ risc_tb_bub:
 	$(call run_risc,tb_asm_bub)
 risc_tb_fib:
 	$(call run_risc,tb_asm_fib)
+
+riscvcpp:
+	tb=riscv
+	src="$(foreach x,$(risc_src),RISCV_SingleCycle/$(x)) $(foreach x,$(risc_mod),modules/$(x)) RISCV_SingleCycle/testbench/testbench.cpp"
+	args="$(ARG) $(VERILATOR_ARGS) -DCONST_DELAYS_OFF --public-flat-rw -IRISCV_SingleCycle --exe"
+	verilator $$args --top $$tb $$src && ./obj_dir/V$$tb +verilator+coverage+file+vcd/cov_riscvcpp.dat"
+	#verilator --runtime-debug -CFLAGS "-O0 -g -DDEBUG_MODE" $$args --top $$tb $$src && ./obj_dir/V$$tb +verilator+coverage+file+vcd/cov_riscvcpp.dat"
+	#mv coverage.dat vcd/cov_riscvcmd.dat
+
 
 
 # SystemVerilog ALU TB
