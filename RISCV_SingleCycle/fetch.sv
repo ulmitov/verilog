@@ -10,10 +10,11 @@ module fetch (
     output logic [31:0] next_pc_alu
 );
     logic [31:0] next_pc;   // the real next pc that should be taken according to ALU or branch control
+    logic [2:0] incr_pc;
     logic req;
 
-    adder #(32) pc_adder (.Nadd_sub(1'b0), .X(imem_addr), .Y(32'h4), .sum(next_pc_alu));
-
+    adder #(32) pc_adder (.Nadd_sub(1'b0), .X(imem_addr), .Y(incr_pc), .sum(next_pc_alu));
+assign incr_pc = 32'h4;
     assign req = imem_data != NOP_CMD || imem_data[6:0] == OPCODE_SYSTEM;
     assign next_pc = pc_mux ? pc_jump : next_pc_alu;
 

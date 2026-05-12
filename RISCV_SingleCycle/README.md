@@ -1,32 +1,49 @@
 # RISCV RV32I single cycle implementation
 
- - `asm` folder contains assembly programs and their hex code mem files
- - `vcd` folder contains simulation results of `testbench.sv`
-
-
-## Run:
-```
-# iverilog:
-make risc_tb_arr;   # find max in array asm
-make risc_tb_bub;   # bubble sort asm
-make risc_tb_fib;   # fibonacci asm
-
-make risc;          # all testbenches
-
-# verilator:
-make riscver;
-```
 
 ## Architecture:
 ![arch.png](./doc/arch.png)
 
 
 ##  Testbench files:
- - `alu.sv` unit has a **SystemVerilog** testbench in ![tb_sv_alu](../tb_sv_alu) folder
- - `memory.sv` is verified in ![UMV testbench](../tb_uvm_mem)
- - other small modules have testbenches in ![/modules/testbench](../modules/testbench) folder
- - `testbench.sv` is a Verilog application level testbench which runs the following **assembly programs**:
+ - `alu.sv` is verified in ![**SystemVerilog testbench**](../tb_sv_alu)
+ - `memory.sv` is verified in ![**UMV testbench**](../tb_uvm_mem)
+ - `testbench.sv` is a Verilog application level testbench
+ - Design verification with a CPP UVM like testbench
 
+
+## CPP Testbench design:
+- Sequencer builds the instructions hex file and also the Reference model and Driver transactions.
+- The test can generate multiple hex files and then run them one by one.
+
+![dvcpp.png](./doc/dvcpp.png)
+
+
+## Design verification
+Objectives:
+- Verify ISA compatibility, design functionality and signalling
+
+Preconditions:
+- Prefill data memory
+
+Strategy:
+- The whole functionality can be verified using the Store commands, which will set output data onto the bus.
+So whole verification depends on Stype and LUI commands.
+
+Test plan:
+- Acceptance test: run commands with zero values
+- Test LUI + Stype output the correct address signals
+- Test LUI + Addi and Stype output the correct data signals
+- Test Load commands output the correct address signals
+- Test Load commands output the correct data signals
+- Test all the Itype immediate commands
+- Test all Rtype ALU commands
+- Test all Btype branch commands
+- Verify the rest of commands
+
+
+
+# Application level tests:
 
 
 ## bubble_sort.asm
@@ -51,9 +68,9 @@ Wrote max value 2A to ram address 0x18:
 
 
 
-## Design:
+## Design notes:
 - Separate memories for instructions and data (Harvard architecture)
-- Instruction memory loads asm code from a hex file and stores it. Each instruction is 32 bits.
+- Instruction memory loads asm code from a hex file and stores it.
 - Fetch unit reads the current instruction according to the current program counter pointer (PC).
 - Decode unit decodes the fields from the instruction bits and passes them to Control block and Register File.
 - Register File is the register space of 32x registers, while x0 is the zero reg and all the rest are general purpose.
@@ -69,8 +86,8 @@ The ALU unit's add operation takes 3 gate delays per bit.
 The longset path commands are load and store.
 So depending on the memory type the Tc should be calculated accordingly.
 
-LW loads data from rs1+imm into rd ( `rd = M[rs1+imm]` ).
-SW stores data from rs2 into rs1+imm ( `M[rs1+imm] = rs2` ).
+LW loads data from rs1+imm into rd ( `reg[rd] = Mem[reg[rs1]+imm]` ).
+SW stores data from rs2 into rs1+imm ( `Mem[reg[rs1]+imm] = reg[rs2]` ).
 So max full path time is:
 ```
 LW: tC > tInstFetch(andDecode)_max + tRegFetch_max + tALU_max + tDMemRead_max + tRegWriteBackSetupTime
@@ -82,3 +99,17 @@ The shortest path is for jal command ( `rd=pc+4; pc+=imm` ). So minimum timing i
 th < tInstFetch(andDecode)_min + tALU_min
 ```
 Where th is the minimum hold time either of PC register or RegFile registers.
+
+
+## Run:
+```
+# iverilog:
+make risc_tb_arr;   # find max in array asm
+make risc_tb_bub;   # bubble sort asm
+make risc_tb_fib;   # fibonacci asm
+
+make risc;          # all testbenches
+
+# verilator:
+make riscver;
+```

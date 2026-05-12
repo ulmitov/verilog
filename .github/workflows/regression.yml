@@ -87,6 +87,9 @@ jobs:
       - name: RISCV Instruction Memory UVM testbench 32 bit
         run: make uvm-inst ARG=-DDATA_WIDTH=32 2>&1 | tee uvm_inst32.log
       
+      - name: RV32I Design verification Cpp testbench
+        run: make riscdv ARG='-CFLAGS "-DVERBOSITY=0"' | tee uvm_riscdv.log
+      
       - name: Grep Results Summary
         run: make grep_err
 

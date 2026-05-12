@@ -7,18 +7,21 @@ module riscv_core #(
 ) (
     input logic clk,
     input logic res_n,
-    input logic [31:0] instruction,
+    input logic [INST_LEN-1:0] instruction,
+    input logic [XLEN-1:0] rs1_data,
+    input logic [XLEN-1:0] rs2_data,
     input logic [XLEN-1:0] dmem_rd_data,
-    input logic [XLEN-1:0] rs1_data, rs2_data,
 
-    output logic [31:0] pc,
     output logic imem_req,
     output logic rf_wr_en,
+    output logic [31:0] pc,
     output logic [4:0] rd_addr, rs1_addr, rs2_addr,
+    output logic [31:0] dmem_addr,
     output logic [XLEN-1:0] rf_wr_data,
     output logic [XLEN-1:0] dmem_wr_data,
-    output logic [31:0] dmem_addr,
-    output logic dmem_zero_ex, dmem_req, dmem_wr,
+    output logic dmem_zero_ex,
+    output logic dmem_req,
+    output logic dmem_wr,
     output op_enum_dmem_size dmem_size
 );
     logic [31:0] pc_jump, next_pc_alu;

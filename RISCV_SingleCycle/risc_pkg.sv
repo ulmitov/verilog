@@ -5,9 +5,12 @@
 
 package risc_pkg;
 /* verilator lint_off UNUSEDPARAM */
-parameter RISCV_XLEN = `XLEN;
-parameter RESET_PC = 32'h0;     // instructions loaded via readmemh start at 0x00
+parameter int RISCV_XLEN = `XLEN;
+parameter int RESET_PC = 32'h0;     // instructions loaded via readmemh start at 0x00
 parameter NOP_CMD = 'h00000013;
+//parameter EBREAK = 'h00100073;
+parameter int DMEM_BASE_ADDRESS = 32'h0;
+parameter int INST_LEN = 32;
 /* verilator lint_on UNUSEDPARAM */
 
 typedef enum logic [3:0] {
@@ -21,22 +24,22 @@ typedef enum logic [3:0] {
     OP_ALU_OR,
     OP_ALU_SLT,
     OP_ALU_SLTU
-} op_enum_alu;
+} op_enum_alu /*verilator public*/;
 
 
 typedef enum logic [6:0] {
     OPCODE_R_TYPE       = 7'b0110011,   // R-Type. Register to register arithmetic and logic
-    OPCODE_S_TYPE       = 7'b0100011,   // S-Type. Store to mem instructions - SB, SH, SW, SD, FSQ
+    OPCODE_S_TYPE       = 7'b0100011,   // S-Type. Store to mem - SB, SH, SW, SD, FSQ
     OPCODE_B_TYPE       = 7'b1100011,   // B-Type. Conditional branches
     OPCODE_U_TYPE_LUI   = 7'b0110111,   // U-Type. LUI and AUIPC - large immediates
     OPCODE_U_TYPE_AUIPC = 7'b0010111,   // U-Type. LUI and AUIPC - large immediates
     OPCODE_J_TYPE       = 7'b1101111,   // J-Type. JAL command   - Unconditional jumps
     OPCODE_I_TYPE_ALU   = 7'b0010011,   // I-Type. Arithmetic with immediate (OP-IMM)
-    OPCODE_I_TYPE_LOAD  = 7'b0000011,   // I-Type. Load from mem instructions
+    OPCODE_I_TYPE_LOAD  = 7'b0000011,   // I-Type. Load from mem. Also this mask can be used to detect 32 bit instructions!!!
     OPCODE_I_TYPE_JALR  = 7'b1100111,   // I-Type. JALR - Jump and Link Register
     OPCODE_FLOATP       = 7'b0000111,   // I-Type. Floating pont instructions
     OPCODE_SYSTEM       = 7'b1110011    // I-Type. System instructions - ECALL, EBREAK
-} op_enum_inst_opcodes;
+} op_enum_inst_opcodes /*verilator public*/;
 
 
 typedef enum logic [2:0] {
@@ -48,7 +51,7 @@ typedef enum logic [2:0] {
     OP_DMEM_TRPL = 3'b111,
     OP_UNUSEDLHU = 3'b101,
     OP_UNUSEDLWU = 3'b110 
-} op_enum_dmem_size;
+} op_enum_dmem_size /*verilator public*/;
 
 
 typedef enum logic [1:0] {
@@ -67,7 +70,7 @@ typedef enum logic [2:0] {
     OP_B_TYPE_BGE   = 3'h5,
     OP_B_TYPE_BLTU  = 3'h6,
     OP_B_TYPE_BGEU  = 3'h7
-} op_enum_b_type_funct3;
+} op_enum_b_type_funct3 /*verilator public*/;
 
 
 // R type inst
@@ -104,5 +107,5 @@ typedef enum logic [3:0] {
     OP_I_TYPE_ANDI = 4'hF,
     OP_I_TYPE_SLLI = 4'h9,
     OP_I_TYPE_SRLI_SRAI = 4'hD
-} op_enum_i_type_funct3;
+} op_enum_i_type_funct3 /*verilator public*/;
 endpackage

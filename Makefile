@@ -175,7 +175,7 @@ risc_tb_bub:
 risc_tb_fib:
 	$(call run_risc,tb_asm_fib)
 
-riscvcpp:
+riscdv:
 	tb=riscv
 	src="$(foreach x,$(risc_src),RISCV_SingleCycle/$(x)) $(foreach x,$(risc_mod),modules/$(x)) RISCV_SingleCycle/testbench/testbench.cpp"
 	args="$(ARG) $(VERILATOR_ARGS) -DCONST_DELAYS_OFF --public-flat-rw -IRISCV_SingleCycle --exe"
