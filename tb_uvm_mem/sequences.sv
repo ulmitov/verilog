@@ -36,7 +36,7 @@ class base_sequence extends uvm_sequence#(transaction);
             03: opbl = op_enum_dmem_size'(OP_DMEM_TRPL);
             04: opbl = op_enum_dmem_size'(OP_DMEM_WORD);
             08: opbl = op_enum_dmem_size'(OP_DMEM_DUBL);
-            16: opbl = op_enum_dmem_size'(OP_DMEM_QUAD);
+            //16: opbl = op_enum_dmem_size'(OP_DMEM_QUAD);
         endcase
         return opbl;
     endfunction

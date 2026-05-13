@@ -21,7 +21,9 @@ void push_ref(Transaction *req, char no_zero_cmd = 0) {
 }
 
 
-/* Fill up memory with data value being equal to address value */
+/*
+Fill up memory with data value being equal to address value (for test_itype_load_addr_bits)
+*/
 void seq_prefill_data_memory(const char *mem_fname = "prefill.mem", int word_len = XLEN / 8) {
     remove(mem_fname);
     for (int i = 0; i < DATA_MEMORY_DEPTH / word_len; i++) {

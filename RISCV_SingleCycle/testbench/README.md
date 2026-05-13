@@ -34,6 +34,7 @@ So whole verification depends on LUI and Stype commands, so they will be tested 
 ## Verification notes
 - ![CI #35](https://github.com/ulmitov/verilog/actions/runs/25748486816/job/75618142917) Discovered that instructions were not fetched properly after reset. Fixed in next CI.
 - ![CI #36](https://github.com/ulmitov/verilog/actions/runs/25793690130/job/75765416609) Discovered that Stype commands always returned 32 bit data, instead of requested block size. Fixed in next CI.
+- ![CI #38](https://github.com/ulmitov/verilog/actions/runs/25806742517/job/75811513330) Discovered that in case the read address is outside of data memory, the Itype Load commands data was not sign extended. Fixed in next CI.
 
 
 

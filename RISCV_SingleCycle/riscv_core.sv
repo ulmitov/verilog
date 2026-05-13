@@ -27,6 +27,7 @@ module riscv_core #(
     logic [31:0] pc_jump, next_pc_alu;
     logic [31:0] immediate;
     logic [XLEN-1:0] alu_a, alu_b, alu_res;
+    logic [XLEN-1:0] signed_rd_data;
     logic pc_mux;
     logic branch_taken;
     logic pc_sel, op1_sel, op2_sel;
@@ -38,7 +39,7 @@ module riscv_core #(
     op_enum_wr_data_sel rf_wr_data_sel;
 
 
-    fetch fetch_stage (
+    fetch fetch_block (
         .clk(clk),
         .res(~res_n),
         .pc_mux(pc_mux),
@@ -50,7 +51,7 @@ module riscv_core #(
     );
 
 
-    decode decode_stage(
+    decode decode_block(
         .instruction(instruction),
         .opcode(opcode),
         .funct3(funct3),
@@ -68,7 +69,7 @@ module riscv_core #(
     );
 
 
-    branch_control branch_ctrl (
+    branch_control branch_block (
         .b_type(b_type),
         .funct3(funct3),
         .rs1_data(rs1_data),
@@ -77,7 +78,7 @@ module riscv_core #(
     );
 
 
-    alu #(XLEN) alu_stage (
+    alu #(XLEN) alu_block (
         .alu_op(alu_op),
         .alu_a(alu_a),
         .alu_b(alu_b),
@@ -85,7 +86,7 @@ module riscv_core #(
     );
 
 
-    control ctrl (
+    control ctrl_block (
         .opcode(opcode),
         .funct3(funct3),
         .funct7(funct7),
@@ -107,10 +108,20 @@ module riscv_core #(
         .rf_wr_data_sel(rf_wr_data_sel)
     );
 
-    data_handler dh_block (
+
+    data_handler #(.XLEN(XLEN)) dh_block (
         .block_size(dmem_size),
         .data_in(rs2_data),
         .data_out(dmem_wr_data)
+    );
+
+
+    sign_extender #(.DATA_WIDTH(XLEN)) sign_block (
+        .blsize(dmem_size),
+        .zero_ex(dmem_zero_ex),
+        .data_in(dmem_rd_data),
+        // outputs:
+        .data_out(signed_rd_data)
     );
 
 
@@ -129,7 +140,7 @@ module riscv_core #(
     always_comb begin
         case (rf_wr_data_sel)
             OP_RF_SEL_ALU: rf_wr_data = alu_res;
-            OP_RF_SEL_MEM: rf_wr_data = dmem_rd_data;
+            OP_RF_SEL_MEM: rf_wr_data = signed_rd_data;
             OP_RF_SEL_IMM: rf_wr_data = immediate;
             OP_RF_SEL_PC:  rf_wr_data = next_pc_alu;
         endcase

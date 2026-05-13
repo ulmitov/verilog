@@ -89,20 +89,19 @@ module riscv #(
     );
 
 
-    data_memory #(
-        .DATA_WIDTH(XLEN),
+    memory #(
         .DEPTH(MEM_DEPTH),
+        .DATA_WIDTH(XLEN),
         .ADDR_WIDTH(32),
         .ENDIANESS(0)
     ) data_mem (
-        .clk(clk),
+        .wclk(clk),
         .res(~res_n),
         .ren(1'b1),
         .wen(dmem_wr),
         .req(dmem_req),
         .addr(dmem_addr),
         .blsize(dmem_size),
-        .zero_ex(dmem_zero_ex),
         .wr_data(dbus_wr_data),
         // outputs:
         .rd_data(dmem_rd_data)

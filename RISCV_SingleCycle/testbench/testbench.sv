@@ -49,7 +49,7 @@ module tb_riscv #(parameter mem_file = `BUBBLES, parameter FINISH = 1);
         res_n = 1'b1;
         #`T_CYC res_n = 1'b0;
         #`T_CYC res_n = 1'b1;
-        wait (dut.instruction === 'h13);
+        wait (dut.instruction === 'h00100073);
         @(posedge clk);
         @(posedge clk);
         $display("End of testbench: %s on cycle %0d", mem_file, cycle_count);
@@ -63,11 +63,11 @@ module tb_asm_arr;
     tb_riscv #(.mem_file(`ARR_MAX), .FINISH(0)) tb();
 
     initial begin
-        wait (tb.dut.instruction === 'h13);
+        wait (tb.dut.instruction === 'h00100073);
         @(posedge tb.clk);
         @(posedge tb.clk);
 
-        exp = tb.dut.data_mem.mem_block.MEMX[24];
+        exp = tb.dut.data_mem.MEMX[24];
         if (exp !== 'h2A)
             $display("[tb_riscv] *** ERROR: unexpected memory value %0h", exp);
         else
@@ -82,7 +82,7 @@ module tb_asm_bub;
     tb_riscv #(.mem_file(`BUBBLES), .FINISH(0)) tb();
 
     initial begin
-        wait (tb.dut.instruction === 'h13);
+        wait (tb.dut.instruction === 'h00100073);
         @(posedge tb.clk);
         @(posedge tb.clk);
 
@@ -103,13 +103,13 @@ module tb_asm_fib;
     tb_riscv #(.mem_file(`FIBONACCI), .FINISH(0)) tb();
 
     initial begin
-        wait (tb.dut.instruction === 'h13);
+        wait (tb.dut.instruction === 'h00100073);
         @(posedge tb.clk);
         @(posedge tb.clk);
 
         exp = 1;
         for (i = 24; i < 40; i = i + 4)
-            exp = {exp, tb.dut.data_mem.mem_block.MEMX[i]};
+            exp = {exp, tb.dut.data_mem.MEMX[i]};
         if (exp !== 'h080D1522)
             $display("[tb_riscv] *** ERROR: unexpected memory value %0h", exp);
         else

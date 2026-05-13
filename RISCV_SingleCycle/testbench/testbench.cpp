@@ -27,7 +27,7 @@ void run_test(Environment* env) {
 
     test_stype_data(env);
 
-    // note: precondition for this one: prefill data not to be changed by other tests!
+    // precondition for this one: prefill data not to be changed by other tests!
     test_itype_load_addr_bits(env);
 
     test_itype_load_data_bits(env);

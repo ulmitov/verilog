@@ -125,7 +125,7 @@ public:
     }
 
     void prefill_data_memory(const char *mem_fname = "prefill.mem", int word_len = XLEN / 8) {
-        svSetScope(svGetScopeFromName("TOP.riscv.data_mem.mem_block"));
+        svSetScope(svGetScopeFromName("TOP.riscv.data_mem"));
         Vriscv::initmem(mem_fname);
     }
     
@@ -145,14 +145,14 @@ public:
             */
             printf("[%lu] DEBUG: FETCH: req=%d  imem_addr=%08x  incr_pc=%d  instruction=%08x  imem_req=%d  pc_mux=%d  next_pc_alu=%08x  next_pc=%08x\n",
                 timestamp,
-                top->rootp->riscv__DOT__core__DOT__fetch_stage__DOT__req,
-                top->rootp->riscv__DOT__core__DOT__fetch_stage__DOT__imem_addr,
-                top->rootp->riscv__DOT__core__DOT__fetch_stage__DOT__incr_pc,
+                top->rootp->riscv__DOT__core__DOT__fetch_block__DOT__req,
+                top->rootp->riscv__DOT__core__DOT__fetch_block__DOT__imem_addr,
+                top->rootp->riscv__DOT__core__DOT__fetch_block__DOT__incr_pc,
                 top->rootp->riscv__DOT__core__DOT__instruction,
                 top->rootp->riscv__DOT__core__DOT__imem_req,
                 top->rootp->riscv__DOT__core__DOT__pc_mux,
                 top->rootp->riscv__DOT__core__DOT__next_pc_alu,
-                top->rootp->riscv__DOT__core__DOT__fetch_stage__DOT__next_pc
+                top->rootp->riscv__DOT__core__DOT__fetch_block__DOT__next_pc
             );
             printf("[%lu] DEBUG: CORE:  opcode=%02x  funct3=%d  rf_wr_data_sel=%d  rd_addr=%08x  rs1_addr=%08x  rs1_data=%08x  rs2_addr=%08x  rs2_data=%08x  imm=%08x\n",
                 timestamp,
@@ -185,7 +185,7 @@ public:
             //if (VERBOSITY) {
                 printf("[%lu] CORE: pc=%08x  instruction=%08x  opcode=0x%0x  rf_wr_data_sel=%d  rd_addr=%08x  rs1_addr=%08x  rs2_addr=%08x  imm=%08x\n",
                     timestamp,
-                    top->rootp->riscv__DOT__core__DOT__fetch_stage__DOT__imem_addr,
+                    top->rootp->riscv__DOT__core__DOT__fetch_block__DOT__imem_addr,
                     top->rootp->riscv__DOT__core__DOT__instruction,
                     top->rootp->riscv__DOT__core__DOT__opcode,
                     top->rootp->riscv__DOT__core__DOT__rf_wr_data_sel,

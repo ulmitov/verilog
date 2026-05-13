@@ -340,6 +340,7 @@ void generate_itype_load_address(int bits_width, char unsigned_commands = 0) {
             ref_req.wr = 0;
             ref_req.wr_data = 0;
             ref_req.addr = (lui_base.imm << 12) + sign_extend(load.imm);
+            // precondition: data memory was prefilled with each address holding 4 bytes equal to the address value!
             if (ref_req.addr >= DATA_MEMORY_BASE_ADDR && ref_req.addr < DATA_MEMORY_LAST_ADDR) {
                 ref_req.rd_data = ref_req.addr & data_mask;
             } else {
@@ -527,7 +528,7 @@ void generate_itype_load_data(int bits_width, char unsigned_commands = 0) {
             } else if (unsigned_commands) {
                 ref_req.wr_data = drv_req.rd_data;
             } else {
-                ref_req.wr_data = sign_extend(drv_req.rd_data, bits_width);
+                ref_req.wr_data = sign_extend(drv_req.rd_data, bits_width) & 0x00FFFFFFFF;  // masking since in tr it is long
             }
             sprintf(ref_req.str, "%s\n%s\n%s\n%s\n%s\n%s\n",
                     lui_base.str, lui_data.str, addi.str, load.str, lui_base_stype.str, stype.str);

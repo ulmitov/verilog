@@ -59,7 +59,7 @@ class scoreboard extends uvm_scoreboard;
             OP_DMEM_TRPL: blen = WIDTH > 16 ? 3 : mem_config::BUS_BLOCKS;
             OP_DMEM_WORD: blen = WIDTH > 24 ? 4 : mem_config::BUS_BLOCKS;
             OP_DMEM_DUBL: blen = WIDTH > 32 ? 8 : mem_config::BUS_BLOCKS;
-            OP_DMEM_QUAD: blen = WIDTH > 64 ? 16 : mem_config::BUS_BLOCKS;
+            //OP_DMEM_QUAD: blen = WIDTH > 64 ? 16 : mem_config::BUS_BLOCKS;
             default: blen = mem_config::BUS_BLOCKS;
         endcase
 
