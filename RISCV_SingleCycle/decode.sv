@@ -23,6 +23,9 @@ module decode (
     logic [31:0] imm_b;
     logic [31:0] imm_u;
     logic [31:0] imm_j;
+    logic is_32bit;
+
+    assign is_32bit = &instruction[1:0];
 
     assign opcode   = instruction[6:0];
     assign rd_addr  = instruction[11:7];

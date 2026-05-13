@@ -34,7 +34,7 @@ typedef enum logic [2:0] {
     OP_DMEM_DUBL = 3'b011,      // FLD (OPCODE_FLOATP)
     OP_I_TYPE_LBU = 3'b100,     // FLQ (OPCODE_FLOATP)
     OP_I_TYPE_LHU = 3'b101,
-    OP_DMEM_QUAD = 3'b110,//OP_I_TYPE_LWU
+    OP_I_TYPE_LWU = 3'b110,
     OP_DMEM_TRPL = 3'b111
 } op_enum_dmem_size /*verilator public*/;
 

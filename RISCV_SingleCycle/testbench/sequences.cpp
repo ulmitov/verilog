@@ -119,13 +119,12 @@ void seq_lhu(struct isa_itype *cmd) {
     cmd->funct3 = Vriscv_risc_pkg::OP_I_TYPE_LHU;
     seq_itype("lhu", cmd, 1);
 }
-/*
 void seq_lwu(struct isa_itype *cmd) {
     cmd->opcode = Vriscv_risc_pkg::OPCODE_I_TYPE_LOAD;
     cmd->funct3 = Vriscv_risc_pkg::OP_I_TYPE_LWU;
     seq_itype("lwu", cmd, 1);
 }
-*/
+
 // Arithmetic instructions
 void seq_addi(struct isa_itype *cmd) {
     cmd->opcode = Vriscv_risc_pkg::OPCODE_I_TYPE_ALU;

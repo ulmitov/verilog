@@ -1,6 +1,6 @@
 # Memory UVM testbench
 The DUT is a one port ![memory module](../memory.v) which is used in RISCV implementation.
-The testbench verifies 8, 16, 24, 32, 64, and 128 bus widths.
+The testbench verifies 8, 16, 24, 32, 64 bus widths.
 In the deployment actions can view this test suite runnning on **8 to 128** bit busses.
 
 

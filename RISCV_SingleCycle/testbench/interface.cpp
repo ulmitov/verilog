@@ -111,6 +111,7 @@ public:
     }
 
     void reset(int repeats = 1) {
+        set_rd_data(0);
         top->res_n = 0;
         wait(CLK_PHASE * 2 * repeats);
         top->res_n = 1;

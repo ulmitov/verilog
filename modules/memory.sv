@@ -7,8 +7,6 @@ The behavior of the memory is unknown if you write and read at the same addr.
 The output Q depends on the time relationship between the write clock and the read addr signal.
 
 m="memory"; yosys -p "read_verilog ${m}.sv; hierarchy -check -top $m; proc; opt; clean; show -format svg -prefix synth/${m} ${m}; show ${m}"
-
-TODO: add logic to handle out of bound addresses, f.e. blsize=OP_DMEM_QUAD with addr=0x1f8
 */
 `include "consts.vh"
 import risc_pkg::*;
@@ -59,7 +57,7 @@ module memory #(
     logic [2:0] block_size;
     always_comb begin
         case(blsize)
-            OP_DMEM_QUAD: block_size = MAXBL > 8 ? 5 : BSIZE;   // 16 bytes
+            //OP_DMEM_QUAD: block_size = MAXBL > 8 ? 5 : BSIZE;   // 16 bytes
             OP_DMEM_DUBL: block_size = MAXBL > 4 ? 4 : BSIZE;   // 8
             OP_DMEM_WORD: block_size = MAXBL > 3 ? 3 : BSIZE;   // 4
             OP_DMEM_TRPL: block_size = MAXBL > 2 ? 2 : BSIZE;   // 3
@@ -123,8 +121,7 @@ module memory #(
                 end
             end
         end
-
-        if (DATA_WIDTH >= 128) begin
+        /*if (DATA_WIDTH >= 128) begin
             always_ff @(posedge wclk) begin
                 if (wr_en) begin
                     if (block_size > 4) begin
@@ -135,7 +132,7 @@ module memory #(
                     end
                 end
             end
-        end
+        end*/
     endgenerate
 
 
@@ -161,7 +158,7 @@ module memory #(
 
 
     generate
-        if (DATA_WIDTH >= 128) begin
+        /*if (DATA_WIDTH >= 128) begin
             always_latch begin
                 if (rd_en) begin
                     if (block_size == 5) begin
@@ -180,7 +177,7 @@ module memory #(
                     if (block_size == 4) reg_rd[DATA_WIDTH-1:64] = 0;
                 end
             end
-        end
+        end*/
 
         if (DATA_WIDTH >= 64) begin
             always_latch begin
@@ -261,7 +258,7 @@ function int unsigned get_block_size(int unsigned blocks);
         03: bl = 2;
         04: bl = 3;
         08: bl = 4;
-        16: bl = 5;
+        //16: bl = 5;
         default: bl = 0;
     endcase
     return bl;

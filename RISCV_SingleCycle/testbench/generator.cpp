@@ -278,7 +278,7 @@ void generate_itype_load_acceptance() {
 }
 
 
-void generate_itype_load_address(int bits_width) {
+void generate_itype_load_address(int bits_width, char unsigned_commands = 0) {
     struct isa_lui lui_base;
     struct isa_itype load;
     struct isa_stype stype;
@@ -305,11 +305,19 @@ void generate_itype_load_address(int bits_width) {
 
             switch(bits_width) {
                 case 8:
-                    seq_lb(&load);
+                    if (unsigned_commands) {
+                        seq_lbu(&load);
+                    } else {
+                        seq_lb(&load);
+                    }
                     data_mask = 0xFF;
                     break;
                 case 16:
-                    seq_lh(&load);
+                    if (unsigned_commands) {
+                        seq_lhu(&load);
+                    } else {
+                        seq_lh(&load);
+                    }
                     data_mask = 0xFFFF;
                     break;
                 case 24:
@@ -317,7 +325,11 @@ void generate_itype_load_address(int bits_width) {
                     data_mask = 0xFFFFFF;
                     break;
                 case 32:
-                    seq_lw(&load);
+                    if (unsigned_commands) {
+                        seq_lwu(&load);
+                    } else {
+                        seq_lw(&load);
+                    }
                     data_mask = 0xFFFFFFFF;
                     break;
                 default:
@@ -363,7 +375,13 @@ void generate_itype_load_address(int bits_width) {
                     return;
             }
             ref_req.wr = 1;
-            ref_req.wr_data = load.rd ? ref_req.rd_data & data_mask : 0;
+            if (!load.rd) {
+                ref_req.wr_data = 0;
+            } else if (unsigned_commands) {
+                ref_req.wr_data = ref_req.rd_data & data_mask;
+            } else {
+                ref_req.wr_data = sign_extend(ref_req.rd_data & data_mask, bits_width);
+            }
             ref_req.rd_data = 0;
             // ref_req.addr remains same
             sprintf(ref_req.str, "%s\n%s\n%s\n", lui_base.str, load.str, stype.str);
@@ -373,7 +391,7 @@ void generate_itype_load_address(int bits_width) {
 }
 
 
-void generate_itype_load_data(int bits_width) {
+void generate_itype_load_data(int bits_width, char unsigned_commands = 0) {
     struct isa_lui lui_base;
     struct isa_lui lui_data;
     struct isa_lui lui_base_stype;
@@ -418,11 +436,19 @@ void generate_itype_load_data(int bits_width) {
 
             switch(bits_width) {
                 case 8:
-                    seq_lb(&load);
+                    if (unsigned_commands) {
+                        seq_lbu(&load);
+                    } else {
+                        seq_lb(&load);
+                    }
                     data_mask = 0xFF;
                     break;
                 case 16:
-                    seq_lh(&load);
+                    if (unsigned_commands) {
+                        seq_lhu(&load);
+                    } else {
+                        seq_lh(&load);
+                    }
                     data_mask = 0xFFFF;
                     break;
                 case 24:
@@ -430,7 +456,11 @@ void generate_itype_load_data(int bits_width) {
                     data_mask = 0xFFFFFF;
                     break;
                 case 32:
-                    seq_lw(&load);
+                    if (unsigned_commands) {
+                        seq_lwu(&load);
+                    } else {
+                        seq_lw(&load);
+                    }
                     data_mask = 0xFFFFFFFF;
                     break;
                 default:
@@ -460,7 +490,6 @@ void generate_itype_load_data(int bits_width) {
             sprintf(ref_req.str, "%s\n%s\n%s\n%s\n",
                     lui_base.str, lui_data.str, addi.str, load.str);
             push_ref(&ref_req, 1);
-
 
             // Verify data was loaded correctly into destination reg
             // Store data from destination reg to some random memory:
@@ -493,8 +522,13 @@ void generate_itype_load_data(int bits_width) {
             ref_req.wr = 1;
             ref_req.rd_data = 0;
             ref_req.addr = (lui_base_stype.imm << 12) + sign_extend(stype.imm);
-            ref_req.wr_data = dreg ? sign_extend(drv_req.rd_data, bits_width) : 0;
-            // LBU: ref_req.wr_data = dreg ? (reg_val & !data_mask) + (drv_req.rd_data & data_mask) : 0;
+            if (!dreg) {
+                ref_req.wr_data = 0;
+            } else if (unsigned_commands) {
+                ref_req.wr_data = drv_req.rd_data;
+            } else {
+                ref_req.wr_data = sign_extend(drv_req.rd_data, bits_width);
+            }
             sprintf(ref_req.str, "%s\n%s\n%s\n%s\n%s\n%s\n",
                     lui_base.str, lui_data.str, addi.str, load.str, lui_base_stype.str, stype.str);
             push_ref(&ref_req);
