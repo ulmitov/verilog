@@ -22,7 +22,7 @@ public:
 void Monitor::main() {
     if (inf->top->clk) {
         if (VERBOSITY) {
-            printf("[%ld] MON: waiting to sample on SETUP_TIME before posedge\n", inf->timestamp);
+            //printf("[%ld] MON: waiting to sample on SETUP_TIME before posedge\n", inf->timestamp);
         }
         while (inf->top->clk) inf->wait(1);
         inf->wait(CLK_PHASE - SETUP_TIME - 1);

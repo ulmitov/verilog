@@ -26,21 +26,19 @@ module control (
 );
     logic funct5;
     logic [3:0] funct_r;
-    logic [3:0] opcode_i;
     op_enum_alu op_sri;
 
     assign funct5   = funct7[5];
     assign funct_r  = {funct5, funct3};
-    assign opcode_i = {opcode[4], funct3};
     assign rf_wr_en = ~s_type & ~b_type;
     assign dmem_wr  = s_type;
     assign dmem_req = s_type || (rf_wr_data_sel == OP_RF_SEL_MEM);
 
     always_comb begin
         // defaults
-        dmem_zero_ex = 1'b0;
-        dmem_size = OP_DMEM_WORD;
         rf_wr_data_sel = OP_RF_SEL_ALU;
+        dmem_size = OP_DMEM_WORD;
+        dmem_zero_ex = 1'b0;
         alu_op = OP_ALU_ADD;    // for branching and jumps
         pc_sel = 1'b0;          // 1- alu_res(jump), 0- next_pc
         op1_sel = 1'b0;         // 1- pc, 0- rs1
@@ -62,12 +60,14 @@ module control (
             rf_wr_data_sel = OP_RF_SEL_PC;
         end
 
-        if (u_type) begin
-            case (opcode)
-                OPCODE_U_TYPE_LUI: rf_wr_data_sel = OP_RF_SEL_IMM;
-                OPCODE_U_TYPE_AUIPC: op1_sel = 1'b1;        // 1- pc, 0- rs1
-            endcase
-        end
+        case (opcode)
+            OPCODE_U_TYPE_LUI: rf_wr_data_sel = OP_RF_SEL_IMM;  // LUI is u_type
+            OPCODE_U_TYPE_AUIPC: op1_sel = 1'b1;                // AUIPC is u_type
+            OPCODE_I_TYPE_JALR: begin                           // JALR is i_type
+                pc_sel = 1'b1;
+                rf_wr_data_sel = OP_RF_SEL_PC;
+            end
+        endcase
 
         if (r_type) begin
             //select the alu opcode according to R opcode
@@ -92,29 +92,30 @@ module control (
         
         // Imm and load inst
         if (i_type) begin
-            case (opcode_i)
-                // Load operations
-                OP_I_TYPE_LB:   {rf_wr_data_sel, dmem_size} = {OP_RF_SEL_MEM, OP_DMEM_BYTE};
-                OP_I_TYPE_LH:   {rf_wr_data_sel, dmem_size} = {OP_RF_SEL_MEM, OP_DMEM_HALF};
-                OP_I_TYPE_LW:   {rf_wr_data_sel, dmem_size} = {OP_RF_SEL_MEM, OP_DMEM_WORD};
-                OP_I_TYPE_LBU:  {dmem_zero_ex, rf_wr_data_sel, dmem_size} = {1'b1, OP_RF_SEL_MEM, OP_DMEM_BYTE};
-                OP_I_TYPE_LHU:  {dmem_zero_ex, rf_wr_data_sel, dmem_size} = {1'b1, OP_RF_SEL_MEM, OP_DMEM_HALF};
-                // Imm operations
-                OP_I_TYPE_SLTI:         alu_op = OP_ALU_SLT;
-                OP_I_TYPE_SLTIU:        alu_op = OP_ALU_SLTU;
-                OP_I_TYPE_XORI:         alu_op = OP_ALU_XOR;
-                OP_I_TYPE_ORI:          alu_op = OP_ALU_OR;
-                OP_I_TYPE_ANDI:         alu_op = OP_ALU_AND;
-                OP_I_TYPE_SLLI:         alu_op = OP_ALU_SLL;
-                OP_I_TYPE_SRLI_SRAI:    alu_op = op_sri;
-                default:                alu_op = OP_ALU_ADD; // case OP_I_TYPE_ADDI and OPCODE_I_TYPE_JALR
-            endcase
-
-            if (opcode == OPCODE_I_TYPE_JALR) begin
-                pc_sel = 1'b1;
-                rf_wr_data_sel = OP_RF_SEL_PC;
+            if (opcode[4]) begin: imm_operations
+                case (funct3)
+                    OP_I_TYPE_SLTI:         alu_op = OP_ALU_SLT;
+                    OP_I_TYPE_SLTIU:        alu_op = OP_ALU_SLTU;
+                    OP_I_TYPE_XORI:         alu_op = OP_ALU_XOR;
+                    OP_I_TYPE_ORI:          alu_op = OP_ALU_OR;
+                    OP_I_TYPE_ANDI:         alu_op = OP_ALU_AND;
+                    OP_I_TYPE_SLLI:         alu_op = OP_ALU_SLL;
+                    OP_I_TYPE_SRLI_SRAI:    alu_op = op_sri;
+                    default:                alu_op = OP_ALU_ADD; // case OP_I_TYPE_ADDI and OPCODE_I_TYPE_JALR
+                endcase
+            end else begin: load_operations
+                case (funct3)
+                    OP_DMEM_BYTE:   dmem_size = OP_DMEM_BYTE;
+                    OP_DMEM_HALF:   dmem_size = OP_DMEM_HALF;
+                    OP_DMEM_WORD:   dmem_size = OP_DMEM_WORD;
+                    OP_DMEM_TRPL:   dmem_size = OP_DMEM_TRPL;
+                    OP_I_TYPE_LBU:  {dmem_size, dmem_zero_ex} = {OP_DMEM_BYTE, 1'b1};
+                    OP_I_TYPE_LHU:  {dmem_size, dmem_zero_ex} = {OP_DMEM_HALF, 1'b1};
+                    //OP_I_TYPE_LWU:  {dmem_size, dmem_zero_ex} = {OP_DMEM_WORD, 1'b1};
+                    default:        dmem_size =  OP_DMEM_WORD;
+                endcase
+                rf_wr_data_sel = OP_RF_SEL_MEM;
             end
-            //$display("opcode_i=%0h, dmem_req=%0b, rf_wr_data_sel=%0h, OP_RF_SEL_MEM=%0h, dmem_size=%0b", opcode_i, dmem_req, rf_wr_data_sel, OP_RF_SEL_MEM, dmem_size);
         end
     end
 endmodule

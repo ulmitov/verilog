@@ -40,7 +40,7 @@ module riscv_core #(
 
     fetch fetch_stage (
         .clk(clk),
-        .res_n(res_n),
+        .res(~res_n),
         .pc_mux(pc_mux),
         .pc_jump(pc_jump),
         .imem_data(instruction),

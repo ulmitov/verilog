@@ -6,25 +6,10 @@
 package risc_pkg;
 /* verilator lint_off UNUSEDPARAM */
 parameter int RISCV_XLEN = `XLEN;
-parameter int RESET_PC = 32'h0;     // instructions loaded via readmemh start at 0x00
-parameter NOP_CMD = 'h00000013;
-//parameter EBREAK = 'h00100073;
-parameter int DMEM_BASE_ADDRESS = 32'h0;
 parameter int INST_LEN = 32;
+parameter int INST_BASE_ADDRESS = 32'h0;
+parameter int DMEM_BASE_ADDRESS = 32'h0;
 /* verilator lint_on UNUSEDPARAM */
-
-typedef enum logic [3:0] {
-    OP_ALU_ADD,
-    OP_ALU_SUB,
-    OP_ALU_SLL,
-    OP_ALU_SRL,
-    OP_ALU_SRA,
-    OP_ALU_XOR,
-    OP_ALU_AND,
-    OP_ALU_OR,
-    OP_ALU_SLT,
-    OP_ALU_SLTU
-} op_enum_alu /*verilator public*/;
 
 
 typedef enum logic [6:0] {
@@ -45,12 +30,12 @@ typedef enum logic [6:0] {
 typedef enum logic [2:0] {
     OP_DMEM_BYTE = 3'b000,
     OP_DMEM_HALF = 3'b001,
-    OP_DMEM_WORD = 3'b010,
-    OP_DMEM_DUBL = 3'b011,
-    OP_DMEM_QUAD = 3'b100,
-    OP_DMEM_TRPL = 3'b111,
-    OP_UNUSEDLHU = 3'b101,
-    OP_UNUSEDLWU = 3'b110 
+    OP_DMEM_WORD = 3'b010,      // FLW (OPCODE_FLOATP)
+    OP_DMEM_DUBL = 3'b011,      // FLD (OPCODE_FLOATP)
+    OP_I_TYPE_LBU = 3'b100,     // FLQ (OPCODE_FLOATP)
+    OP_I_TYPE_LHU = 3'b101,
+    OP_DMEM_QUAD = 3'b110,//OP_I_TYPE_LWU
+    OP_DMEM_TRPL = 3'b111
 } op_enum_dmem_size /*verilator public*/;
 
 
@@ -90,22 +75,29 @@ typedef enum logic [3:0] {
 } op_enum_r_type_funct75_funct3;
 
 
-// I type inst
+// I type arithmetic
+typedef enum logic [2:0] {
+    OP_I_TYPE_ADDI  = 3'h0,
+    OP_I_TYPE_SLLI  = 3'h1,
+    OP_I_TYPE_SLTI  = 3'h2,
+    OP_I_TYPE_SLTIU = 3'h3,
+    OP_I_TYPE_XORI  = 3'h4,
+    OP_I_TYPE_ORI   = 3'h6,
+    OP_I_TYPE_ANDI  = 3'h7,
+    OP_I_TYPE_SRLI_SRAI = 3'h5
+} op_enum_i_type_alu_imm /*verilator public*/;
+
+
 typedef enum logic [3:0] {
-    OP_I_TYPE_LB = 4'h0,
-    OP_I_TYPE_LH = 4'h1,
-    OP_I_TYPE_LW = 4'h2,//FLW(opcode 7)
-    OP_I_TYPE_LD = 4'h3,//FLD(opcode 7)
-    OP_I_TYPE_LBU = 4'h4,//FLQ(opcode 7)
-    OP_I_TYPE_LHU = 4'h5,
-    OP_I_TYPE_LWU = 4'h6,
-    OP_I_TYPE_ADDI = 4'h8,
-    OP_I_TYPE_SLTI = 4'hA,
-    OP_I_TYPE_SLTIU = 4'hB,
-    OP_I_TYPE_XORI = 4'hC,
-    OP_I_TYPE_ORI = 4'hE,
-    OP_I_TYPE_ANDI = 4'hF,
-    OP_I_TYPE_SLLI = 4'h9,
-    OP_I_TYPE_SRLI_SRAI = 4'hD
-} op_enum_i_type_funct3 /*verilator public*/;
+    OP_ALU_ADD,
+    OP_ALU_SUB,
+    OP_ALU_SLL,
+    OP_ALU_SRL,
+    OP_ALU_SRA,
+    OP_ALU_XOR,
+    OP_ALU_AND,
+    OP_ALU_OR,
+    OP_ALU_SLT,
+    OP_ALU_SLTU
+} op_enum_alu /*verilator public*/;
 endpackage

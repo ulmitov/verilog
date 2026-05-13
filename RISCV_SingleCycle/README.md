@@ -1,74 +1,19 @@
-# RISCV RV32I single cycle implementation
+# RISCV single cycle implementation
 
 
-## Architecture:
+## Architecture
 ![arch.png](./doc/arch.png)
 
 
-##  Testbench files:
+##  Testbench files
+ - ![Design verification](./testbench) **CPP UVM like testbench**: ![See README](./testbench)
  - `alu.sv` is verified in ![**SystemVerilog testbench**](../tb_sv_alu)
  - `memory.sv` is verified in ![**UMV testbench**](../tb_uvm_mem)
- - `testbench.sv` is a Verilog application level testbench
- - Design verification with a CPP UVM like testbench
-
-
-## CPP Testbench design:
-- Sequencer builds the instructions hex file and also the Reference model and Driver transactions.
-- The test can generate multiple hex files and then run them one by one.
-
-![dvcpp.png](./doc/dvcpp.png)
-
-
-## Design verification
-Objectives:
-- Verify ISA compatibility, design functionality and signalling
-
-Preconditions:
-- Prefill data memory
-
-Strategy:
-- The whole functionality can be verified using the Store commands, which will set output data onto the bus.
-So whole verification depends on Stype and LUI commands.
-
-Test plan:
-- Acceptance test: run commands with zero values
-- Test LUI + Stype output the correct address signals
-- Test LUI + Addi and Stype output the correct data signals
-- Test Load commands output the correct address signals
-- Test Load commands output the correct data signals
-- Test all the Itype immediate commands
-- Test all Rtype ALU commands
-- Test all Btype branch commands
-- Verify the rest of commands
+ - ![testbench/testbench.sv](./testbench/testbench.sv) is a Verilog application level test
 
 
 
-# Application level tests:
-
-
-## bubble_sort.asm
-See array values each rf_wr_en
-![Bubble sort result](./doc/bubble_sort_in.png)
-See sorted values in reg_file address 0x0B through 0x0E (x11-x14)
-![Bubble sort result](./doc/bubble_sort_out.png)
-
-
-
-## fibonacci_sequence.asm
-See values each ram.wen in ram.wr_data
-![Fibonacci result](./doc/fibonacci_out.png)
-
-
-
-## find_max_in_array.asm
-See array values each ram.wen
-![Find max result](./doc/find_max_in_array_in.png)
-Wrote max value 2A to ram address 0x18:
-![Find max result](./doc/find_max_in_array_out.png)
-
-
-
-## Design notes:
+## Design notes
 - Separate memories for instructions and data (Harvard architecture)
 - Instruction memory loads asm code from a hex file and stores it.
 - Fetch unit reads the current instruction according to the current program counter pointer (PC).
@@ -101,7 +46,7 @@ th < tInstFetch(andDecode)_min + tALU_min
 Where th is the minimum hold time either of PC register or RegFile registers.
 
 
-## Run:
+## Run
 ```
 # iverilog:
 make risc_tb_arr;   # find max in array asm

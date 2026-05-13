@@ -111,17 +111,12 @@ public:
             } else {
                 printf("PASSED: got all %d results\n\n", ref_count);
             }
-            if (!drv_fifo.empty()) {
-                printf("ERROR: unsent %ld by driver\n\n", drv_fifo.size());
-                err_total++;
-            }
         } else {
             printf("ERROR: %d errors occurred during test\n\n", err_count);
             err_total += err_count;
         }
         res_count = 0;
         while (!ref_fifo.empty()) ref_fifo.pop();
-        while (!drv_fifo.empty()) drv_fifo.pop();
     }
 
     char is_finished() {

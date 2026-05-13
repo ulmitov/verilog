@@ -1,19 +1,24 @@
 # Contents:
 
-Please navigate to each folder to view the project description Readme
+Each folder has a Readme
 
- - ![UART 16550 module](./UART) according to PC16550D spec and a C++ driver which is used in a Verilator testbench
- - ![RISCV implementation](./RISCV_SingleCycle) with some assembly code to check functionality
+ - ![RISCV implementation](./RISCV_SingleCycle) with assembly application tests
+ - ![RISCV Design verification](./RISCV_SingleCycle/testbench) A Cpp UVM like testbench
  - ![SystemVerilog testbench for ALU](./tb_sv_alu)
  - ![UVM testbench for Memory module](./tb_uvm_mem)
  - ![UVM testbench for FIFO](./tb_uvm_fifo)
- - ![modules](./modules) folder includes different verilog modules and their testbenches
+ - ![modules:](./modules) different verilog modules and their testbenches
+ - ![UART 16550 module](./UART) according to 16550 spec
+ - ![UART C driver](./UART/driver)
+ - ![UART Cpp testbench](./UART/testbench)
 
 
-# Code coverage:
+
+# Verification Code coverage:
+**Current status** of verification coverage: https://ulmitov.github.io/verilog/
+
 **Full run log** can be viewed in last deploy run: https://github.com/ulmitov/verilog/actions
 
-**Current status** of verification coverage: https://ulmitov.github.io/verilog/
 
 
 # Run suites:
@@ -24,6 +29,7 @@ Please navigate to each folder to view the project description Readme
 - `make uvm-fifo`: FIFO UVM testbench
 - `make uvm-mem`: Memory UVM testbench
 - `make alu`: ALU SystemVerilog testbench
+- `make riscdv`: RV32I Cpp testbench
 - `make all`: all testbenches
 
 

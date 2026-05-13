@@ -22,15 +22,15 @@ void print_config(int seed) {
 void run_test(Environment* env) {
 
     test_acceptance(env);
-/*
+
     test_stype_addr(env);
 
     test_stype_data(env);
 
     // note: precondition for this one: prefill data not to be changed by other tests!
-    test_itype_load_addr_bits(env);
+    //test_itype_load_addr_bits(env);
 
-    test_itype_load_data_bits(env);*/
+    //test_itype_load_data_bits(env);
 }
 
 

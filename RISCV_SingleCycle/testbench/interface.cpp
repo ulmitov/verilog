@@ -61,7 +61,6 @@ public:
     }
 
     void set_rd_data(long int data) {
-        if (VERBOSITY) printf("INF: Setting rd_data to 0x%0lx\n", data);
         top->dbus_rd_data = data;
     }
 

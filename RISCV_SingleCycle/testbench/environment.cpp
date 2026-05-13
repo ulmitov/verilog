@@ -5,9 +5,9 @@
 #include "scoreboard.cpp"
 #include "monitor.cpp"
 #include "driver.cpp"
+
 Scoreboard *scb = new Scoreboard();
 Sequencer *sqr = new Sequencer();
-
 
 
 class Environment {
@@ -51,6 +51,7 @@ public:
                 // continue to next test if previous failed: forward expected tx to next set
                 if (!sqr->sqr_fifo.empty()) {
                     scb->forward_to_set(phase_num + 1);
+                    drv->forward_to_set(phase_num + 1);
                 }
             }
             printf("INFO: Finished verification phase %d\n\n", phase_num);
@@ -62,8 +63,13 @@ public:
                 total_cmd, sqr->sqr_fifo.size());
             scb->err_total++;
         }
+        if (!scb->err_count && !drv_fifo.empty()) {
+            printf("ERROR: unsent %ld transactions by driver\n\n", drv_fifo.size());
+            scb->err_total++;
+        }
         // post test phase prepare for next test
         scb->post_test();
+        while (!drv_fifo.empty()) drv_fifo.pop();
         sqr->split_count = 0;
     }
 

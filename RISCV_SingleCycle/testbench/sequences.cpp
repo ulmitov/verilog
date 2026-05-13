@@ -15,6 +15,7 @@ void push_ref(Transaction *req, char no_zero_cmd = 0) {
     }
     if (no_zero_cmd) return;
     if (sqr->sqr_fifo.size() / INSTRUCTIONS_LIMIT > sqr->split_count) {
+        if (VERBOSITY) printf("DEBUG: --- ZERO CMD ---\n");
         sqr->push(0);
     }
 }
@@ -90,17 +91,17 @@ void seq_itype(const char *name, struct isa_itype *cmd, char load_format = 0) {
 // Load instructions
 void seq_lb(struct isa_itype *cmd) {
     cmd->opcode = Vriscv_risc_pkg::OPCODE_I_TYPE_LOAD;
-    cmd->funct3 = Vriscv_risc_pkg::OP_I_TYPE_LB;        // TODO: can change to BYTE ?
+    cmd->funct3 = Vriscv_risc_pkg::OP_DMEM_BYTE;
     seq_itype("lb", cmd, 1);
 }
 void seq_lh(struct isa_itype *cmd) {
     cmd->opcode = Vriscv_risc_pkg::OPCODE_I_TYPE_LOAD;
-    cmd->funct3 = Vriscv_risc_pkg::OP_I_TYPE_LH;
+    cmd->funct3 = Vriscv_risc_pkg::OP_DMEM_HALF;
     seq_itype("lh", cmd, 1);
 }
 void seq_lw(struct isa_itype *cmd) {
     cmd->opcode = Vriscv_risc_pkg::OPCODE_I_TYPE_LOAD;
-    cmd->funct3 = Vriscv_risc_pkg::OP_I_TYPE_LW;
+    cmd->funct3 = Vriscv_risc_pkg::OP_DMEM_WORD;
     seq_itype("lw", cmd, 1);
 }
 void seq_lt(struct isa_itype *cmd) {            // custom command: load tripple
@@ -118,11 +119,13 @@ void seq_lhu(struct isa_itype *cmd) {
     cmd->funct3 = Vriscv_risc_pkg::OP_I_TYPE_LHU;
     seq_itype("lhu", cmd, 1);
 }
+/*
 void seq_lwu(struct isa_itype *cmd) {
     cmd->opcode = Vriscv_risc_pkg::OPCODE_I_TYPE_LOAD;
     cmd->funct3 = Vriscv_risc_pkg::OP_I_TYPE_LWU;
     seq_itype("lwu", cmd, 1);
 }
+*/
 // Arithmetic instructions
 void seq_addi(struct isa_itype *cmd) {
     cmd->opcode = Vriscv_risc_pkg::OPCODE_I_TYPE_ALU;

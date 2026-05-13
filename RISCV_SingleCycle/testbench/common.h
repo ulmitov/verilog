@@ -21,6 +21,7 @@
 #endif
 #define SEQUENCES_NUM 40
 int RETURN_CODE = 0;
+int INSTRUCTIONS_LIMIT = (Vriscv___024root::riscv__DOT__instruction_mem__DOT__DEPTH / 4) - 20;
 
 
 // DUT parameters
@@ -33,7 +34,6 @@ const int HOLD_TIME = 2;
 
 const int XLEN = Vriscv_risc_pkg::RISCV_XLEN;
 const int DATA_MEMORY_DEPTH = Vriscv___024root::riscv__DOT__MEM_DEPTH;
-const int INSTRUCTIONS_LIMIT = (Vriscv___024root::riscv__DOT__instruction_mem__DOT__DEPTH / 4) - 20;
 const int DATA_MEMORY_BASE_ADDR = Vriscv_risc_pkg::DMEM_BASE_ADDRESS;
 const int DATA_MEMORY_LAST_ADDR = DATA_MEMORY_BASE_ADDR + DATA_MEMORY_DEPTH;
 

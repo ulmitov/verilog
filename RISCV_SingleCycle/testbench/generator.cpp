@@ -43,6 +43,7 @@ void generate_bit_stimulus(
     }
 }
 
+
 /* Sign extend 32 bit */
 int sign_extend(int data, int bits_num = 12) {  // For 64 bits will need to return long
     bits_num = 32 - bits_num;
@@ -394,9 +395,9 @@ void generate_itype_load_data(int bits_width) {
         for (int i = 0; i < SEQUENCES_NUM; i++) {
 
             // set base address to read outside of data memory
-            // this address will be used by driver to drive rd data
+            // this address should be unique as it will be used by driver to drive rd data
             lui_base.rd = REGFILE_A1;
-            lui_base.imm = 0xF0000; // TODO: set random vals or stimulus?
+            lui_base.imm = 0xA0000 + rand() % 0x60000; // TODO: set random vals or stimulus?
             seq_lui(&lui_base);
 
             // fill data destination reg high bits
@@ -441,8 +442,16 @@ void generate_itype_load_data(int bits_width) {
             drv_req.wr = 0;
             drv_req.addr = (lui_base.imm << 12) + sign_extend(load.imm);
             // TODO: for external memory, add block size logic in load commands, then remove the data mask from here:
-            drv_req.rd_data = rand() & data_mask;   // TODO apply stimulus here, need to verifu high to low, etc...
+            // also apply stimulus here, need to verify high to low, etc...
+            drv_req.rd_data = rand() & data_mask;
+            sprintf(drv_req.str, "%s\n%s\n%s\n%s\n",
+                    lui_base.str, lui_data.str, addi.str, load.str);
+            drv_req.test_id = sqr->split_count;
             drv_fifo.push(drv_req);
+            if (VERBOSITY) {
+                printf("DEBUG: GEN: pushed to driver transaction with addr %0lx, rd_data %0lx\n",
+                drv_req.addr, drv_req.rd_data);
+            }
 
             ref_req.wr = 0;
             ref_req.wr_data = 0;
@@ -484,9 +493,10 @@ void generate_itype_load_data(int bits_width) {
             ref_req.wr = 1;
             ref_req.rd_data = 0;
             ref_req.addr = (lui_base_stype.imm << 12) + sign_extend(stype.imm);
-            ref_req.wr_data = dreg ? (reg_val & !data_mask) + (drv_req.rd_data & data_mask) : 0;
+            ref_req.wr_data = dreg ? sign_extend(drv_req.rd_data, bits_width) : 0;
+            // LBU: ref_req.wr_data = dreg ? (reg_val & !data_mask) + (drv_req.rd_data & data_mask) : 0;
             sprintf(ref_req.str, "%s\n%s\n%s\n%s\n%s\n%s\n",
-                    lui_base_stype.str, lui_base.str, lui_data.str, addi.str, load.str, stype.str);
+                    lui_base.str, lui_data.str, addi.str, load.str, lui_base_stype.str, stype.str);
             push_ref(&ref_req);
         }
     }

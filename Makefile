@@ -17,6 +17,7 @@ VERILATOR_ARGS := 	-Wno-lint -Wno-TIMESCALEMOD -Wno-SELRANGE -Wno-UNOPTFLAT -Wno
 
 define get_coverage
 	pwd
+	ls *.dat || true; ls ./vcd *.dat || true;
 	verilator_coverage --write coverage_merged.dat $$(find ./vcd -type f -name "cov_*.dat" | xargs)
 	grep -v -E "UVM/|testbench|verilated_std.sv|tb_sv_alu|tb_uvm_fifo|tb_uvm_mem" coverage_merged.dat > coverage_merged_notb.dat
 	verilator_coverage --write-info coverage_merged.info coverage_merged_notb.dat
