@@ -2,7 +2,7 @@ import risc_pkg::*;
 
 
 module decode (
-    input logic [31:0] instruction,
+    input logic [INST_LEN-1:0] instruction,
     
     output logic [6:0] opcode,
     output logic [4:0] rd_addr,

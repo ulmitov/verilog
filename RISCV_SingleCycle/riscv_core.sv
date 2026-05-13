@@ -107,14 +107,18 @@ module riscv_core #(
         .rf_wr_data_sel(rf_wr_data_sel)
     );
 
+    data_handler dh_block (
+        .block_size(dmem_size),
+        .data_in(rs2_data),
+        .data_out(dmem_wr_data)
+    );
+
 
     `ifdef DEBUG_RUN
         // DEBUG only: set x when no need for data
-        assign dmem_addr = dmem_req ? alu_res[31:0] : {32{1'bX}};
-        assign dmem_wr_data = dmem_req ? rs2_data : {XLEN{1'bX}};
+        assign dmem_addr = dmem_req ? alu_res : 'bX;
     `else
         assign dmem_addr = alu_res;
-        assign dmem_wr_data = rs2_data;
     `endif
 
     assign alu_a = op1_sel ? pc : rs1_data;         // 1- pc, 0- rs1

@@ -24,7 +24,7 @@ class monitor extends uvm_monitor;
         super.run_phase(phase);
         req = transaction::type_id::create("req");
         forever begin
-            wait(!vif.DRIVER_MP.res);
+            wait(!vif.DRIVER_MP.cb_mon.res);
             @(vif.MONITOR_MP.cb_mon);
             req.pull    = vif.MONITOR_MP.cb_mon.pull;
             req.push    = vif.MONITOR_MP.cb_mon.push;
