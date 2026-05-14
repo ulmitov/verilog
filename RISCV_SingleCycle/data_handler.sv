@@ -14,28 +14,18 @@ module data_handler #(parameter XLEN = RISCV_XLEN) (
         if (XLEN == 16) begin
             always_comb begin
                 case(block_size)
-                    OP_DMEM_BYTE: data_out = {8'b0, data_in[7:0]};
+                    OP_DMEM_BYTE: data_out = {{(XLEN-08){1'b0}}, data_in[7:0]};
                     default: data_out = data_in;
                 endcase
             end
         end
-        if (XLEN == 32) begin
+        if (XLEN >= 32) begin
             always_comb begin
                 case(block_size)
-                    OP_DMEM_BYTE: data_out = {24'b0, data_in[7:0]};
-                    OP_DMEM_HALF: data_out = {16'b0, data_in[15:0]};
-                    OP_DMEM_TRPL: data_out = {8'b0, data_in[23:0]};
-                    default: data_out = data_in;
-                endcase
-            end
-        end
-        if (XLEN == 64) begin
-            always_comb begin
-                case(block_size)
-                    OP_DMEM_BYTE: data_out = {56'b0, data_in[7:0]};
-                    OP_DMEM_HALF: data_out = {48'b0, data_in[15:0]};
-                    OP_DMEM_TRPL: data_out = {40'b0, data_in[23:0]};
-                    OP_DMEM_WORD: data_out = {32'b0, data_in[31:0]};
+                    OP_DMEM_BYTE: data_out = {{(XLEN-08){1'b0}}, data_in[7:0]};
+                    OP_DMEM_HALF: data_out = {{(XLEN-16){1'b0}}, data_in[15:0]};
+                    OP_DMEM_TRPL: data_out = {{(XLEN-24){1'b0}}, data_in[23:0]};
+                    OP_DMEM_WORD: data_out = {{(XLEN-32){1'b0}}, data_in[31:0]};
                     //OP_DMEM_DUBL: data_out = {data_in[63:0]};
                     default: data_out = data_in;
                 endcase

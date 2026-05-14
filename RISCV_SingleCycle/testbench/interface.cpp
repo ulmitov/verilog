@@ -6,11 +6,6 @@
 class Interface {
 public:
     unsigned long timestamp;
-    const IData& _req;
-    const IData& _wr;
-    IData& _addr;
-    IData& _wr_data;
-    const IData& _rd_data;
     Vriscv___024root *root;  // Root instance pointer to allow access to model internals,
     Vriscv *top;
     VerilatedVcdC* vcd;
@@ -19,11 +14,6 @@ public:
         timestamp(0),
         vcd(vcdc ? new VerilatedVcdC() : nullptr),
         top(dut),
-        _req(dut->dmem_req),
-        _wr(dut->dmem_wr),
-        _addr(dut->dmem_addr),
-        _wr_data(dut->dbus_wr_data),
-        _rd_data(dut->dbus_rd_data),
         root(dut->rootp)
     {
         if (vcdc) {
@@ -62,12 +52,6 @@ public:
 
     void set_rd_data(long int data) {
         top->dbus_rd_data = data;
-    }
-
-    void print_alias() {
-        printf("ITF_ALIAS: addr=%08x  dmem_req=%d  dmem_wr=%d  wr_data=%08x  rd_data=%08x ALU=%d\n\n",
-            _addr, _req, _wr, _wr_data, _rd_data, root->riscv__DOT__core__DOT__alu_res
-        );
     }
 
     void eval_sim(int interval = 0) {
@@ -134,9 +118,9 @@ public:
             /*
             if (addr() >= DATA_MEMORY_BASE_ADDR && addr() < DATA_MEMORY_LAST_ADDR) {
                 printf("DMEM DUMP: ");
-                for (int i = 0; i < 8; i++) {
+                for (int i = 0; i < 4; i++) {
                     try {
-                        printf("%d ", top->rootp->riscv__DOT__data_mem__DOT__mem_block__DOT__MEMX[addr()+i]);
+                        printf("%d ", top->rootp->riscv__DOT__data_mem__DOT__MEMX[addr()][i]);
                     } catch (...) {
                         printf("Error dumping dmem address %d\n", addr() + i);
                     }
@@ -181,7 +165,7 @@ public:
                 top->dbus_wr_data,
                 top->dbus_rd_data
             );
-        } else {
+        } else if (VERBOSITY) {
             //if (VERBOSITY) {
                 printf("[%lu] CORE: pc=%08x  instruction=%08x  opcode=0x%0x  rf_wr_data_sel=%d  rd_addr=%08x  rs1_addr=%08x  rs2_addr=%08x  imm=%08x\n",
                     timestamp,

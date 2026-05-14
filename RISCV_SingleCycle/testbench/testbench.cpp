@@ -10,6 +10,7 @@
 void print_config(int seed) {
     printf("********* TEST CONFIG *********\n");
     printf("Test seed %d\n", seed);
+    printf("XLEN %d\n", XLEN);
     printf("SEQUENCES_NUM %d\n", SEQUENCES_NUM);
     printf("CLK_PHASE %d\n", CLK_PHASE);
     printf("INSTRUCTIONS_LIMIT %d\n", INSTRUCTIONS_LIMIT);
@@ -27,12 +28,11 @@ void run_test(Environment* env) {
 
     test_stype_data(env);
 
-    // precondition for this one: prefill data not to be changed by other tests!
+    // precondition for addr tests: prefill data not to be changed by other tests!
     test_itype_load_addr_bits(env);
+    test_itype_load_unsigned_addr_bits(env);
 
     test_itype_load_data_bits(env);
-
-    test_itype_load_unsigned_addr_bits(env);
 
     test_itype_load_unsigned_data_bits(env);
 }
@@ -53,7 +53,7 @@ int main (int argc, char **argv) {
     Environment* env = new Environment(inf);
 
     inf->top->clk = 1;
-    inf->eval_sim();
+    //inf->eval_sim();
 
     seq_prefill_data_memory();
     inf->prefill_data_memory();

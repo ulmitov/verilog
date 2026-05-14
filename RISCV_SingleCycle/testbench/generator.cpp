@@ -107,7 +107,7 @@ void generate_stype_imm_lui_imm(int bits_width) {
     unsigned long int stimulus_12[SEQUENCES_NUM];
     unsigned long int stimulus_20[SEQUENCES_NUM];
 
-    printf("INFO: Generating transactions: %d bits Stype rs1 imm and lui imm fields, address lines verification\n", bits_width);
+    printf("INFO: Generating transactions: %d bits Stype rs1 imm and lui imm fields verification\n", bits_width);
     generate_bit_stimulus(&stimulus_12[0], 12);
     generate_bit_stimulus(&stimulus_20[0], 20);
 
@@ -163,7 +163,7 @@ void generate_stype_data(int bits_width) {
     generate_bit_stimulus(&stimulus_12[0], 12);
     generate_bit_stimulus(&stimulus_20[0], 20);
 
-    // TODO: maybe move it into the loops ?
+    // TODO: if the loops get bigger then move it inside the loops
     lui_base.rd = REGFILE_A0;
     lui_base.imm = DATA_MEMORY_BASE_ADDR >> 12;
     seq_lui(&lui_base);
@@ -184,7 +184,7 @@ void generate_stype_data(int bits_width) {
             seq_addi(&addi);
 
             // Stype: copy value from [rs2] into mem[[rs1]+imm]
-            stype.imm = (stimulus_12[i] / 4) * 4;    // 4 bytes aligned
+            stype.imm = (stimulus_12[i] / WORD_LEN) * WORD_LEN;    // 4 bytes aligned
             stype.rs1 = lui_base.rd;
             stype.rs2 = reg;
 
@@ -286,7 +286,7 @@ void generate_itype_load_address(int bits_width, char unsigned_commands = 0) {
     unsigned long int stimulus_20[SEQUENCES_NUM];
     int data_mask;
 
-    printf("INFO: Generating transactions: %d bits Itype load command verification\n", bits_width);
+    printf("INFO: Generating transactions: %d bits Itype load command addr verification\n", bits_width);
     generate_bit_stimulus(&stimulus_12[0], 12);
     generate_bit_stimulus(&stimulus_20[0], 20);
 
@@ -404,7 +404,7 @@ void generate_itype_load_data(int bits_width, char unsigned_commands = 0) {
     int data_mask;
     long int reg_val;
 
-    printf("INFO: Generating transactions: %d bits Itype load command verification\n", bits_width);
+    printf("INFO: Generating transactions: %d bits Itype load command data verification\n", bits_width);
     generate_bit_stimulus(&stimulus_12[0], 12);
     //generate_bit_stimulus(&stimulus_20[0], 20);
 
@@ -433,7 +433,7 @@ void generate_itype_load_data(int bits_width, char unsigned_commands = 0) {
             // Load Itype: copy value from mem[[rs1]+imm] into reg[rd]
             load.rd = dreg;
             load.rs1 = lui_base.rd;
-            load.imm = (stimulus_12[i]);// / 4) * 4;    // 4 bytes aligned
+            load.imm = (stimulus_12[i]);// / WORD_LEN) * WORD_LEN;    // 4 bytes aligned
 
             switch(bits_width) {
                 case 8:
@@ -479,10 +479,10 @@ void generate_itype_load_data(int bits_width, char unsigned_commands = 0) {
                     lui_base.str, lui_data.str, addi.str, load.str);
             drv_req.test_id = sqr->split_count;
             drv_fifo.push(drv_req);
-            if (VERBOSITY) {
+            //if (VERBOSITY) {
                 printf("DEBUG: GEN: pushed to driver transaction with addr %0lx, rd_data %0lx\n",
                 drv_req.addr, drv_req.rd_data);
-            }
+            //}
 
             ref_req.wr = 0;
             ref_req.wr_data = 0;
@@ -498,9 +498,9 @@ void generate_itype_load_data(int bits_width, char unsigned_commands = 0) {
             lui_base_stype.rd = REGFILE_A0;
             lui_base_stype.imm = DATA_MEMORY_BASE_ADDR << 12;
             seq_lui(&lui_base_stype);
-            
+
             // Stype: copy value from [rs2] into mem[[rs1]+imm]
-            stype.imm = ((rand() % 0x1000) / 4) * 4;    // 4 bytes aligned
+            stype.imm = ((rand() % 0x1000) / WORD_LEN) * WORD_LEN;    // 4 bytes aligned
             stype.rs1 = lui_base_stype.rd;
             stype.rs2 = dreg;
 

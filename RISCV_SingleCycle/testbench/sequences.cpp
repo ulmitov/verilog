@@ -7,15 +7,18 @@ extern Sequencer *sqr;
 
 void push_ref(Transaction *req, char no_zero_cmd = 0) {
     req->test_id = sqr->split_count;
+    //req->wr_data &= (1UL << XLEN) - 1;
+    //req->rd_data &= (1UL << XLEN) - 1;
     ref_fifo.push(*req);
-    if (VERBOSITY) {
+    if (VERBOSITY) printf("%s\n", req->str);
+    //if (VERBOSITY) {
         printf("DEBUG [%ld]: EXPECT: addr=%08lx data=%08lx\n",
             ref_fifo.size() - 1, req->addr, req->wr_data
         );
-    }
+    //}
     if (no_zero_cmd) return;
     if (sqr->sqr_fifo.size() / INSTRUCTIONS_LIMIT > sqr->split_count) {
-        if (VERBOSITY) printf("DEBUG: --- ZERO CMD ---\n");
+        printf("DEBUG: --- ZERO CMD ---\n");
         sqr->push(0);
     }
 }
@@ -38,7 +41,6 @@ void seq_lui(struct isa_lui *cmd) {
     decoded_val = cmd->opcode | (cmd->rd << 7) | (cmd->imm << 12);
     sprintf(cmd->str, "%08x\t lui x%d, 0x%0x",
         decoded_val, cmd->rd, cmd->imm);
-    if (VERBOSITY) printf("%s\n", cmd->str);
     sqr->push(decoded_val);
 }
 
@@ -50,7 +52,6 @@ void seq_stype(const char *name, struct isa_stype *cmd) {
     decoded_val += (cmd->rs1 << 15) | (cmd->rs2 << 20) | ((cmd->imm >> 5) << 25);
     sprintf(cmd->str, "%08x\t %s x%d, 0x%0x(x%d)",
         decoded_val, name, cmd->rs2, cmd->imm, cmd->rs1);
-    if (VERBOSITY) printf("%s\n", cmd->str);
     sqr->push(decoded_val);
 }
 void seq_sb(struct isa_stype *cmd) {
@@ -87,7 +88,6 @@ void seq_itype(const char *name, struct isa_itype *cmd, char load_format = 0) {
         sprintf(cmd->str, "%08x\t %s x%d, x%d, 0x%0x",
                 decoded_val, name, cmd->rd, cmd->rs1, cmd->imm);
     }
-    if (VERBOSITY) printf("%s\n", cmd->str);
     sqr->push(decoded_val);
 }
 // Load instructions

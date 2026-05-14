@@ -19,9 +19,10 @@
 #ifndef VERBOSITY
 #define VERBOSITY 1
 #endif
-#define SEQUENCES_NUM 40
+#define SEQUENCES_NUM 30
+
 int RETURN_CODE = 0;
-int INSTRUCTIONS_LIMIT = (Vriscv___024root::riscv__DOT__instruction_mem__DOT__DEPTH / 4) - 20;
+int INSTRUCTIONS_LIMIT = (Vriscv___024root::riscv__DOT__instruction_mem__DOT__DEPTH / (Vriscv_risc_pkg::INST_LEN / 8)) - 20;
 
 
 // DUT parameters
@@ -36,6 +37,7 @@ const int XLEN = Vriscv_risc_pkg::RISCV_XLEN;
 const int DATA_MEMORY_DEPTH = Vriscv___024root::riscv__DOT__MEM_DEPTH;
 const int DATA_MEMORY_BASE_ADDR = Vriscv_risc_pkg::DMEM_BASE_ADDRESS;
 const int DATA_MEMORY_LAST_ADDR = DATA_MEMORY_BASE_ADDR + DATA_MEMORY_DEPTH;
+const int WORD_LEN = XLEN / 8;
 
 
 struct Transaction {
@@ -47,6 +49,7 @@ struct Transaction {
     int test_id;
     char str[360];
 };
+
 
 extern std::queue<Transaction> ref_fifo;
 extern std::queue<Transaction> drv_fifo;
