@@ -6,6 +6,7 @@
 #include "monitor.cpp"
 #include "driver.cpp"
 
+extern Logger *logger;
 Scoreboard *scb = new Scoreboard();
 Sequencer *sqr = new Sequencer();
 
@@ -37,9 +38,10 @@ public:
         int phase_num = 0;
         total_cmd = sqr->sqr_fifo.size();   // zero commands are not in fifo
         scb->pre_test();
-        printf("INFO: Starting main test: processing %d instructions\n", total_cmd);
+        printf("INFO: Starting main test: processing %d instructions. Logger is %d\n", total_cmd, logger->prefix);
 
         while (!sqr->sqr_fifo.empty()) {
+            logger->start_log(phase_num);
             sqr->main();
             printf("INFO: finished building mem file %d with %d transactions out of %d. Current queue size: %ld\n",
                 phase_num, sqr->cmd_count, total_cmd, sqr->sqr_fifo.size());
@@ -48,11 +50,20 @@ public:
             inf->reset();
 
             if (run_phase()) {
+                // log output:
+                printf("INFO: Caused by last transaction:\n");
+                inf->dump(1);
+                printf("INFO: Peeking on the next transaction:\n");
+                inf->wait(CLK_PHASE * 2);
+                inf->dump(1);
+
                 // continue to next test if previous failed: forward expected tx to next set
                 if (!sqr->sqr_fifo.empty()) {
                     scb->forward_to_set(phase_num + 1);
                     drv->forward_to_set(phase_num + 1);
                 }
+                printf("INFO: Printing the full log for current phase:\n");
+                logger->print_log(phase_num);
             }
             printf("INFO: Finished verification phase %d\n\n", phase_num);
             phase_num++;
@@ -90,11 +101,6 @@ public:
                 break;
             }
             if (scb->main()) {
-                printf("INFO: Caused by last transaction:\n");
-                inf->dump(1);
-                printf("INFO: Peeking on the next transaction:\n");
-                inf->wait(CLK_PHASE * 2);
-                inf->dump(1);
                 return 1;
             }
             // wait until posedge (this wait can be moved into the end of monitor main)

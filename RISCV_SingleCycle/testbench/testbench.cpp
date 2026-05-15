@@ -1,6 +1,7 @@
 #ifndef COMMON_H
 #include "common.h"
 #endif
+#include "logger.cpp"
 #include "interface.cpp"
 #include "environment.cpp"
 #include "generator.cpp"
@@ -10,6 +11,7 @@
 void print_config(int seed) {
     printf("********* TEST CONFIG *********\n");
     printf("Test seed %d\n", seed);
+    printf("VERBOSITY %d\n", VERBOSITY);
     printf("XLEN %d\n", XLEN);
     printf("SEQUENCES_NUM %d\n", SEQUENCES_NUM);
     printf("CLK_PHASE %d\n", CLK_PHASE);
@@ -53,13 +55,13 @@ int main (int argc, char **argv) {
     Environment* env = new Environment(inf);
 
     inf->top->clk = 1;
-    //inf->eval_sim();
 
     seq_prefill_data_memory();
     inf->prefill_data_memory();
 
     run_test(env);
 
+    delete logger;
     delete env;
     delete inf;
     delete top;

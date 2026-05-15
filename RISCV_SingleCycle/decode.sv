@@ -2,7 +2,7 @@ import risc_pkg::*;
 
 
 module decode (
-    input logic [INST_LEN-1:0] instruction,
+    input logic [IALIGN-1:0] instruction,
     
     output logic [6:0] opcode,
     output logic [4:0] rd_addr,
@@ -58,7 +58,7 @@ module decode (
             OPCODE_R_TYPE:          r_type = 1'b1;
             OPCODE_S_TYPE:          s_type = 1'b1;
             OPCODE_B_TYPE:          b_type = 1'b1;
-            OPCODE_J_TYPE:          j_type = 1'b1;
+            OPCODE_U_TYPE_JAL:      j_type = 1'b1;
             OPCODE_U_TYPE_LUI,
             OPCODE_U_TYPE_AUIPC:    u_type = 1'b1;
             OPCODE_I_TYPE_ALU,

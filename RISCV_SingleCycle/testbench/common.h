@@ -22,7 +22,7 @@
 #define SEQUENCES_NUM 30
 
 int RETURN_CODE = 0;
-int INSTRUCTIONS_LIMIT = (Vriscv___024root::riscv__DOT__instruction_mem__DOT__DEPTH / (Vriscv_risc_pkg::INST_LEN / 8)) - 20;
+int INSTRUCTIONS_LIMIT = (Vriscv___024root::riscv__DOT__instruction_mem__DOT__DEPTH / (Vriscv_risc_pkg::IALIGN / 8)) - 20;
 
 
 // DUT parameters
@@ -55,8 +55,7 @@ extern std::queue<Transaction> ref_fifo;
 extern std::queue<Transaction> drv_fifo;
 
 
-// load (imm << 12) into reg[rd]
-struct isa_lui {
+struct isa_utype {
     char str[50];
     int opcode;
     unsigned int rd;    // 5 bits
@@ -64,7 +63,6 @@ struct isa_lui {
 };
 
 
-// S type: copy value in reg[rs2] into mem[reg[rs1]+imm]. Imm is sign extended.
 struct isa_stype {
     char str[50];
     int opcode;
@@ -75,7 +73,6 @@ struct isa_stype {
 };
 
 
-// I type: rd = rs1 + imm
 struct isa_itype {
     char str[50];
     int opcode;
@@ -83,4 +80,25 @@ struct isa_itype {
     unsigned int rd;    // 5 bits
     unsigned int rs1;   // 5 bits
     signed int imm;     // 12 bits
+};
+
+
+struct isa_btype {
+    char str[50];
+    int opcode;
+    int funct3;
+    unsigned int rs1;   // 5 bits
+    unsigned int rs2;   // 5 bits
+    signed int imm;     // 12 bits
+};
+
+
+struct isa_rtype {
+    char str[50];
+    int opcode;
+    int funct3;
+    unsigned int rd;    // 5 bits
+    unsigned int rs1;   // 5 bits
+    unsigned int rs2;   // 5 bits
+    unsigned int funct7;// 7 bits
 };

@@ -72,10 +72,6 @@ void test_itype_load_addr_bits(Environment* env) {
         printf("INFO: Finished LH command addr test\n");
     }
     if (XLEN >= 32) {
-        generate_itype_load_address(24);
-        env->main();
-        printf("INFO: Finished LT command addr test\n");
-
         generate_itype_load_address(32);
         env->main();
         printf("INFO: Finished LW command addr test\n");
@@ -95,6 +91,10 @@ void test_itype_load_unsigned_addr_bits(Environment* env) {
         printf("INFO: Finished LHU command addr test\n");
     }
     if (XLEN >= 32) {
+        generate_itype_load_address(24, 1);
+        env->main();
+        printf("INFO: Finished LT command addr test\n");
+
         generate_itype_load_address(32, 1);
         env->main();
         printf("INFO: Finished LWU command addr test\n");
@@ -114,10 +114,6 @@ void test_itype_load_data_bits(Environment* env) {
         printf("INFO: Finished LH command data test\n");
     }
     if (XLEN >= 32) {
-        generate_itype_load_data(24);
-        env->main();
-        printf("INFO: Finished LT command data test\n");
-
         generate_itype_load_data(32);
         env->main();
         printf("INFO: Finished LW command data test\n");
@@ -137,6 +133,10 @@ void test_itype_load_unsigned_data_bits(Environment* env) {
         printf("INFO: Finished LHU command data test\n");
     }
     if (XLEN >= 32) {
+        generate_itype_load_data(24, 1);
+        env->main();
+        printf("INFO: Finished LT command data test\n");
+
         generate_itype_load_data(32, 1);
         env->main();
         printf("INFO: Finished LWU command data test\n");

@@ -13,7 +13,7 @@ public:
 
     void push(unsigned int val);
 
-    void put_bytes(const char *file_path, unsigned long int input_val, int word_len = 4);
+    void put_bytes(const char *file_path, unsigned long int input_val, int word_len = Vriscv_risc_pkg::IALIGN / 8);
 };
 
 

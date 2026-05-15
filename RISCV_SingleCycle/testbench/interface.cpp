@@ -2,6 +2,8 @@
 #include "common.h"
 #endif
 
+extern Logger *logger;
+
 
 class Interface {
 public:
@@ -31,7 +33,7 @@ public:
             delete vcd;
         }
         top->final();
-        VerilatedCov::write("cov_riscdv.dat");
+        VerilatedCov::write("vcd/cov_riscdv.dat");
     }
 
     char req() {
@@ -112,6 +114,13 @@ public:
         svSetScope(svGetScopeFromName("TOP.riscv.data_mem"));
         Vriscv::initmem(mem_fname);
     }
+
+    int is_data_memory_address() {
+        if (addr() >= DATA_MEMORY_BASE_ADDR && addr() < DATA_MEMORY_LAST_ADDR) {
+            return 1;
+        }
+        return 0;
+    }
     
     void dump(int full = 0) {
         if (full) {
@@ -165,21 +174,19 @@ public:
                 top->dbus_wr_data,
                 top->dbus_rd_data
             );
-        } else if (VERBOSITY) {
-            //if (VERBOSITY) {
-                printf("[%lu] CORE: pc=%08x  instruction=%08x  opcode=0x%0x  rf_wr_data_sel=%d  rd_addr=%08x  rs1_addr=%08x  rs2_addr=%08x  imm=%08x\n",
-                    timestamp,
-                    top->rootp->riscv__DOT__core__DOT__fetch_block__DOT__imem_addr,
-                    top->rootp->riscv__DOT__core__DOT__instruction,
-                    top->rootp->riscv__DOT__core__DOT__opcode,
-                    top->rootp->riscv__DOT__core__DOT__rf_wr_data_sel,
-                    top->rootp->riscv__DOT__core__DOT__rd_addr,
-                    top->rootp->riscv__DOT__core__DOT__rs1_addr,
-                    top->rootp->riscv__DOT__core__DOT__rs2_addr,
-                    top->rootp->riscv__DOT__core__DOT__immediate
-                );
-            //}
-            printf("[%lu] DEBUG: DATABUS: addr=%08x  dmem_req=%d  dmem_wr=%d  wr_data=%08x  rd_data=%08x\n\n",
+        } else {
+            fprintf(logger->fptr, "[%lu] CORE: pc=%08x  instruction=%08x  opcode=0x%0x  rf_wr_data_sel=%d  rd_addr=%08x  rs1_addr=%08x  rs2_addr=%08x  imm=%08x\n",
+                timestamp,
+                top->rootp->riscv__DOT__core__DOT__fetch_block__DOT__imem_addr,
+                top->rootp->riscv__DOT__core__DOT__instruction,
+                top->rootp->riscv__DOT__core__DOT__opcode,
+                top->rootp->riscv__DOT__core__DOT__rf_wr_data_sel,
+                top->rootp->riscv__DOT__core__DOT__rd_addr,
+                top->rootp->riscv__DOT__core__DOT__rs1_addr,
+                top->rootp->riscv__DOT__core__DOT__rs2_addr,
+                top->rootp->riscv__DOT__core__DOT__immediate
+            );
+            fprintf(logger->fptr, "[%lu] DEBUG: DATABUS: addr=%08x  dmem_req=%d  dmem_wr=%d  wr_data=%08x  rd_data=%08x\n\n",
                 timestamp,
                 top->dmem_addr,
                 top->dmem_req,

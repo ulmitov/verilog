@@ -4,7 +4,7 @@ SHELL := $(pwd)vvp.sh
 #SHELL := /bin/bash
 SIM ?= iverilog
 RM_OBJDIR := false
-DEBUG_ARG := -CFLAGS \"-g -DDEBUG_MODE\"
+DEBUG_ARG := --runtime-debug -CFLAGS \"-O0 -g -DDEBUG_MODE\"
 RUNTIME_DBG := --prof-cfuncs -CFLAGS -DVL_DEBUG --stats --debug --runtime-debug
 _mkvcdir := $(shell mkdir -p vcd)
 RM_OBJDIR_CMD := find . -type d -name "obj_dir" -exec rm -rf {} +
@@ -51,15 +51,16 @@ endef
 
 
 clean:
-	find . -type f -name "*.vvp" -delete
+	find . -type f -name "cov*.dat" -delete
 	find . -type f -name "dsim.*" -delete
 	find . -type f -name "dvlcom.*" -delete
-	find . -type f -name "cov*.dat" -delete
 	find . -type f -name "*.info" -delete
 	find . -type f -name "*.log" -delete
-	find . -type d -name "obj_dir" -exec rm -rf {} +
-	find . -type d -name "dsim_work" -exec rm -rf {} +
+	find . -type f -name "*.txt" -delete
+	find . -type f -name "*.vvp" -delete
 	find . -type d -name "covhtml" -exec rm -rf {} +
+	find . -type d -name "dsim_work" -exec rm -rf {} +
+	find . -type d -name "obj_dir" -exec rm -rf {} +
 
 ver:
 	$(call run_verilator,$(TOP),$(SRC))
@@ -68,9 +69,9 @@ vvp:
 
 get_coverage:
 	$(call get_coverage)
+
 dsim_report:
 	dcreport -out_dir dir metrics.db
-
 
 lint:
 	verilator --lint-only -Wall -y $(pwd)modules -I$(pwd)modules/ $(ARG)
@@ -169,6 +170,7 @@ risc_mod := memory.sv adder.v shift.v mux.v
 define run_risc
 	$(call run_sim,$(1),RISCV_SingleCycle/testbench/testbench.sv $(foreach x,$(risc_src),RISCV_SingleCycle/$(x)) $(foreach x,$(risc_mod),modules/$(x)))
 endef
+# Application tests
 risc_tb_arr:
 	$(call run_risc,tb_asm_arr)
 risc_tb_bub:
@@ -176,17 +178,12 @@ risc_tb_bub:
 risc_tb_fib:
 	$(call run_risc,tb_asm_fib)
 
+# RISCV CPP testbench
 riscdv:
 	tb=riscv
 	src="$(foreach x,$(risc_src),RISCV_SingleCycle/$(x)) $(foreach x,$(risc_mod),modules/$(x)) RISCV_SingleCycle/testbench/testbench.cpp"
-	args="$(ARG) $(VERILATOR_ARGS) -DCONST_DELAYS_OFF --public-flat-rw -IRISCV_SingleCycle --exe"
-	verilator $$args --top $$tb $$src && ./obj_dir/V$$tb +verilator+coverage+file+vcd/cov_riscvcpp.dat"
-	#verilator --runtime-debug -CFLAGS "-O0 -g -DDEBUG_MODE" $$args --top $$tb $$src && ./obj_dir/V$$tb
-	# +verilator+coverage+file+vcd/cov_riscvcpp.dat"
-	#mv coverage.dat vcd/cov_riscdv.dat || true
-	mv cov_riscdv.dat vcd/cov_riscdv.dat || true
-	
-
+	args="$(VERILATOR_ARGS) $(ARG) -DCONST_DELAYS_OFF --public-flat-rw -IRISCV_SingleCycle --exe"
+	verilator $$args --top $$tb $$src && ./obj_dir/V$$tb
 
 
 # SystemVerilog ALU TB

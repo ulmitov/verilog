@@ -19,11 +19,13 @@
 So whole verification depends on LUI and Stype commands, so they will be tested first.
 
 **Test plan:**
+Status Done:
 - Acceptance test: run commands with zero values
 - Test LUI + Stype output the correct address signals
 - Test LUI + Addi and Stype output the correct data signals
 - Test Load commands output the correct address signals
 - Test Load commands output the correct data signals
+Status WIP:
 - Test all the Itype immediate commands
 - Test all Rtype ALU commands
 - Test all Btype branch commands

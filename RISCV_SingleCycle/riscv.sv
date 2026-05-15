@@ -16,7 +16,7 @@ module riscv #(
     output logic dmem_wr
 );
     logic [31:0] imem_addr;
-    logic [INST_LEN-1:0] instruction;
+    logic [IALIGN-1:0] instruction;
     logic [XLEN-1:0] mem_rd_data, dmem_rd_data;
     logic [XLEN-1:0] rs1_data, rs2_data, rf_wr_data;
     logic [4:0] rd_addr, rs1_addr, rs2_addr;
@@ -53,15 +53,11 @@ module riscv #(
 
 
     memory #(
-        `ifdef DEBUG_RUN
-        .DEPTH(2**14),       // 2**10/4 = 256 instructions
-        `else
-        .DEPTH(2**14),      // 16kb, 4k instructions
-        `endif
+        .DEPTH(2**12),      // 8kb, 1k instructions
         .DATA_WIDTH(32),
         .ADDR_WIDTH(32),
         .MEM_FILE(MEM_FILE),
-        .ENDIANESS(1)       // images in big endian
+        .ENDIANESS(1)       // hex images are big endian
     ) instruction_mem (
         .wen(), .wr_data(),
         .wclk(clk),

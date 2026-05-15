@@ -59,7 +59,7 @@ long int get_lui_base_imm_value(long int lui_base_val, long int imm_val, int imm
 
 /* Verify commands with zero values and check that Reg[x0] is not overriden by LUI */
 void generate_stype_acceptance() {
-    struct isa_lui lui_base;
+    struct isa_utype lui_base;
     struct isa_stype stype;
     printf("INFO: Generating transactions: LUI and Stype commands with zero values\n");
 
@@ -102,7 +102,7 @@ void generate_stype_acceptance() {
 
 
 void generate_stype_imm_lui_imm(int bits_width) {
-    struct isa_lui lui_base;
+    struct isa_utype lui_base;
     struct isa_stype stype;
     unsigned long int stimulus_12[SEQUENCES_NUM];
     unsigned long int stimulus_20[SEQUENCES_NUM];
@@ -151,8 +151,8 @@ void generate_stype_imm_lui_imm(int bits_width) {
 
 
 void generate_stype_data(int bits_width) {
-    struct isa_lui lui_base;
-    struct isa_lui lui_data;
+    struct isa_utype lui_base;
+    struct isa_utype lui_data;
     struct isa_itype addi;
     struct isa_stype stype;
     unsigned long int stimulus_12[SEQUENCES_NUM];
@@ -224,7 +224,7 @@ void generate_stype_data(int bits_width) {
 
 /* Verify commands with zero values */
 void generate_itype_load_acceptance() {
-    struct isa_lui lui_base;
+    struct isa_utype lui_base;
     struct isa_itype addi;
     struct isa_itype load;
     int data_mask;
@@ -279,7 +279,7 @@ void generate_itype_load_acceptance() {
 
 
 void generate_itype_load_address(int bits_width, char unsigned_commands = 0) {
-    struct isa_lui lui_base;
+    struct isa_utype lui_base;
     struct isa_itype load;
     struct isa_stype stype;
     unsigned long int stimulus_12[SEQUENCES_NUM];
@@ -393,9 +393,9 @@ void generate_itype_load_address(int bits_width, char unsigned_commands = 0) {
 
 
 void generate_itype_load_data(int bits_width, char unsigned_commands = 0) {
-    struct isa_lui lui_base;
-    struct isa_lui lui_data;
-    struct isa_lui lui_base_stype;
+    struct isa_utype lui_base;
+    struct isa_utype lui_data;
+    struct isa_utype lui_base_stype;
     struct isa_itype addi;
     struct isa_itype load;
     struct isa_stype stype;
@@ -453,7 +453,7 @@ void generate_itype_load_data(int bits_width, char unsigned_commands = 0) {
                     data_mask = 0xFFFF;
                     break;
                 case 24:
-                    seq_lt(&load);
+                    seq_lt(&load);  // this one is unsigned
                     data_mask = 0xFFFFFF;
                     break;
                 case 32:
@@ -469,28 +469,26 @@ void generate_itype_load_data(int bits_width, char unsigned_commands = 0) {
                     return;
             }
 
+            ref_req.wr = 0;
+            ref_req.wr_data = 0;
+            ref_req.addr = (lui_base.imm << 12) + sign_extend(load.imm);
+            ref_req.rd_data = rand() & data_mask;
+            sprintf(ref_req.str, "%s\n%s\n%s\n%s\n",
+                    lui_base.str, lui_data.str, addi.str, load.str);
+            push_ref(&ref_req, 1);
+
             // driver to set rd_data with random data
             drv_req.wr = 0;
-            drv_req.addr = (lui_base.imm << 12) + sign_extend(load.imm);
+            drv_req.addr = ref_req.addr;
             // TODO: for external memory, add block size logic in load commands, then remove the data mask from here:
             // also apply stimulus here, need to verify high to low, etc...
-            drv_req.rd_data = rand() & data_mask;
+            drv_req.rd_data = ref_req.rd_data;
             sprintf(drv_req.str, "%s\n%s\n%s\n%s\n",
                     lui_base.str, lui_data.str, addi.str, load.str);
             drv_req.test_id = sqr->split_count;
             drv_fifo.push(drv_req);
-            //if (VERBOSITY) {
-                printf("DEBUG: GEN: pushed to driver transaction with addr %0lx, rd_data %0lx\n",
-                drv_req.addr, drv_req.rd_data);
-            //}
-
-            ref_req.wr = 0;
-            ref_req.wr_data = 0;
-            ref_req.addr = drv_req.addr;
-            ref_req.rd_data = drv_req.rd_data;
-            sprintf(ref_req.str, "%s\n%s\n%s\n%s\n",
-                    lui_base.str, lui_data.str, addi.str, load.str);
-            push_ref(&ref_req, 1);
+            fprintf(logger->fptr, "\bGEN: pushed to driver transaction with addr %0lx, rd_data %0lx\n\n",
+            drv_req.addr, drv_req.rd_data);
 
             // Verify data was loaded correctly into destination reg
             // Store data from destination reg to some random memory:

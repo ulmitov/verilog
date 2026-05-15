@@ -7,7 +7,7 @@ module riscv_core #(
 ) (
     input logic clk,
     input logic res_n,
-    input logic [INST_LEN-1:0] instruction,
+    input logic [IALIGN-1:0] instruction,
     input logic [XLEN-1:0] rs1_data,
     input logic [XLEN-1:0] rs2_data,
     input logic [XLEN-1:0] dmem_rd_data,
@@ -30,7 +30,7 @@ module riscv_core #(
     logic [XLEN-1:0] signed_rd_data;
     logic pc_mux;
     logic branch_taken;
-    logic pc_sel, op1_sel, op2_sel;
+    logic pc_sel, alua_sel, alub_sel;
     logic r_type, i_type, s_type, b_type, u_type, j_type;
     logic [6:0] opcode;
     logic [6:0] funct7;
@@ -98,8 +98,8 @@ module riscv_core #(
         .j_type(j_type),
         .alu_op(alu_op),
         .pc_sel(pc_sel),
-        .op1_sel(op1_sel),
-        .op2_sel(op2_sel),
+        .alua_sel(alua_sel),
+        .alub_sel(alub_sel),
         .dmem_size(dmem_size),
         .dmem_req(dmem_req),
         .dmem_wr(dmem_wr),
@@ -132,10 +132,10 @@ module riscv_core #(
         assign dmem_addr = alu_res;
     `endif
 
-    assign alu_a = op1_sel ? pc : rs1_data;         // 1- pc, 0- rs1
-    assign alu_b = op2_sel ? immediate : rs2_data;  // 1- imm, 0- rs2
-    assign pc_mux = branch_taken | pc_sel;          // pc_sel: 1-alu_res(jump), 0-next_pc
-    assign pc_jump = {alu_res[XLEN-1:1], 1'b0};
+    assign alu_a    = alua_sel ? pc : rs1_data;         // 0- rs1_data, 1- pc
+    assign alu_b    = alub_sel ? immediate : rs2_data;  // 0- rs2_data, 1- imm
+    assign pc_mux   = branch_taken | pc_sel;            // pc_sel: 0- next_pc, 1- alu_res(jump)
+    assign pc_jump  = {alu_res[XLEN-1:1], 1'b0};
 
     always_comb begin
         case (rf_wr_data_sel)

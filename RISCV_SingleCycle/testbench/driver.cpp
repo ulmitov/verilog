@@ -31,12 +31,13 @@ void Driver::main() {
         inf->wait(SETUP_TIME + 1);
     }
     if (drv_fifo.empty()) return;
+    // TODO: maybe drive 0 if nothing to drive ?
 
     // skip if mem operation not requested
     if (!inf->req()) return;
 
     // skip if the address belongs to data memory
-    if (inf->addr() >= DATA_MEMORY_BASE_ADDR && inf->addr() < DATA_MEMORY_LAST_ADDR) return;
+    if (inf->is_data_memory_address()) return;
 
     req = drv_fifo.front();
 
@@ -45,10 +46,8 @@ void Driver::main() {
     if (req.addr != inf->addr()) return;
 
     drv_count++;
-    if (VERBOSITY) {
-        printf("DRV: Tr(%d) setting rd_data to 0x%0lx\n", drv_count, req.rd_data);
-        printf("%s\n", req.str);
-    }
+    fprintf(logger->fptr, "DRV: Tr(%d) setting rd_data to 0x%0lx\n", drv_count, req.rd_data);
+    fprintf(logger->fptr, "%s\n", req.str);
 
     // drive
     inf->set_rd_data(req.rd_data);

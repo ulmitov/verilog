@@ -3,7 +3,7 @@ module fetch (
     input logic res,
     input logic pc_mux,
     input logic [31:0] pc_jump,
-    input logic [INST_LEN-1:0] imem_data,
+    input logic [IALIGN-1:0] imem_data,
 
     output logic imem_req,
     output logic [31:0] imem_addr,
