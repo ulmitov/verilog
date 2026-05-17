@@ -48,8 +48,11 @@ jobs:
       - name: RV32I application tests
         run: make risc SIM=v RM_OBJDIR=true 2>&1 | tee tb_rv32i.log
 
-      - name: RV32I Design verification Cpp testbench
-        run: make riscdv ARG='-CFLAGS "-DVERBOSITY=0"' 2>&1 | tee uvm_riscdv.log
+      - name: RV32I Design Verification C++ testbench
+        run: make riscdv ARG='-CFLAGS "-DVERBOSITY=0" -DXLEN=32' 2>&1 | tee uvm_riscdv32.log
+
+      - name: RV64I Design Verification C++ testbench
+        run: make riscdv ARG='-CFLAGS "-DVERBOSITY=0" -DXLEN=64' 2>&1 | tee uvm_riscdv64.log
 
       - name: UART C++ and verilog tests
         run: make uart SIM=v RM_OBJDIR=true 2>&1 | tee tb_uart.log
@@ -81,10 +84,10 @@ jobs:
       - name: Memory UVM testbench 64 bit
         run: make uvm-mem ARG=-DDATA_WIDTH=64 2>&1 | tee uvm_mem64.log
 
-      - name: RISCV Instruction Memory UVM testbench 16 bit
+      - name: RISCV Instruction Memory UVM test 16 bit
         run: make uvm-inst ARG=-DDATA_WIDTH=16 2>&1 | tee uvm_inst16.log
 
-      - name: RISCV Instruction Memory UVM testbench 32 bit
+      - name: RISCV Instruction Memory UVM test 32 bit
         run: make uvm-inst ARG=-DDATA_WIDTH=32 2>&1 | tee uvm_inst32.log
 
       - name: Results Summary

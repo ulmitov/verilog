@@ -8,15 +8,13 @@ extern Logger *logger;
 class Interface {
 public:
     unsigned long timestamp;
-    Vriscv___024root *root;  // Root instance pointer to allow access to model internals,
     Vriscv *top;
     VerilatedVcdC* vcd;
     
-    Interface(Vriscv *dut, char vcdc = 1):
+    Interface(char vcdc = 0):
         timestamp(0),
-        vcd(vcdc ? new VerilatedVcdC() : nullptr),
-        top(dut),
-        root(dut->rootp)
+        top(new Vriscv()),
+        vcd(vcdc ? new VerilatedVcdC() : nullptr)
     {
         if (vcdc) {
             top->trace(vcd, 99);
@@ -25,6 +23,7 @@ public:
     }
 
     ~Interface() {
+        char vcd_file_path[50];
         wait_ticks(10);
         printf("[%lu] INFO: End of testbench\n", timestamp);
         top->eval();
@@ -33,7 +32,9 @@ public:
             delete vcd;
         }
         top->final();
-        VerilatedCov::write("vcd/cov_riscdv.dat");
+        sprintf(vcd_file_path, "vcd/cov_riscdv_%d.dat", XLEN);
+        VerilatedCov::write(vcd_file_path);
+        delete top;
     }
 
     char req() {
@@ -54,6 +55,13 @@ public:
 
     void set_rd_data(long int data) {
         top->dbus_rd_data = data;
+    }
+
+    void set_clock(int val) {
+        top->clk = val;
+    }
+    int get_clock() {
+        return top->clk;
     }
 
     void eval_sim(int interval = 0) {
@@ -175,7 +183,7 @@ public:
                 top->dbus_rd_data
             );
         } else {
-            fprintf(logger->fptr, "[%lu] CORE: pc=%08x  instruction=%08x  opcode=0x%0x  rf_wr_data_sel=%d  rd_addr=%08x  rs1_addr=%08x  rs2_addr=%08x  imm=%08x\n",
+            fprintf(logger->fptr, "[%lu] CORE: pc=%08x  instruction=%08x  opcode=0x%0x  rf_wr_data_sel=%d  rd_addr=%08x  rs1_addr=%08x  rs2_addr=%08x  imm=%08x  alu_res=%d\n",
                 timestamp,
                 top->rootp->riscv__DOT__core__DOT__fetch_block__DOT__imem_addr,
                 top->rootp->riscv__DOT__core__DOT__instruction,
@@ -184,7 +192,8 @@ public:
                 top->rootp->riscv__DOT__core__DOT__rd_addr,
                 top->rootp->riscv__DOT__core__DOT__rs1_addr,
                 top->rootp->riscv__DOT__core__DOT__rs2_addr,
-                top->rootp->riscv__DOT__core__DOT__immediate
+                top->rootp->riscv__DOT__core__DOT__immediate,
+                top->rootp->riscv__DOT__core__DOT__alu_block__DOT__alu_res
             );
             fprintf(logger->fptr, "[%lu] DEBUG: DATABUS: addr=%08x  dmem_req=%d  dmem_wr=%d  wr_data=%08x  rd_data=%08x\n\n",
                 timestamp,

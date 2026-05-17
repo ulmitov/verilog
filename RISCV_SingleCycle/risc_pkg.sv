@@ -19,6 +19,8 @@ typedef enum logic [6:0] {
     OPCODE_U_TYPE_AUIPC = 7'b0010111,   // U-Type. LUI and AUIPC - large immediates
     OPCODE_U_TYPE_JAL   = 7'b1101111,   // UJ-Type. JAL command  - Unconditional jumps
     OPCODE_I_TYPE_ALU   = 7'b0010011,   // I-Type. Arithmetic with immediate (OP-IMM)
+    OPCODE_ITYPE_IMM_32 = 7'b0011011,   // I-Type. Arithmetic 32 bits with immediate (OP-32-IMM) RV64I
+    OPCODE_RTYPE_32     = 7'b0111011,   // R-Type. Arithmetic 32 bits (OP-32) RV64I
     OPCODE_I_TYPE_LOAD  = 7'b0000011,   // I-Type. Load from mem. Also this mask can be used to detect 32 bit instructions!!!
     OPCODE_I_TYPE_JALR  = 7'b1100111,   // I-Type. JALR - Jump and Link Register
     OPCODE_FLOATP       = 7'b0000111,   // I-Type. Floating pont instructions

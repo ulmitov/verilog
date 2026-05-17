@@ -10,9 +10,9 @@
 
 void print_config(int seed) {
     printf("********* TEST CONFIG *********\n");
+    printf("XLEN %d\n", XLEN);
     printf("Test seed %d\n", seed);
     printf("VERBOSITY %d\n", VERBOSITY);
-    printf("XLEN %d\n", XLEN);
     printf("SEQUENCES_NUM %d\n", SEQUENCES_NUM);
     printf("CLK_PHASE %d\n", CLK_PHASE);
     printf("INSTRUCTIONS_LIMIT %d\n", INSTRUCTIONS_LIMIT);
@@ -27,43 +27,52 @@ void run_test(Environment* env) {
     test_acceptance(env);
 
     test_stype_addr(env);
-
     test_stype_data(env);
+    // after verified stype the order of testing does not matter
 
     // precondition for addr tests: prefill data not to be changed by other tests!
     test_itype_load_addr_bits(env);
     test_itype_load_unsigned_addr_bits(env);
 
     test_itype_load_data_bits(env);
-
     test_itype_load_unsigned_data_bits(env);
+
+    test_itype_arithmetic(env);
+    test_itype_arithmetic_op32(env);
+
+}
+
+
+void run_single(Environment* env) {
+    test_itype_arithmetic(env);
 }
 
 
 int main (int argc, char **argv) {
     Verilated::commandArgs(argc, argv);
-    Verilated::traceEverOn(true);
-    if (VERBOSITY) Verilated::scopesDump(); // print available scopes
+    if (VERBOSITY) {
+        Verilated::traceEverOn(true);
+        Verilated::scopesDump(); // print available scopes
+    }
 
     // TODO: set the seed from verilator args if exists
     unsigned int seed = time(NULL);
     srand(seed);
 
     print_config(seed);
-    Vriscv* top = new Vriscv();
-    Interface *inf = new Interface(top, VERBOSITY);
+    Interface *inf = new Interface(VERBOSITY);
     Environment* env = new Environment(inf);
 
-    inf->top->clk = 1;
+    inf->set_clock(1);
 
     seq_prefill_data_memory();
     inf->prefill_data_memory();
 
+    //run_single(env);
     run_test(env);
 
-    delete logger;
     delete env;
     delete inf;
-    delete top;
+    delete logger;
     exit(RETURN_CODE);
 }

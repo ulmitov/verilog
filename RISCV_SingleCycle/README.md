@@ -1,4 +1,6 @@
 # RISCV single cycle implementation
+Currently supported designs are RV32I and RV64I.
+Interrupts and registers are in status TBD.
 
 
 ## Architecture
@@ -53,7 +55,9 @@ make risc_tb_arr;   # find max in array asm
 make risc_tb_bub;   # bubble sort asm
 make risc_tb_fib;   # fibonacci asm
 
-make risc;          # all testbenches
+make risc;          # all asm testbenches
+
+make riscdv         # Cpp testbench
 
 # verilator:
 make riscver;

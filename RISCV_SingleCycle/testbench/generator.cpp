@@ -14,27 +14,31 @@ void generate_bit_stimulus(
     unsigned long rand_min = 0,
     unsigned long rand_max = 0
 ) {
-    int i;
     unsigned long long mask_ff = (1ULL << bits_width) - 1;
-    //printf("MASK %0llx  bits_width %d   res %0x \n", mask_ff, bits_width, (1 << bits_width) - 1);
     // high to low and low to high
     *arr++ = 0;
     *arr++ = mask_ff;
     *arr++ = 0;
     *arr++ = mask_ff;
-    // some patterns
-    *arr++ = 0xAAAAAAAAAAAAAAAA & mask_ff;
-    *arr++ = 0x5555555555555555 & mask_ff;
-    *arr++ = 0xAAAAAAAAAAAAAAAA & mask_ff;
-    *arr++ = 0xDBDBDBDBDBDBDBDB & mask_ff;
-    *arr++ = 0xB6B6B6B6B6B6B6B6 & mask_ff;
-    *arr++ = 0x6D6D6D6D6D6D6D6D & mask_ff;
+    length -= 4;
+
     // toggle bit by bit
-    for (i = 0; i < bits_width; i++) {
-        *arr++ = 1 << i;
+    for (int i = 0; i < bits_width; i++) *arr++ = 1 << i;
+    length -= bits_width;
+
+    if (length > 6) {
+        // some patterns
+        *arr++ = 0xAAAAAAAAAAAAAAAA & mask_ff;
+        *arr++ = 0x5555555555555555 & mask_ff;
+        *arr++ = 0xAAAAAAAAAAAAAAAA & mask_ff;
+        *arr++ = 0xDBDBDBDBDBDBDBDB & mask_ff;
+        *arr++ = 0xB6B6B6B6B6B6B6B6 & mask_ff;
+        *arr++ = 0x6D6D6D6D6D6D6D6D & mask_ff;
+        length -= 6;
     }
-    // fill up to requested length with random values
-    for (i = bits_width + 10; i < length; i++) {
+    
+    // fill with random values up to requested array length
+    while (length-- > 0) {
         if (rand_max) {
             *arr++ = mask_ff & (rand_min + rand() % rand_max);
         } else {
@@ -44,16 +48,28 @@ void generate_bit_stimulus(
 }
 
 
-/* Sign extend 32 bit */
-int sign_extend(int data, int bits_num = 12) {  // For 64 bits will need to return long
-    bits_num = 32 - bits_num;
+/** Sign extend
+ *
+ * @param data: the data to be extended
+ * @param bits_num: bits size of the field that is extended
+ * @return sign-extended long data
+*/
+long sign_extend(long data, int bits_num = 12) {
+    bits_num = 64 - bits_num;   // 64 is for long data type
     data = data << bits_num;
     data = data >> bits_num;
-    return data & 0xFFFFFFFF;
+    return data;
 }
 
-long int get_lui_base_imm_value(long int lui_base_val, long int imm_val, int imm_bits_num = 12) {
-    return (lui_base_val << 12) + sign_extend(imm_val, imm_bits_num);
+
+/** Get the value based on lui and addi commands
+ *
+ * @param lui_base_val: lui imm
+ * @param imm_val: addi imm
+ * @return long: sum of both sign-extended to 64 bits
+*/
+long int get_lui_base_imm_value(long int lui_base_val, long int imm_val) {
+    return sign_extend(lui_base_val << 12, 32) + sign_extend(imm_val);
 }
 
 
@@ -63,7 +79,8 @@ void generate_stype_acceptance() {
     struct isa_stype stype;
     printf("INFO: Generating transactions: LUI and Stype commands with zero values\n");
 
-    for (int block_size = 1; block_size < 5; block_size++) {
+    for (int block_size = 3; block_size < 7; block_size++) {
+        if (XLEN < 64 && block_size > 5) break;
         // lui rd will hold the base address for stype
         lui_base.rd = 0;
         lui_base.imm = rand() % 0x100000;
@@ -73,34 +90,20 @@ void generate_stype_acceptance() {
         stype.imm = 0;
         stype.rs1 = 0;
         stype.rs2 = 0;
+        set_stype(&stype, 1 << block_size);
 
-        switch(block_size * 8) {
-            case 8:
-                seq_sb(&stype);
-                break;
-            case 16:
-                seq_sh(&stype);
-                break;
-            case 24:
-                seq_st(&stype);
-                break;
-            case 32:
-                seq_sw(&stype);
-                break;
-            default:
-                printf("ERROR: invalid bits_width provided by test");
-                return;
-        }
+        // Reference transaction
         ref_req.wr = 1;
+        ref_req.addr = 0;
         ref_req.rd_data = 0;
         ref_req.wr_data = 0;
-        ref_req.addr = 0;
         sprintf(ref_req.str, "%s\n%s\n", lui_base.str, stype.str);
         push_ref(&ref_req);
     }
 }
 
 
+/* Verify lui and stype produce correct address bits */
 void generate_stype_imm_lui_imm(int bits_width) {
     struct isa_utype lui_base;
     struct isa_stype stype;
@@ -121,25 +124,9 @@ void generate_stype_imm_lui_imm(int bits_width) {
         stype.imm = stimulus_12[i];
         stype.rs1 = lui_base.rd;
         stype.rs2 = 0;
+        set_stype(&stype, bits_width);
 
-        switch(bits_width) {
-            case 8:
-                seq_sb(&stype);
-                break;
-            case 16:
-                seq_sh(&stype);
-                break;
-            case 24:
-                seq_st(&stype);
-                break;
-            case 32:
-                seq_sw(&stype);
-                break;
-            default:
-                printf("ERROR: invalid bits_width provided by test");
-                return;
-        }
-        // expect addr to be: lui_base.imm << 12 + (signed)stype.imm
+        // Reference transaction: expect addr to be: lui_base.imm << 12 + (signed)stype.imm
         ref_req.wr = 1;
         ref_req.rd_data = 0;
         ref_req.wr_data = 0;
@@ -150,6 +137,7 @@ void generate_stype_imm_lui_imm(int bits_width) {
 }
 
 
+/* Verify lui, addi and stype produce correct data bits */
 void generate_stype_data(int bits_width) {
     struct isa_utype lui_base;
     struct isa_utype lui_data;
@@ -157,7 +145,6 @@ void generate_stype_data(int bits_width) {
     struct isa_stype stype;
     unsigned long int stimulus_12[SEQUENCES_NUM];
     unsigned long int stimulus_20[SEQUENCES_NUM];
-    int data_mask;
 
     printf("INFO: Generating transactions: %d bits Stype data verification\n", bits_width);
     generate_bit_stimulus(&stimulus_12[0], 12);
@@ -168,51 +155,31 @@ void generate_stype_data(int bits_width) {
     lui_base.imm = DATA_MEMORY_BASE_ADDR >> 12;
     seq_lui(&lui_base);
 
-    for (int reg = 1; reg < 32; reg++) {
-        if (reg == REGFILE_A0) continue;
+    for (int dreg = 1; dreg < 32; dreg += REG_FILE_INCR) {
+        if (dreg == REGFILE_A0) continue;
 
         for (int i = 0; i < SEQUENCES_NUM; i++) {
             // set the upper imm value
-            lui_data.rd = reg;
+            lui_data.rd = dreg;
             lui_data.imm = stimulus_20[i];
             seq_lui(&lui_data);
 
             // set rd = rs1 + imm
-            addi.rd = reg;
-            addi.rs1 = reg;
+            addi.rd = dreg;
+            addi.rs1 = dreg;
             addi.imm = stimulus_12[i];
             seq_addi(&addi);
 
             // Stype: copy value from [rs2] into mem[[rs1]+imm]
             stype.imm = (stimulus_12[i] / WORD_LEN) * WORD_LEN;    // 4 bytes aligned
             stype.rs1 = lui_base.rd;
-            stype.rs2 = reg;
+            stype.rs2 = dreg;
+            set_stype(&stype, bits_width);
 
-            switch(bits_width) {
-                case 8:
-                    seq_sb(&stype);
-                    data_mask = 0xFF;
-                    break;
-                case 16:
-                    seq_sh(&stype);
-                    data_mask = 0xFFFF;
-                    break;
-                case 24:
-                    seq_st(&stype);
-                    data_mask = 0xFFFFFF;
-                    break;
-                case 32:
-                    seq_sw(&stype);
-                    data_mask = 0xFFFFFFFF;
-                    break;
-                default:
-                    printf("ERROR: invalid bits_width provided by test");
-                    return;
-            }
-            // expect wr_data to be: lui_data.imm << 12 + (signed)addi.imm & (width mask)
+            // Reference transaction: expect wr_data to be: lui_data.imm << 12 + (signed)addi.imm & (width mask)
             ref_req.wr = 1;
             ref_req.rd_data = 0;
-            ref_req.wr_data = ((lui_data.imm << 12) + sign_extend(addi.imm)) & data_mask;
+            ref_req.wr_data = get_lui_base_imm_value(lui_data.imm, addi.imm) & stype.datamask;
             ref_req.addr = (lui_base.imm << 12) + sign_extend(stype.imm);
             sprintf(ref_req.str, "%s\n%s\n%s\n%s\n",
                 lui_base.str, lui_data.str, addi.str, stype.str);
@@ -225,13 +192,13 @@ void generate_stype_data(int bits_width) {
 /* Verify commands with zero values */
 void generate_itype_load_acceptance() {
     struct isa_utype lui_base;
-    struct isa_itype addi;
     struct isa_itype load;
-    int data_mask;
+    struct isa_itype addi;
 
     printf("INFO: Generating transactions: Itype load command acceptance\n");
 
-    for (int block_size = 1; block_size < 5; block_size++) {
+    for (int block_size = 3; block_size < 7; block_size++) {
+        if (XLEN < 64 && block_size > 5) break;
         // set into reg the address for load
         lui_base.rd = 0;
         lui_base.imm = rand() % 0x100000;
@@ -245,52 +212,32 @@ void generate_itype_load_acceptance() {
         load.rd = 0;
         load.rs1 = 0;
         load.imm = 0;
+        set_itype_load(&load, 1 << block_size, 0);
 
-        switch(block_size * 8) {
-            case 8:
-                seq_lb(&load);
-                data_mask = 0xFF;
-                break;
-            case 16:
-                seq_lh(&load);
-                data_mask = 0xFFFF;
-                break;
-            case 24:
-                seq_lt(&load);
-                data_mask = 0xFFFFFF;
-                break;
-            case 32:
-                seq_lw(&load);
-                data_mask = 0xFFFFFFFF;
-                break;
-            default:
-                printf("ERROR: invalid bits_width provided by test");
-                return;
-        }
-
+        // Reference transaction
         ref_req.wr = 0;
+        ref_req.addr = 0;
         ref_req.rd_data = 0;
         ref_req.wr_data = 0;
-        ref_req.addr = 0;
-        sprintf(ref_req.str, "%s\n%s\n%s\n", lui_base.str, addi.str, load.str);
+        sprintf(ref_req.str, "%s\n%s\n", lui_base.str, load.str);
         push_ref(&ref_req);
     }
 }
 
 
+/* Verify load commands produce correct address bits */
 void generate_itype_load_address(int bits_width, char unsigned_commands = 0) {
     struct isa_utype lui_base;
     struct isa_itype load;
     struct isa_stype stype;
     unsigned long int stimulus_12[SEQUENCES_NUM];
     unsigned long int stimulus_20[SEQUENCES_NUM];
-    int data_mask;
 
     printf("INFO: Generating transactions: %d bits Itype load command addr verification\n", bits_width);
     generate_bit_stimulus(&stimulus_12[0], 12);
     generate_bit_stimulus(&stimulus_20[0], 20);
 
-    for (int dreg = 1; dreg < 32; dreg++) {
+    for (int dreg = 1; dreg < 32; dreg += REG_FILE_INCR) {
 
         for (int i = 0; i < SEQUENCES_NUM; i++) {
             // set into reg the address for load
@@ -302,47 +249,15 @@ void generate_itype_load_address(int bits_width, char unsigned_commands = 0) {
             load.rd = dreg < 31 ? dreg + 1 : 0;
             load.rs1 = dreg;
             load.imm = stimulus_12[i];
+            set_itype_load(&load, bits_width, unsigned_commands);
 
-            switch(bits_width) {
-                case 8:
-                    if (unsigned_commands) {
-                        seq_lbu(&load);
-                    } else {
-                        seq_lb(&load);
-                    }
-                    data_mask = 0xFF;
-                    break;
-                case 16:
-                    if (unsigned_commands) {
-                        seq_lhu(&load);
-                    } else {
-                        seq_lh(&load);
-                    }
-                    data_mask = 0xFFFF;
-                    break;
-                case 24:
-                    seq_lt(&load);
-                    data_mask = 0xFFFFFF;
-                    break;
-                case 32:
-                    if (unsigned_commands) {
-                        seq_lwu(&load);
-                    } else {
-                        seq_lw(&load);
-                    }
-                    data_mask = 0xFFFFFFFF;
-                    break;
-                default:
-                    printf("ERROR: invalid bits_width provided by test");
-                    return;
-            }
-
+            // Reference transaction (load reaction)
             ref_req.wr = 0;
             ref_req.wr_data = 0;
             ref_req.addr = (lui_base.imm << 12) + sign_extend(load.imm);
             // precondition: data memory was prefilled with each address holding 4 bytes equal to the address value!
             if (ref_req.addr >= DATA_MEMORY_BASE_ADDR && ref_req.addr < DATA_MEMORY_LAST_ADDR) {
-                ref_req.rd_data = ref_req.addr & data_mask;
+                ref_req.rd_data = ref_req.addr & load.datamask;
             } else {
                 ref_req.rd_data = 0;  // TODO Drive value?
             }
@@ -353,35 +268,16 @@ void generate_itype_load_address(int bits_width, char unsigned_commands = 0) {
             stype.imm = load.imm;
             stype.rs1 = load.rs1;
             stype.rs2 = load.rd;
+            set_stype(&stype, bits_width);
 
-            switch(bits_width) {
-                case 8:
-                    seq_sb(&stype);
-                    data_mask = 0xFF;
-                    break;
-                case 16:
-                    seq_sh(&stype);
-                    data_mask = 0xFFFF;
-                    break;
-                case 24:
-                    seq_st(&stype);
-                    data_mask = 0xFFFFFF;
-                    break;
-                case 32:
-                    seq_sw(&stype);
-                    data_mask = 0xFFFFFFFF;
-                    break;
-                default:
-                    printf("ERROR: invalid bits_width provided by test");
-                    return;
-            }
+            // Reference transaction
             ref_req.wr = 1;
             if (!load.rd) {
                 ref_req.wr_data = 0;
             } else if (unsigned_commands) {
-                ref_req.wr_data = ref_req.rd_data & data_mask;
+                ref_req.wr_data = ref_req.rd_data & stype.datamask;
             } else {
-                ref_req.wr_data = sign_extend(ref_req.rd_data & data_mask, bits_width);
+                ref_req.wr_data = sign_extend(ref_req.rd_data & stype.datamask, bits_width);
             }
             ref_req.rd_data = 0;
             // ref_req.addr remains same
@@ -392,6 +288,7 @@ void generate_itype_load_address(int bits_width, char unsigned_commands = 0) {
 }
 
 
+/* Verify load commands produce correct data bits */
 void generate_itype_load_data(int bits_width, char unsigned_commands = 0) {
     struct isa_utype lui_base;
     struct isa_utype lui_data;
@@ -401,14 +298,12 @@ void generate_itype_load_data(int bits_width, char unsigned_commands = 0) {
     struct isa_stype stype;
     unsigned long int stimulus_12[SEQUENCES_NUM];
     //unsigned long int stimulus_20[SEQUENCES_NUM];
-    int data_mask;
-    long int reg_val;
 
     printf("INFO: Generating transactions: %d bits Itype load command data verification\n", bits_width);
     generate_bit_stimulus(&stimulus_12[0], 12);
     //generate_bit_stimulus(&stimulus_20[0], 20);
 
-    for (int dreg = 1; dreg < 32; dreg++) {
+    for (int dreg = 1; dreg < 32; dreg += REG_FILE_INCR) {
         if (dreg == REGFILE_A0 || dreg == REGFILE_A1) continue;
 
         for (int i = 0; i < SEQUENCES_NUM; i++) {
@@ -434,45 +329,13 @@ void generate_itype_load_data(int bits_width, char unsigned_commands = 0) {
             load.rd = dreg;
             load.rs1 = lui_base.rd;
             load.imm = (stimulus_12[i]);// / WORD_LEN) * WORD_LEN;    // 4 bytes aligned
+            set_itype_load(&load, bits_width, unsigned_commands);
 
-            switch(bits_width) {
-                case 8:
-                    if (unsigned_commands) {
-                        seq_lbu(&load);
-                    } else {
-                        seq_lb(&load);
-                    }
-                    data_mask = 0xFF;
-                    break;
-                case 16:
-                    if (unsigned_commands) {
-                        seq_lhu(&load);
-                    } else {
-                        seq_lh(&load);
-                    }
-                    data_mask = 0xFFFF;
-                    break;
-                case 24:
-                    seq_lt(&load);  // this one is unsigned
-                    data_mask = 0xFFFFFF;
-                    break;
-                case 32:
-                    if (unsigned_commands) {
-                        seq_lwu(&load);
-                    } else {
-                        seq_lw(&load);
-                    }
-                    data_mask = 0xFFFFFFFF;
-                    break;
-                default:
-                    printf("ERROR: invalid bits_width provided by test");
-                    return;
-            }
-
+            // Reference transaction (load + drive reaction)
             ref_req.wr = 0;
             ref_req.wr_data = 0;
             ref_req.addr = (lui_base.imm << 12) + sign_extend(load.imm);
-            ref_req.rd_data = rand() & data_mask;
+            ref_req.rd_data = rand() & load.datamask;
             sprintf(ref_req.str, "%s\n%s\n%s\n%s\n",
                     lui_base.str, lui_data.str, addi.str, load.str);
             push_ref(&ref_req, 1);
@@ -487,7 +350,7 @@ void generate_itype_load_data(int bits_width, char unsigned_commands = 0) {
                     lui_base.str, lui_data.str, addi.str, load.str);
             drv_req.test_id = sqr->split_count;
             drv_fifo.push(drv_req);
-            fprintf(logger->fptr, "\bGEN: pushed to driver transaction with addr %0lx, rd_data %0lx\n\n",
+            fprintf(logger->fptr, "GEN: pushed to driver transaction with addr %0lx, rd_data %0lx\n\n",
             drv_req.addr, drv_req.rd_data);
 
             // Verify data was loaded correctly into destination reg
@@ -501,23 +364,9 @@ void generate_itype_load_data(int bits_width, char unsigned_commands = 0) {
             stype.imm = ((rand() % 0x1000) / WORD_LEN) * WORD_LEN;    // 4 bytes aligned
             stype.rs1 = lui_base_stype.rd;
             stype.rs2 = dreg;
+            set_stype(&stype, XLEN);
 
-            switch(XLEN) {
-                case 8:
-                    seq_sb(&stype);
-                    break;
-                case 16:
-                    seq_sh(&stype);
-                    break;
-                case 32:
-                    seq_sw(&stype);
-                    break;
-                default:
-                    printf("ERROR: unsupported XLEN\n");
-                    return;
-            }
-
-            reg_val = (lui_data.imm << 12) + sign_extend(addi.imm);
+            // Reference transaction
             ref_req.wr = 1;
             ref_req.rd_data = 0;
             ref_req.addr = (lui_base_stype.imm << 12) + sign_extend(stype.imm);
@@ -526,11 +375,105 @@ void generate_itype_load_data(int bits_width, char unsigned_commands = 0) {
             } else if (unsigned_commands) {
                 ref_req.wr_data = drv_req.rd_data;
             } else {
-                ref_req.wr_data = sign_extend(drv_req.rd_data, bits_width) & 0x00FFFFFFFF;  // masking since in tr it is long
+                ref_req.wr_data = sign_extend(drv_req.rd_data, bits_width);
             }
             sprintf(ref_req.str, "%s\n%s\n%s\n%s\n%s\n%s\n",
                     lui_base.str, lui_data.str, addi.str, load.str, lui_base_stype.str, stype.str);
             push_ref(&ref_req);
+        }
+    }
+}
+
+
+/* Verify itype commands produce correct arithmetic results */
+void generate_itype_arithmetic(int opcode, int op32 = 0) {
+    struct isa_utype lui_base;
+    struct isa_stype stype;
+    struct isa_itype itype;
+    struct isa_itype addi;
+    unsigned long int stimulus_12[SEQUENCES_NUM];
+    //unsigned long int stimulus_20[SEQUENCES_NUM];
+
+    printf("INFO: Generating transactions: Itype arithmetic commands with opcode %d\n", opcode);
+    generate_bit_stimulus(&stimulus_12[0], 12);
+    //generate_bit_stimulus(&stimulus_20[0], 20);
+
+    // first loop running with zeros, i.e acceptance test!
+    for (int sreg = 0; sreg < 32; sreg += REG_FILE_INCR) {
+        for (int dreg = 0; dreg < 32; dreg += REG_FILE_INCR) {
+            for (int i = 0; i < SEQUENCES_NUM; i++) {
+                if (dreg == 0 && i == 4) break; // for x0 4 first sequences is enough
+
+                // lui rd will hold the upper bits for itype.rs1
+                lui_base.rd = sreg;
+                lui_base.imm = rand() % 0x100000;   // stimulus_20[i];
+                seq_lui(&lui_base);
+
+                // fill itype.rs1 lower bits
+                addi.rd = sreg;
+                addi.rs1 = sreg;
+                addi.imm = rand() % 0x1000;
+                seq_addi(&addi);
+
+                // rd = rs1 + imm
+                itype.rd = dreg;
+                itype.rs1 = sreg;
+                itype.imm = stimulus_12[i];
+                set_itype_arithmetic(&itype, opcode, op32);
+
+                // Stype: copy value from [rs2] into mem[[rs1]+imm]
+                stype.imm = ((rand() % 0x700) / WORD_LEN) * WORD_LEN;    // only positive ranges, 4 bytes aligned
+                stype.rs1 = 0;              // x0 is always 0 so in this test always saving to mem range 0 +/- 4096
+                stype.rs2 = itype.rd;
+                set_stype(&stype, XLEN);
+
+                // Reference transaction
+                ref_req.wr = 1;
+                ref_req.rd_data = 0;
+                ref_req.addr = sign_extend(stype.imm);
+                ref_req.wr_data = sreg ? get_lui_base_imm_value(lui_base.imm, addi.imm) : 0;
+                sprintf(ref_req.str, "%s\n%s\n%s\n%s\n", lui_base.str, addi.str, itype.str, stype.str);
+
+                switch(opcode) {
+                    case Vriscv_risc_pkg::OP_ALU_ADD:
+                        ref_req.wr_data += sign_extend(itype.imm);
+                        if (op32) ref_req.wr_data = sign_extend(ref_req.wr_data, 32);
+                        break;
+                    case Vriscv_risc_pkg::OP_ALU_SLL:
+                        ref_req.wr_data = ref_req.wr_data << itype.imm;
+                        if (op32) ref_req.wr_data = sign_extend(ref_req.wr_data, 32);
+                        break;
+                    case Vriscv_risc_pkg::OP_ALU_SRL:
+                        // masking because wr_data is long and shift right must push zeros from the left
+                        ref_req.wr_data = (unsigned long)(ref_req.wr_data & stype.datamask) >> itype.imm;
+                        if (op32) ref_req.wr_data = sign_extend(ref_req.wr_data, 32);
+                        break;
+                    case Vriscv_risc_pkg::OP_ALU_SRA:
+                        ref_req.wr_data = ref_req.wr_data >> itype.imm;
+                        if (op32) ref_req.wr_data = sign_extend(ref_req.wr_data, 32);
+                        break;
+                    case Vriscv_risc_pkg::OP_ALU_XOR:
+                        ref_req.wr_data ^= sign_extend(itype.imm);
+                        break;
+                    case Vriscv_risc_pkg::OP_ALU_AND:
+                        ref_req.wr_data &= sign_extend(itype.imm);
+                        break;
+                    case Vriscv_risc_pkg::OP_ALU_OR:
+                        ref_req.wr_data |= sign_extend(itype.imm);
+                        break;
+                    case Vriscv_risc_pkg::OP_ALU_SLT:
+                        ref_req.wr_data = ref_req.wr_data < sign_extend(itype.imm);
+                        break;
+                    case Vriscv_risc_pkg::OP_ALU_SLTU:
+                        ref_req.wr_data = (unsigned long)ref_req.wr_data < (unsigned long)sign_extend(itype.imm);
+                        break;
+                    default:
+                        printf("ERROR: invalid ALU opcode provided by test\n");
+                        return;
+                }
+                if (!dreg) ref_req.wr_data = 0;
+                push_ref(&ref_req);
+            }
         }
     }
 }

@@ -5,15 +5,15 @@
 
 class Sequencer {
 public:
-    int split_count = 0;
-    int cmd_count = 0;
     std::queue<int> sqr_fifo;
+    int split_count = 0;    // as generators are running they will increase this with each zero command
+    int cmd_count = 0;      // counter of commands per hex file (test phase)
 
     void main(const char *mem_file_name = "test.mem");
 
     void push(unsigned int val);
 
-    void put_bytes(const char *file_path, unsigned long int input_val, int word_len = Vriscv_risc_pkg::IALIGN / 8);
+    void put_bytes(const char *file_path, unsigned long input_val, int word_len = Vriscv_risc_pkg::IALIGN / 8);
 };
 
 
@@ -28,7 +28,7 @@ void Sequencer::main(const char *mem_file_name) {
         if (!val) break;
         cmd_count++;
     }
-    // if got last command then push zero cmd
+    // push zero cmd as last command
     if (val) put_bytes(mem_file_name, 0);
 }
 
@@ -39,7 +39,7 @@ void Sequencer::push(unsigned int val) {
 }
 
 
-void Sequencer::put_bytes(const char *file_path, unsigned long int input_val, int word_len) {
+void Sequencer::put_bytes(const char *file_path, unsigned long input_val, int word_len) {
     int byte_val;
     FILE *fp;
     if ((fp = fopen(file_path, "a")) == NULL) {

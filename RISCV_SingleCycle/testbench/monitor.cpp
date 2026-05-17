@@ -20,11 +20,11 @@ public:
 
 
 void Monitor::main() {
-    if (inf->top->clk) {
+    if (inf->get_clock()) {
         if (VERBOSITY) {
             //printf("[%ld] MON: waiting to sample on SETUP_TIME before posedge\n", inf->timestamp);
         }
-        while (inf->top->clk) inf->wait(1);
+        while (inf->get_clock()) inf->wait(1);
         inf->wait(CLK_PHASE - SETUP_TIME - 1);
     }
     inf->dump();

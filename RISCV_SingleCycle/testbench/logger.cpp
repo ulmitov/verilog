@@ -39,12 +39,13 @@ public:
         }
     }
     
-    void print_log(int index) {
+    void print_log() {
         FILE *rptr;
         char ch;
         char name[40];
+        sprintf(name, tpl, uid, prefix, postfix);
+        fprintf(fptr, "---------- END OF %s ----------\n", name);
         fflush(fptr);
-        sprintf(name, tpl, uid, prefix, index);
         rptr = fopen(name, "r");
         if (rptr == NULL) {
             printf("ERROR: Could not open file %s\n", name);

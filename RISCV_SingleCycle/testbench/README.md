@@ -1,7 +1,7 @@
 # CPP Testbench design
 - Generator scenarios produce test sequences along with Driver transactions, and also the expected Reference transactions.
-- Sequencer builds the instructions hex file that is boot loaded into Instruction ROM.
-- The test can generate one or multiple hex files and then run them one by one.
+- Sequencer builds the instructions hex file that is boot loaded into the Instruction ROM.
+- The test can generate one or multiple scenarios and hex files and then run them one by one.
 
 ![Cpp testbench diagram](../doc/dvcpp.png)
 
@@ -21,15 +21,16 @@ So whole verification depends on LUI and Stype commands, so they will be tested 
 **Test plan:**
 Status Done:
 - Acceptance test: run commands with zero values
-- Test LUI + Stype output the correct address signals
-- Test LUI + Addi and Stype output the correct data signals
-- Test Load commands output the correct address signals
-- Test Load commands output the correct data signals
-Status WIP:
-- Test all the Itype immediate commands
+- Test LUI + Stype for address signals
+- Test LUI + Stype for data signals
+- Test Itype Load for address signals
+- Test Itype Load for data signals
+- Test all Itype arithmetic commands
+Status TBD:
 - Test all Rtype ALU commands
 - Test all Btype branch commands
-- Verify the rest of commands
+- Verify rest of commands
+- Additional tests... (interrupts, registers, negative)
 
 
 

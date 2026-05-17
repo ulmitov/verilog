@@ -62,6 +62,7 @@ module decode (
             OPCODE_U_TYPE_LUI,
             OPCODE_U_TYPE_AUIPC:    u_type = 1'b1;
             OPCODE_I_TYPE_ALU,
+            OPCODE_ITYPE_IMM_32,
             OPCODE_I_TYPE_LOAD,
             OPCODE_I_TYPE_JALR:     i_type = 1'b1;
         endcase

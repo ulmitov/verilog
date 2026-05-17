@@ -2,6 +2,7 @@
 #include "common.h"
 #endif
 
+// maybe move it later into the class
 std::queue<Transaction> drv_fifo;
 
 
@@ -23,11 +24,11 @@ public:
 
 
 void Driver::main() {
-    if (!inf->top->clk) {
+    if (!inf->get_clock()) {
         if (VERBOSITY) {
             //printf("[%ld] DRV: waiting to drive on HOLD_TIME after posedge\n", inf->timestamp);
         }
-        while (!inf->top->clk) inf->wait(1);
+        while (!inf->get_clock()) inf->wait(1);
         inf->wait(SETUP_TIME + 1);
     }
     if (drv_fifo.empty()) return;
