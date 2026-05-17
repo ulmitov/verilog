@@ -75,8 +75,8 @@ module alu #(parameter XLEN = RISCV_XLEN) (
                 OP_ALU_XOR:     alu_res = alu_a ^ alu_b;
                 OP_ALU_AND:     alu_res = alu_a & alu_b;
                 OP_ALU_OR:      alu_res = alu_a | alu_b;
-                OP_ALU_SLT:     alu_res = {XLEN{lt}};
-                OP_ALU_SLTU:    alu_res = {XLEN{ltu}};
+                OP_ALU_SLT:     alu_res = {{(XLEN-1){1'b0}}, lt};
+                OP_ALU_SLTU:    alu_res = {{(XLEN-1){1'b0}}, ltu};
                 default:        alu_res = {XLEN{1'b0}};
             endcase
         end
@@ -103,8 +103,8 @@ module alu_dataflow #(parameter XLEN = RISCV_XLEN) (
             OP_ALU_XOR: alu_res = alu_a ^ alu_b;
             OP_ALU_AND: alu_res = alu_a & alu_b;
             OP_ALU_OR:  alu_res = alu_a | alu_b;
-            OP_ALU_SLT: alu_res = $signed(alu_a) < $signed(alu_b) ? {XLEN{1'b1}} : {XLEN{1'b0}};
-            OP_ALU_SLTU:alu_res = alu_a < alu_b ? {XLEN{1'b1}} : {XLEN{1'b0}};
+            OP_ALU_SLT: alu_res = $signed(alu_a) < $signed(alu_b) ? 'b1 : 'b0;
+            OP_ALU_SLTU:alu_res = alu_a < alu_b ? 'b1 : 'b0;
             default:    alu_res = {XLEN{1'b0}};
         endcase
         `ifdef SV_TB

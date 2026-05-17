@@ -26,7 +26,7 @@ module riscv_core #(
 );
     logic [31:0] pc_jump, next_pc_alu;
     logic [31:0] immediate;
-    logic [XLEN-1:0] alu_a, alu_b, alu_res;
+    logic [XLEN-1:0] alu_a, alu_b, alu_res, alu_res_signed;
     logic [XLEN-1:0] signed_rd_data;
     logic pc_mux;
     logic branch_taken;
@@ -132,16 +132,24 @@ module riscv_core #(
         assign dmem_addr = alu_res;
     `endif
 
-    assign alu_a    = alua_sel ? pc : rs1_data;         // 0- rs1_data, 1- pc
-    assign alu_b    = alub_sel ? immediate : rs2_data;  // 0- rs2_data, 1- imm
-    assign pc_mux   = branch_taken | pc_sel;            // pc_sel: 0- next_pc, 1- alu_res(jump)
     assign pc_jump  = {alu_res[XLEN-1:1], 1'b0};
+    assign pc_mux   = branch_taken | pc_sel;            // pc_sel: 0- next_pc, 1- alu_res(jump)
+    assign alu_a    = alua_sel ? pc : rs1_data;         // 0- rs1_data, 1- pc
+    assign alu_b    = alub_sel ? {{(XLEN-32){immediate[31]}}, immediate} : rs2_data;  // 0- rs2_data, 1- imm
+
+    // OPCODE_ITYPE_IMM_32: result is trancated to 32 bits and sign extended
+    generate
+        if (XLEN > 32)
+            assign alu_res_signed = opcode == OPCODE_ITYPE_IMM_32 ? {{32{alu_res[31]}}, alu_res[31:0]} : alu_res;
+        else
+            assign alu_res_signed = alu_res;
+    endgenerate
 
     always_comb begin
         case (rf_wr_data_sel)
-            OP_RF_SEL_ALU: rf_wr_data = alu_res;
+            OP_RF_SEL_ALU: rf_wr_data = alu_res_signed;
             OP_RF_SEL_MEM: rf_wr_data = signed_rd_data;
-            OP_RF_SEL_IMM: rf_wr_data = immediate;
+            OP_RF_SEL_IMM: rf_wr_data = {{(XLEN-32){immediate[31]}}, immediate};
             OP_RF_SEL_PC:  rf_wr_data = next_pc_alu;
         endcase
     end

@@ -38,6 +38,10 @@ Status TBD:
 - ![CI #35](https://github.com/ulmitov/verilog/actions/runs/25748486816/job/75618142917) Discovered that instructions were not fetched properly after reset. Fixed in next CI.
 - ![CI #36](https://github.com/ulmitov/verilog/actions/runs/25793690130/job/75765416609) Discovered that Stype commands always returned 32 bit data, instead of requested block size. Fixed in next CI.
 - ![CI #38](https://github.com/ulmitov/verilog/actions/runs/25806742517/job/75811513330) Discovered that in case the read address is outside of data memory, the Itype Load commands data was not sign extended. Fixed in next CI.
+- ![CI #42](https://github.com/ulmitov/verilog/actions/runs/25995536368/job/76409264454) Issues found:
+1) ALU was extending "Less Than" result to 32 bits, instead of 1 bit.
+2) For RV64 immediate was not sign extended
+3) For RV64 ALU result of OP-32-IMM commands was not sign extended
 
 
 

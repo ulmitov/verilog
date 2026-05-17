@@ -34,17 +34,17 @@ module decode (
     assign rs2_addr = instruction[24:20];
     assign funct7   = instruction[31:25];
 
+    assign imm_j = {{12{instruction[31]}}, instruction[19:12], instruction[20], instruction[30:21], 1'b0};
+    assign imm_b = {{20{instruction[31]}}, instruction[7], instruction[30:25], instruction[11:8], 1'b0};
     assign imm_s = {{21{instruction[31]}}, instruction[30:25], instruction[11:7]};
     assign imm_i = {{20{instruction[31]}}, instruction[31:20]};
-    assign imm_b = {{20{instruction[31]}}, instruction[7], instruction[30:25], instruction[11:8], 1'b0};
     assign imm_u = {instruction[31:12], 12'b0}; // same as imm << 12
-    assign imm_j = {{12{instruction[31]}}, instruction[19:12], instruction[20], instruction[30:21], 1'b0};
 
     assign immediate =  s_type ? imm_s :
                         i_type ? imm_i :
                         b_type ? imm_b :
                         u_type ? imm_u :
-                        j_type ? imm_j : 32'b0;
+                        j_type ? imm_j : {RISCV_XLEN{1'b0}};
 
     always_comb begin
         s_type = 1'b0;
