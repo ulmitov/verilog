@@ -34,7 +34,8 @@ module memory #(
     parameter BSIZE = get_block_size(MAXBL);
     logic [7:0] MEMX [0:DEPTH-1];    // Each mem address holds 1 byte
     logic [DATA_WIDTH-1:0] reg_rd;
-    logic rd_en, wr_en;
+    logic rd_en;
+    logic wr_en;
 
     `ifdef VERILATOR
     export "DPI-C" task initmem;

@@ -18,8 +18,9 @@ module shift_reg #(parameter N = 4) (
     output wire [N-1:0] dout,   // Parallel Out
     output wire dout_n          // Serial Out
 );
-    integer i;
     reg [N-1:0] darr;
+    integer i;
+
     assign dout_n = dout[0];
 
     `ifndef GATE_FLOW_OFF

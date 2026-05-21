@@ -1,17 +1,19 @@
 # RISCV single cycle implementation
-Currently supported designs are RV32I and RV64I.
-Interrupts and registers are in status TBD.
+-Currently supported design is the Base instruction set for **RV32I and RV64I**.
+-Interrupts and registers are in status **TBD**.
+
+
+
+##  Testbench files
+ - ![Design verification](./testbench) **C++ testbench designed like UVM**: ![See README](./testbench)
+ - `alu.sv` is verified in ![**SystemVerilog testbench**](../tb_sv_alu)
+ - `memory.sv` is verified in ![**UMV testbench**](../tb_uvm_mem)
+ - ![testbench/testbench.sv](./testbench/testbench.sv) is a Verilog application level test
+
 
 
 ## Architecture
 ![arch.png](./doc/arch.png)
-
-
-##  Testbench files
- - ![Design verification](./testbench) **CPP UVM like testbench**: ![See README](./testbench)
- - `alu.sv` is verified in ![**SystemVerilog testbench**](../tb_sv_alu)
- - `memory.sv` is verified in ![**UMV testbench**](../tb_uvm_mem)
- - ![testbench/testbench.sv](./testbench/testbench.sv) is a Verilog application level test
 
 
 

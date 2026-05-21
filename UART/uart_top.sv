@@ -19,16 +19,26 @@ module uart_top (
     output logic baudout,   // Tx baud
     output logic intr       // interrupt to cpu
 );
-    logic [`UART_DATA_WIDTH-1:0] lsr, lcr, iir, ier, fcr, dll, dlm, thr;
-    logic [`UART_DATA_WIDTH+1:0] rx_fifo_out;
+    logic [`UART_DATA_WIDTH-1:0] lsr;
+    logic [`UART_DATA_WIDTH-1:0] lcr;
+    logic [`UART_DATA_WIDTH-1:0] iir;
+    logic [`UART_DATA_WIDTH-1:0] ier;
+    logic [`UART_DATA_WIDTH-1:0] fcr;
+    logic [`UART_DATA_WIDTH-1:0] dll;
+    logic [`UART_DATA_WIDTH-1:0] dlm;
+    logic [`UART_DATA_WIDTH-1:0] thr;
     logic [`UART_DATA_WIDTH-1:0] tsr_data;
     logic [`UART_DATA_WIDTH-1:0] rd_data;
     logic [`UART_DATA_WIDTH-1:0] data_in;
-    logic ren, wen;
+    logic [`UART_DATA_WIDTH+1:0] rx_fifo_out;
+    logic ren;
+    logic wen;
     logic dlab;
     logic baud_load;
-    logic fifo_en, lsr_rd;
-    logic thr_wr, rbr_rd;
+    logic fifo_en;
+    logic lsr_rd;
+    logic thr_wr;
+    logic rbr_rd;
     logic rx_ready;
     logic rx_full;
     logic tx_empty;

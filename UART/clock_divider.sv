@@ -12,8 +12,12 @@ module clock_divider #(parameter DIV_WIDTH = 16) (
     input [DIV_WIDTH-1:0] div,
     output logic clk_out
 );
-    logic [DIV_WIDTH-1:0] counter, next_count;
-    logic cycle_init, cycle_full, switch_clk, half_cycle;
+    logic [DIV_WIDTH-1:0] counter;
+    logic [DIV_WIDTH-1:0] next_count;
+    logic cycle_init;
+    logic cycle_full;
+    logic switch_clk;
+    logic half_cycle;
 
     assign cycle_init   = counter == 1;
     assign cycle_full   = counter == div;

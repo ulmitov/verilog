@@ -9,11 +9,13 @@ module alu #(parameter XLEN = RISCV_XLEN) (
     output logic [XLEN-1:0] alu_res
 );
     `ifndef GATE_FLOW_OFF
-        logic lt, ltu;
+        logic lt;
+        logic ltu;
         logic nadd_sub;
         logic right_en;
         logic sign_ext;
-        logic carry, of;
+        logic carry;
+        logic of;
         logic [XLEN-1:0] sum;
         logic [XLEN-1:0] out_sh;
         logic [$clog2(XLEN):0] shifts_num;
@@ -23,7 +25,9 @@ module alu #(parameter XLEN = RISCV_XLEN) (
             .X(alu_a),
             .Y(alu_b),
             .sum(sum),
-            .carry(carry), .overflow(of), .eq(),
+            .carry(carry),
+            .overflow(of),
+            .eq(),
             .lt(lt),
             .ltu(ltu)
         );

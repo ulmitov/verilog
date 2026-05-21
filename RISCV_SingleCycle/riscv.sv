@@ -17,9 +17,14 @@ module riscv #(
 );
     logic [31:0] imem_addr;
     logic [IALIGN-1:0] instruction;
-    logic [XLEN-1:0] mem_rd_data, dmem_rd_data;
-    logic [XLEN-1:0] rs1_data, rs2_data, rf_wr_data;
-    logic [4:0] rd_addr, rs1_addr, rs2_addr;
+    logic [XLEN-1:0] mem_rd_data;
+    logic [XLEN-1:0] dmem_rd_data;
+    logic [XLEN-1:0] rs1_data;
+    logic [XLEN-1:0] rs2_data;
+    logic [XLEN-1:0] rf_wr_data;
+    logic [4:0] rd_addr;
+    logic [4:0] rs1_addr;
+    logic [4:0] rs2_addr;
     logic imem_req;
     logic rf_wr_en;
     logic dmem_zero_ex;

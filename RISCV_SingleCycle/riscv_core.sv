@@ -15,7 +15,9 @@ module riscv_core #(
     output logic imem_req,
     output logic rf_wr_en,
     output logic [31:0] pc,
-    output logic [4:0] rd_addr, rs1_addr, rs2_addr,
+    output logic [4:0] rd_addr,
+    output logic [4:0] rs1_addr,
+    output logic [4:0] rs2_addr,
     output logic [31:0] dmem_addr,
     output logic [XLEN-1:0] rf_wr_data,
     output logic [XLEN-1:0] dmem_wr_data,
@@ -24,15 +26,26 @@ module riscv_core #(
     output logic dmem_wr,
     output op_enum_dmem_size dmem_size
 );
-    logic [31:0] pc_jump, next_pc_alu;
+    logic [31:0] pc_jump;
+    logic [31:0] next_pc_alu;
     logic [31:0] immediate;
-    logic [XLEN-1:0] alu_a, alu_b, alu_res, alu_res_signed;
+    logic [XLEN-1:0] alu_a;
+    logic [XLEN-1:0] alu_b;
+    logic [XLEN-1:0] alu_res;
+    logic [XLEN-1:0] alu_res_signed;
     logic [XLEN-1:0] signed_rd_data;
-    logic pc_mux;
-    logic branch_taken;
     logic op32;
-    logic pc_sel, alua_sel, alub_sel;
-    logic r_type, i_type, s_type, b_type, u_type, j_type;
+    logic pc_mux;
+    logic pc_sel;
+    logic r_type;
+    logic i_type;
+    logic s_type;
+    logic b_type;
+    logic u_type;
+    logic j_type;
+    logic alua_sel;
+    logic alub_sel;
+    logic branch_taken;
     logic [6:0] opcode;
     logic [6:0] funct7;
     logic [2:0] funct3;

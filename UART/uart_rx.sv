@@ -35,12 +35,15 @@ module uart_rx #(parameter DATA_WIDTH = 8, parameter TICKS_NUM = 16) (
     logic rx_done;
     logic rx_done_set;
     logic ct_restart;
-    logic [TICK_BW:0] count_ticks, ct_nextval;
-    logic [$clog2(DATA_WIDTH)-1:0] count_bits, cb_next;
+    logic [TICK_BW:0] count_ticks;
+    logic [TICK_BW:0] ct_nextval;
+    logic [$clog2(DATA_WIDTH)-1:0] count_bits;
+    logic [$clog2(DATA_WIDTH)-1:0] cb_next;
     logic [DATA_WIDTH:0] rsr_data;
     logic [2:0] parity_reg;
     logic last_bit;
-    logic err_par, err_fr;
+    logic err_par;
+    logic err_fr;
 
     // pushing also parity bit
     shift_reg #(.N(DATA_WIDTH+1)) rsr (

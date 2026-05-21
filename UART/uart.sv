@@ -14,8 +14,8 @@ module uart #(
     input rd_uart,
     input wr_uart,
     input rx_ext,           // from external device
-    input [7:0] wr_data,
     input baud_res,
+    input [7:0] wr_data,
     input [DIV_BITS-1:0] divisor,
     input [DWIDTH-1:0] lcreg,
     input [DWIDTH-1:0] fcreg,
@@ -29,6 +29,7 @@ module uart #(
     output logic rx_full,
     output logic tx_empty,
     output logic tx_ready
+    //,output logic [FIFO_ADDR_W:0] rx_fifo_count
 );
     logic [7:0] tx_data;
     logic [7:0] tx_fifo_out;
@@ -36,13 +37,14 @@ module uart #(
     logic [9:0] rx_out;
     logic rx_din;
     logic rx_clk;
+    logic fifo_en;
     logic res_rxf;
     logic res_txf;
-    logic fifo_en;
-    logic rx_fifo_full;
-    logic tx_fifo_full;
     logic tx_push;
     logic rx_push;
+    logic rx_fifo_full;
+    logic tx_fifo_full;
+
 
     clock_divider #(DIV_BITS) baud_gen (
         .clk_in(clk),

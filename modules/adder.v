@@ -79,9 +79,11 @@ module fast_adder #(parameter n = 4) (
     output wire lt,
     output wire ltu
 );
-    wire same_sign, cmp;
+    wire same_sign;
+    wire cmp;
     reg [n:0] C;
-    reg [n-1:0] y2c, S;
+    reg [n-1:0] y2c;
+    reg [n-1:0] S;
     integer k;
 
     always @(*) begin

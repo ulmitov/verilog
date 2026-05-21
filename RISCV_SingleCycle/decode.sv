@@ -23,12 +23,14 @@ module decode (
     logic [31:0] imm_b;
     logic [31:0] imm_u;
     logic [31:0] imm_j;
+    logic [1:0] opcode16;
     logic is_32bit;
 
-    assign is_32bit = &instruction[1:0];
+    assign opcode16 = instruction[1:0];
+    assign is_32bit = &opcode16;
     assign opcode   = instruction[6:0];
     assign rd_addr  = instruction[11:7];
-    assign funct3   = instruction[14:12];
+    assign funct3   = is_32bit ? instruction[14:12] : instruction[15:13];
     assign rs1_addr = instruction[19:15];
     assign rs2_addr = instruction[24:20];
     assign funct7   = instruction[31:25];

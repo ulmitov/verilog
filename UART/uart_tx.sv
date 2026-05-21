@@ -20,7 +20,8 @@ module uart_tx #(parameter DATA_WIDTH = 8, parameter TICKS_NUM = 16) (
     localparam HALF_CYCLE = HALF_TICKS;
 
     typedef enum logic [2:0] { IDLE, START, DATA, PARITY, STOP, STOP_HALF } op_states;
-    op_states state, next_state;
+    op_states state;
+    op_states next_state;
 
     logic sreg_en;
     logic load_en;
@@ -30,12 +31,14 @@ module uart_tx #(parameter DATA_WIDTH = 8, parameter TICKS_NUM = 16) (
     logic last_tick;
     logic tx_pulled;
     logic cb_incr;
-    logic [TICK_BW:0] count_ticks;
-    logic [$clog2(DATA_WIDTH)-1:0] count_bits, cb_next;
-    logic [2:0] parity_reg;
     logic last_bit;
     logic stop_bits;
     logic half_parity;
+    logic [TICK_BW:0] count_ticks;
+    logic [$clog2(DATA_WIDTH)-1:0] count_bits;
+    logic [$clog2(DATA_WIDTH)-1:0] cb_next;
+    logic [2:0] parity_reg;
+
 
     shift_reg #(.N(DATA_WIDTH)) tsr (
         .clk(last_tick),

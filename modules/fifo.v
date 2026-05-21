@@ -35,9 +35,12 @@ module fifo #(
     output reg [ADDR_WIDTH:0] count     // items counter
 );
     reg [DATA_WIDTH-1:0] mem [2**ADDR_WIDTH-1:0]; // TODO: can replace with memory module
-    reg [ADDR_WIDTH-1:0] w_ptr, r_ptr;
-    reg [ADDR_WIDTH-1:0] next_w, next_r;
-    wire ren, wen;
+    reg [ADDR_WIDTH-1:0] w_ptr;
+    reg [ADDR_WIDTH-1:0] r_ptr;
+    reg [ADDR_WIDTH-1:0] next_w;
+    reg [ADDR_WIDTH-1:0] next_r;
+    wire ren;
+    wire wen;
 
     assign wen = push & (~full | pull);
     assign ren = pull & ~empty;
