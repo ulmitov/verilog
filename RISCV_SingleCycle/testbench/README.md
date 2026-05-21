@@ -29,8 +29,9 @@ Status Done:
 - Test all Rtype ALU commands
 - Test all Utype branch commands
 - Test all Btype branch commands
+
 Status TBD:
-- Additional tests... (fencing, interrupts, registers, negative)
+- Additional tests... (interrupts, registers, negative)
 
 
 

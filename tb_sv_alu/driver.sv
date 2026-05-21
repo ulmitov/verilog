@@ -1,4 +1,8 @@
-`define DIF vif.mod_drv
+`ifdef VERILATOR
+`define VIF vif         // TBD: remove after modport issues fixed
+`else
+`define VIF vif.mod_drv
+`endif
 
 
 class driver;
@@ -14,13 +18,26 @@ class driver;
     task main(int num);
         repeat(num) begin
             gen2drv_mail.get(req);
-            // lock DIF from all threads until alu produces result
+            // lock VIF from all threads until alu produces result
+            `ifdef VERILATOR
+            @(posedge vif.clk) vif.lock();
+            //$display("DRV LOCKED");
+            `else
             vif.lock();
-            `DIF.alu_a = req.alu_a;
-            `DIF.alu_b = req.alu_b;
-            `DIF.alu_op = req.alu_op;
-            #`TPD vif.unlock();
+            `endif
+            `VIF.alu_a = req.alu_a;
+            `VIF.alu_b = req.alu_b;
+            `VIF.alu_op = req.alu_op;
+            `ifdef VERILATOR
+            @(negedge vif.clk) vif.unlock();
+            //$display("DRV UNLOCK");
+            `else
+                `ifdef TPD
+                #`TPD vif.unlock();
+                `endif
+            `endif
             req.display("DRV");
+            //$display("DRV UNLOCK");
         end
     endtask
 endclass

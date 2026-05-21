@@ -1,6 +1,6 @@
 # RISCV single cycle implementation
--Currently supported design is the Base instruction set for **RV32I and RV64I**.
--Interrupts and registers are in status **TBD**.
+- Currently supported design is the Base instruction set for **RV32I and RV64I**.
+- Interrupts and registers are in status **TBD**.
 
 
 

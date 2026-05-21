@@ -6,14 +6,17 @@ import risc_pkg::*;
 `else
 `define TPD (`T_DELAY_PD*(3*32))
 `endif
-`define SV_TB   // TODO: remove after verilator bug fixed
+`define SV_TB   // TODO: remove after verilator bug
 
 `include "consts.vh"
 `include "environment.sv"
 
 
 module top_tb;
-    intf itf();
+    logic clk = 0;
+    intf itf(clk);
+    // TODO: remove the clock when verilator threading issues fixed
+    always #`TPD clk = ~clk;
 
     alu #(.XLEN(RISCV_XLEN)) DUT (
         .alu_a(itf.alu_a),

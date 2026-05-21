@@ -1,4 +1,8 @@
-`define MIF vif.mod_mon
+`ifdef VERILATOR
+`define VIF vif         // TBD: remove after verilator modport issues fixed
+`else
+`define VIF vif.mod_mon
+`endif
 
 
 class monitor;
@@ -16,13 +20,18 @@ class monitor;
         repeat(num) begin
             req = new();
             count++;
-            // lock MIF to avoid driver access
+            // lock VIF to avoid driver access
+            `ifdef VERILATOR
+            @(negedge `VIF.clk) vif.lock();
+            //$display("MON locked drv");
+            `else
             vif.lock();
-            req.alu_a = `MIF.alu_a;
-            req.alu_b = `MIF.alu_b;
-            req.alu_op = `MIF.alu_op;
-            req.alu_res = `MIF.alu_res;
-            req.res_exp = `MIF.res_exp;
+            `endif
+            req.alu_a = `VIF.alu_a;
+            req.alu_b = `VIF.alu_b;
+            req.alu_op = `VIF.alu_op;
+            req.alu_res = `VIF.alu_res;
+            req.res_exp = `VIF.res_exp;
             vif.unlock();
             mon2scb_mail.put(req);
             req.display($sformatf("MON %0d", count));

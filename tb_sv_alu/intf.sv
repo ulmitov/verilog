@@ -1,4 +1,4 @@
-interface intf #(parameter XLEN = RISCV_XLEN) ();
+interface intf #(parameter XLEN = RISCV_XLEN) (input logic clk);
     semaphore ready = new(1);
     op_enum_alu alu_op;
     logic [XLEN-1:0] alu_a;
