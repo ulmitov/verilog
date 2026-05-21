@@ -5,10 +5,10 @@
 
 class Logger {
 public:
+    const char *tpl = "vcd/%d_test%03d_phase%03d.txt";
     int uid;
     int prefix = -1;
     int postfix = -1;
-    const char *tpl = "vcd/%d_test%03d_phase%03d.txt";
     FILE *fptr = NULL;
 
     Logger(): uid(time(NULL)) {}
@@ -31,19 +31,24 @@ public:
         if (fptr != NULL) fclose(fptr);
 
         postfix = index;
-        sprintf(name, tpl, uid, prefix, index);
+        sprintf(name, tpl, uid, prefix, postfix);
         fptr = fopen(name, "a");
         if (fptr == NULL) {
             printf("ERROR: Could not open file %s\n", name);
             exit(1);
         }
     }
+
+    char* get_name() {
+        static char name[40];
+        sprintf(name, tpl, uid, prefix, postfix);
+        return name;
+    }
     
     void print_log() {
         FILE *rptr;
         char ch;
-        char name[40];
-        sprintf(name, tpl, uid, prefix, postfix);
+        const char *name = get_name();
         fprintf(fptr, "---------- END OF %s ----------\n", name);
         fflush(fptr);
         rptr = fopen(name, "r");

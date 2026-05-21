@@ -4,14 +4,23 @@
 
 
 class Sequencer {
-public:
+private:
     std::queue<int> sqr_fifo;
-    int split_count = 0;    // as generators are running they will increase this with each zero command
-    int cmd_count = 0;      // counter of commands per hex file (test phase)
+public:
+    int split_num = 0;  // each zero command marks the end of an hex file and rest of commands are split to next hex
+    int cmd_count = 0;  // counter of commands per hex file (test phase)
 
     void main(const char *mem_file_name = "test.mem");
 
-    void push(unsigned int val);
+    void post_test();
+
+    void push_seq(unsigned int val);
+
+    void split();
+
+    void reset();
+
+    long size();
 
     void put_bytes(const char *file_path, unsigned long input_val, int word_len = Vriscv_risc_pkg::IALIGN / 8);
 };
@@ -24,18 +33,42 @@ void Sequencer::main(const char *mem_file_name) {
     while (!sqr_fifo.empty()) {
         val = sqr_fifo.front();
         sqr_fifo.pop();
-        put_bytes(mem_file_name, val);
-        if (!val) break;
-        cmd_count++;
+        if (val) {
+            put_bytes(mem_file_name, val, val & 0x3 == 3 ? 4 : 2);
+            cmd_count++;
+        } else if (sqr_fifo.front()) {
+            // not breaking if multiple zero cmds injected
+            break;
+        }
     }
     // push zero cmd as last command
-    if (val) put_bytes(mem_file_name, 0);
+    put_bytes(mem_file_name, 0);
 }
 
 
-void Sequencer::push(unsigned int val) {
+void Sequencer::post_test() {
+    split_num = 0;
+}
+
+
+void Sequencer::push_seq(unsigned int val) {
     sqr_fifo.push(val);
-    if (!val) split_count++;
+    if (!val) split_num++;
+}
+
+
+void Sequencer::reset() {
+    while (!sqr_fifo.empty()) sqr_fifo.pop();
+}
+
+
+void Sequencer::split() {
+    push_seq(0);
+}
+
+
+long Sequencer::size() {
+    return sqr_fifo.size();
 }
 
 

@@ -40,11 +40,20 @@ void run_test(Environment* env) {
     test_itype_arithmetic(env);
     test_itype_arithmetic_op32(env);
 
+    test_rtype(env);
+    test_rtype_op32(env);
+
+    test_utype_jumps(env);
+
+    test_btype_jumps_forward(env);
+    test_btype_jumps_backward(env);
+
 }
 
 
 void run_single(Environment* env) {
-    test_itype_arithmetic(env);
+    test_btype_jumps_forward(env);
+    test_btype_jumps_backward(env);
 }
 
 
@@ -52,19 +61,18 @@ int main (int argc, char **argv) {
     Verilated::commandArgs(argc, argv);
     if (VERBOSITY) {
         Verilated::traceEverOn(true);
-        Verilated::scopesDump(); // print available scopes
+        Verilated::scopesDump();    // print available scopes
     }
 
     // TODO: set the seed from verilator args if exists
     unsigned int seed = time(NULL);
     srand(seed);
-
     print_config(seed);
+
     Interface *inf = new Interface(VERBOSITY);
     Environment* env = new Environment(inf);
 
     inf->set_clock(1);
-
     seq_prefill_data_memory();
     inf->prefill_data_memory();
 

@@ -30,6 +30,7 @@ module riscv_core #(
     logic [XLEN-1:0] signed_rd_data;
     logic pc_mux;
     logic branch_taken;
+    logic op32;
     logic pc_sel, alua_sel, alub_sel;
     logic r_type, i_type, s_type, b_type, u_type, j_type;
     logic [6:0] opcode;
@@ -125,22 +126,17 @@ module riscv_core #(
     );
 
 
-    `ifdef DEBUG_RUN
-        // DEBUG only: set x when no need for data
-        assign dmem_addr = dmem_req ? alu_res : 'bX;
-    `else
-        assign dmem_addr = alu_res;
-    `endif
-
-    assign pc_jump  = {alu_res[XLEN-1:1], 1'b0};
+    assign dmem_addr= alu_res;
+    assign pc_jump  = {alu_res[31:1], 1'b0};            // For now Inst ROM is always 32 bits, so taking alu_res from bit 31
     assign pc_mux   = branch_taken | pc_sel;            // pc_sel: 0- next_pc, 1- alu_res(jump)
     assign alu_a    = alua_sel ? pc : rs1_data;         // 0- rs1_data, 1- pc
-    assign alu_b    = alub_sel ? {{(XLEN-32){immediate[31]}}, immediate} : rs2_data;  // 0- rs2_data, 1- imm
+    assign alu_b    = alub_sel ? {{(XLEN-32){immediate[31]}}, immediate} : rs2_data;    // 0- rs2_data, 1- imm
+    // OP-32: result is trancated to 32 bits and sign extended
+    assign op32     = opcode == OPCODE_ITYPE_IMM_32 | opcode == OPCODE_RTYPE_32;
 
-    // OPCODE_ITYPE_IMM_32: result is trancated to 32 bits and sign extended
     generate
         if (XLEN > 32)
-            assign alu_res_signed = opcode == OPCODE_ITYPE_IMM_32 ? {{32{alu_res[31]}}, alu_res[31:0]} : alu_res;
+            assign alu_res_signed = op32 ? {{32{alu_res[31]}}, alu_res[31:0]} : alu_res;
         else
             assign alu_res_signed = alu_res;
     endgenerate

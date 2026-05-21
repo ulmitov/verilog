@@ -113,25 +113,43 @@ public:
         printf("[%lu] INFO: --- RESET DONE ---\n", timestamp);
     }
 
-    void boot_load(const char *mem_file_name = "test.mem") {
+    /** Upload hex mem file into instrucion ROM
+     * 
+     * @param mem_file_path mem file string
+     */
+    void boot_load(const char *mem_file_path = "test.mem") {
         svSetScope(svGetScopeFromName("TOP.riscv.instruction_mem"));
-        Vriscv::initmem(mem_file_name);
+        Vriscv::initmem(mem_file_path);
     }
 
-    void prefill_data_memory(const char *mem_fname = "prefill.mem", int word_len = XLEN / 8) {
+    /** Upload hex mem file into data memory
+     * 
+     * @param mem_file_path mem file string
+     */
+    void prefill_data_memory(const char *mem_file_path = "prefill.mem", int word_len = XLEN / 8) {
         svSetScope(svGetScopeFromName("TOP.riscv.data_mem"));
-        Vriscv::initmem(mem_fname);
+        Vriscv::initmem(mem_file_path);
     }
 
+    /** Check if address is in data mememory address range
+     * 
+     * @return 1 if address is in dmem range, 0 otherwise
+     */
     int is_data_memory_address() {
-        if (addr() >= DATA_MEMORY_BASE_ADDR && addr() < DATA_MEMORY_LAST_ADDR) {
-            return 1;
-        }
-        return 0;
+        return addr() >= DATA_MEMORY_BASE_ADDR && addr() < DATA_MEMORY_LAST_ADDR;
+    }
+
+    /** Can define additional stop condition, for example if instruction is zero cmd
+     * 
+     * @return 1 if condition occurred, 0 otherwise
+     */
+    int got_finish() {
+        return top->rootp->riscv__DOT__core__DOT__fetch_block__DOT__imem_addr &&
+        !top->rootp->riscv__DOT__core__DOT__instruction;
     }
     
-    void dump(int full = 0) {
-        if (full) {
+    void dump(int std_out = 0) {
+        if (std_out) {
             /*
             if (addr() >= DATA_MEMORY_BASE_ADDR && addr() < DATA_MEMORY_LAST_ADDR) {
                 printf("DMEM DUMP: ");
@@ -194,6 +212,18 @@ public:
                 top->rootp->riscv__DOT__core__DOT__rs2_addr,
                 top->rootp->riscv__DOT__core__DOT__immediate,
                 top->rootp->riscv__DOT__core__DOT__alu_block__DOT__alu_res
+            );
+            fprintf(logger->fptr, "[%lu] DEBUG: CORE:  opcode=%02x  funct3=%d  rf_wr_data_sel=%d  rd_addr=%08x  rs1_addr=%08x  rs1_data=%08x  rs2_addr=%08x  rs2_data=%08x  imm=%08x\n",
+                timestamp,
+                top->rootp->riscv__DOT__core__DOT__opcode,
+                top->rootp->riscv__DOT__core__DOT__funct3,
+                top->rootp->riscv__DOT__core__DOT__rf_wr_data_sel,
+                top->rootp->riscv__DOT__core__DOT__rd_addr,
+                top->rootp->riscv__DOT__core__DOT__rs1_addr,
+                top->rootp->riscv__DOT__core__DOT__rs1_data,
+                top->rootp->riscv__DOT__core__DOT__rs2_addr,
+                top->rootp->riscv__DOT__core__DOT__rs2_data,
+                top->rootp->riscv__DOT__core__DOT__immediate
             );
             fprintf(logger->fptr, "[%lu] DEBUG: DATABUS: addr=%08x  dmem_req=%d  dmem_wr=%d  wr_data=%08x  rd_data=%08x\n\n",
                 timestamp,

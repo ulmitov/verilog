@@ -53,7 +53,11 @@ module riscv #(
 
 
     memory #(
-        .DEPTH(2**12),      // 8kb, 1k instructions
+        `ifdef VERILATOR
+            .DEPTH(2**12),      // 4kb, 1024 instructions
+        `else
+            .DEPTH(2**10),      // 1kb, 256 instructions
+        `endif
         .DATA_WIDTH(32),
         .ADDR_WIDTH(32),
         .MEM_FILE(MEM_FILE),

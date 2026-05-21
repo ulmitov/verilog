@@ -26,11 +26,11 @@ Status Done:
 - Test Itype Load for address signals
 - Test Itype Load for data signals
 - Test all Itype arithmetic commands
-Status TBD:
 - Test all Rtype ALU commands
+- Test all Utype branch commands
 - Test all Btype branch commands
-- Verify rest of commands
-- Additional tests... (interrupts, registers, negative)
+Status TBD:
+- Additional tests... (fencing, interrupts, registers, negative)
 
 
 

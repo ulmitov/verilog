@@ -19,7 +19,9 @@ public:
 
     void main();
 
-    void forward_to_set(int set_num);
+    void post_test();
+
+    void post_phase(int phase_num);
 };
 
 
@@ -60,9 +62,15 @@ void Driver::main() {
 }
 
 
-void Driver::forward_to_set(int set_num) {
+void Driver::post_test() {
+    while (!drv_fifo.empty()) drv_fifo.pop();
+}
+
+
+void Driver::post_phase(int phase_num) {
+    // forward driver stimulus to next phase number
     while (!drv_fifo.empty()) {
-        if (drv_fifo.front().test_id != set_num) {
+        if (drv_fifo.front().test_id != phase_num) {
             drv_fifo.pop();
             drv_count++;
         } else {

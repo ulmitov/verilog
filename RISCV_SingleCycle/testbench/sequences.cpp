@@ -7,7 +7,7 @@ extern Sequencer *sqr;
 
 
 void push_ref(Transaction *req, char no_zero_cmd = 0) {
-    req->test_id = sqr->split_count;
+    req->test_id = sqr->split_num;
     // masking fields according to XLEN since in transaction it is defined as long:
     if (XLEN < 64) {
         req->wr_data &= (1UL << XLEN) - 1;
@@ -20,15 +20,15 @@ void push_ref(Transaction *req, char no_zero_cmd = 0) {
 
     // Log the commands to file, each phase has dedicated file
     if (ref_fifo.empty()) logger->init_log();
-    logger->start_log(sqr->split_count);
-    fprintf(logger->fptr, "%s\n[%ld]: EXPECT: addr=%08lx data=%08lx\n\n",
+    logger->start_log(sqr->split_num);
+    fprintf(logger->fptr, "%s[%ld]: EXPECT: addr=%08lx data=%08lx\n\n",
             req->str, ref_fifo.size(), req->addr, req->wr_data
     );
 
     ref_fifo.push(*req);
     if (no_zero_cmd) return;
-    if (sqr->sqr_fifo.size() / INSTRUCTIONS_LIMIT > sqr->split_count) {
-        sqr->push(0);
+    if (sqr->size() / INSTRUCTIONS_LIMIT > sqr->split_num) {
+        sqr->split();
     }
 }
 
@@ -46,49 +46,50 @@ void seq_prefill_data_memory(const char *mem_fname = "prefill.mem", int word_len
 
 // U type
 void seq_utype(const char *name, struct isa_utype *cmd) {
-    unsigned int decoded_val;
     cmd->rd &= 0x1F;
     cmd->imm &= 0xFFFFF;
-    decoded_val = cmd->opcode | (cmd->rd << 7) | (cmd->imm << 12);
+    cmd->value = cmd->opcode | (cmd->rd << 7) | (cmd->imm << 12);
     sprintf(cmd->str, "%08x\t%s x%d, 0x%0x",
-        decoded_val, name, cmd->rd, cmd->imm);
-    sqr->push(decoded_val);
+        cmd->value, name, cmd->rd, cmd->imm);
+    sqr->push_seq(cmd->value);
 }
 void seq_lui(struct isa_utype *cmd) {
-    unsigned int decoded_val;
     cmd->opcode = Vriscv_risc_pkg::OPCODE_U_TYPE_LUI;
     seq_utype("lui", cmd);
 }
 void seq_auipc(struct isa_utype *cmd) {
-    unsigned int decoded_val;
     cmd->opcode = Vriscv_risc_pkg::OPCODE_U_TYPE_AUIPC;
     seq_utype("auipc", cmd);
 }
 void seq_jal(struct isa_utype *cmd) {
-    unsigned int decoded_val;
+    unsigned int new_imm;
     cmd->opcode = Vriscv_risc_pkg::OPCODE_U_TYPE_JAL;
     cmd->rd &= 0x1F;
     cmd->imm &= 0xFFFFF;
-    decoded_val = cmd->opcode | (cmd->rd << 7);
-    decoded_val += ((cmd->imm & 0xFF000) << 12) | ((cmd->imm & 0x800) << 20);
-    decoded_val += ((cmd->imm & 0x7FE) << 21) | ((cmd->imm & 0x100000) << 31);
+    // IMM: 20 | 10:1 | 11 | 19:12 <-- bit 12
+    cmd->imm = cmd->imm << 1;
+    new_imm = ((cmd->imm & 0xFF000) >> 12) << 12;
+    new_imm += ((cmd->imm & 0x800) >> 11) << 20;
+    new_imm += ((cmd->imm & 0x7FE) >> 1) << 21;
+    new_imm += ((cmd->imm & 0x100000) >> 20) << 31;
+    cmd->value = cmd->opcode | (cmd->rd << 7) | new_imm;
+    cmd->imm = cmd->imm >> 1;
     sprintf(cmd->str, "%08x\tjal x%d, 0x%0x",
-        decoded_val, cmd->rd, cmd->imm);
-    sqr->push(decoded_val);
+        cmd->value, cmd->rd, cmd->imm);
+    sqr->push_seq(cmd->value);
 }
 
 
 // S type
 void seq_stype(const char *name, struct isa_stype *cmd) {
-    unsigned int decoded_val;
     cmd->rs1 &= 0x1F;
     cmd->rs2 &= 0x1F;
     cmd->imm &= 0xFFF;
-    decoded_val = cmd->opcode | ((cmd->imm & 0x1F) << 7) | (cmd->funct3 << 12);
-    decoded_val += (cmd->rs1 << 15) | (cmd->rs2 << 20) | ((cmd->imm >> 5) << 25);
+    cmd->value = cmd->opcode | ((cmd->imm & 0x1F) << 7) | (cmd->funct3 << 12);
+    cmd->value += (cmd->rs1 << 15) | (cmd->rs2 << 20) | ((cmd->imm >> 5) << 25);
     sprintf(cmd->str, "%08x\t%s x%d, 0x%0x(x%d)",
-        decoded_val, name, cmd->rs2, cmd->imm, cmd->rs1);
-    sqr->push(decoded_val);
+        cmd->value, name, cmd->rs2, cmd->imm, cmd->rs1);
+    sqr->push_seq(cmd->value);
 }
 void seq_sb(struct isa_stype *cmd) {
     cmd->opcode = Vriscv_risc_pkg::OPCODE_S_TYPE;
@@ -121,7 +122,7 @@ void seq_sd(struct isa_stype *cmd) {
     seq_stype("sd", cmd);
 }
 
-void set_stype(struct isa_stype *stype, int bits_width) {
+void set_stype(struct isa_stype *stype, int bits_width = XLEN) {
     switch(bits_width) {
         case 8:
             seq_sb(stype);
@@ -148,21 +149,20 @@ void set_stype(struct isa_stype *stype, int bits_width) {
 
 // I type
 void seq_itype(const char *name, struct isa_itype *cmd, char bit30 = 0) {
-    unsigned int decoded_val;
     cmd->rs1 &= 0x1F;
     cmd->rd &= 0x1F;
     cmd->imm &= 0xFFF;
-    decoded_val = cmd->opcode | (cmd->rd << 7)| (cmd->funct3 << 12);
-    decoded_val += (cmd->rs1 << 15) | (cmd->imm << 20);
-    decoded_val += bit30 << 30;
+    cmd->value = cmd->opcode | (cmd->rd << 7)| (cmd->funct3 << 12);
+    cmd->value += (cmd->rs1 << 15) | (cmd->imm << 20);
+    cmd->value += bit30 << 30;
     if (cmd->opcode == Vriscv_risc_pkg::OPCODE_I_TYPE_LOAD) {
         sprintf(cmd->str, "%08x\t%s x%d, 0x%0x(x%d)",
-                decoded_val, name, cmd->rd, cmd->imm, cmd->rs1);
+                cmd->value, name, cmd->rd, cmd->imm, cmd->rs1);
     } else {
         sprintf(cmd->str, "%08x\t%s x%d, x%d, 0x%0x",
-                decoded_val, name, cmd->rd, cmd->rs1, cmd->imm);
+                cmd->value, name, cmd->rd, cmd->rs1, cmd->imm);
     }
-    sqr->push(decoded_val);
+    sqr->push_seq(cmd->value);
 }
 // JALR
 void seq_jalr(struct isa_itype *cmd) {
@@ -383,16 +383,22 @@ void set_itype_arithmetic(struct isa_itype *itype, int alu_opcode, int op32imm =
 
 // B type
 void seq_btype(const char *name, struct isa_btype *cmd) {
-    unsigned int decoded_val;
+    unsigned int new_imm;
     cmd->rs1 &= 0x1F;
     cmd->rs2 &= 0x1F;
     cmd->imm &= 0xFFF;
-    decoded_val = cmd->opcode | ((cmd->imm & 0x800) << 7) | ((cmd->imm & 0x1E) << 8);
-    decoded_val += (cmd->funct3 << 12) | (cmd->rs1 << 15) | (cmd->rs2 << 20);
-    decoded_val += ((cmd->imm & 0x7E) << 25) | ((cmd->imm & 0x1000) << 31);
-    sprintf(cmd->str, "%08x\t%s x%d, 0x%0x(x%d)",
-        decoded_val, name, cmd->rs2, cmd->imm, cmd->rs1);
-    sqr->push(decoded_val);
+    cmd->imm = cmd->imm << 1;
+    // 4:1 | 11 <-- bit 7
+    // 12 | 10:5 <-- bit 25
+    new_imm = ((cmd->imm & 0x800) >> 11) << 7;
+    new_imm += ((cmd->imm & 0x1E) >> 1) << 8;
+    new_imm += ((cmd->imm & 0x7E0) >> 5) << 25;
+    new_imm += ((cmd->imm & 0x1000) >> 12) << 31;
+    cmd->value = cmd->opcode | (cmd->funct3 << 12) | (cmd->rs1 << 15) | (cmd->rs2 << 20) | new_imm;
+    cmd->imm = cmd->imm >> 1;
+    sprintf(cmd->str, "%08x\t%s x%d, x%d, 0x%0x",
+        cmd->value, name, cmd->rs1, cmd->rs2, cmd->imm);
+    sqr->push_seq(cmd->value);
 }
 void seq_beq(struct isa_btype *cmd) {
     cmd->opcode = Vriscv_risc_pkg::OPCODE_B_TYPE;
@@ -425,18 +431,43 @@ void seq_bgeu(struct isa_btype *cmd) {
     seq_btype("bgeu", cmd);
 }
 
+void set_btype(struct isa_btype *btype, int btype_opcode) {
+    switch(btype_opcode) {
+        case Vriscv_risc_pkg::OP_B_TYPE_BEQ:
+            seq_beq(btype);
+            break;
+        case Vriscv_risc_pkg::OP_B_TYPE_BNE:
+            seq_bne(btype);
+            break;
+        case Vriscv_risc_pkg::OP_B_TYPE_BLT:
+            seq_blt(btype);
+            break;
+        case Vriscv_risc_pkg::OP_B_TYPE_BGE:
+            seq_bge(btype);
+            break;
+        case Vriscv_risc_pkg::OP_B_TYPE_BLTU:
+            seq_bltu(btype);
+            break;
+        case Vriscv_risc_pkg::OP_B_TYPE_BGEU:
+            seq_bgeu(btype);
+            break;
+        default:
+            printf("ERROR: invalid BTYPE opcode provided by test\n");
+            return;
+    }
+}
+
 
 // R type
 void seq_rtype(const char *name, struct isa_rtype *cmd) {
-    unsigned int decoded_val;
     cmd->rd &= 0x1F;
     cmd->rs1 &= 0x1F;
     cmd->rs2 &= 0x1F;
-    decoded_val = cmd->opcode | (cmd->rd << 7) | (cmd->funct3 << 12);
-    decoded_val += (cmd->rs1 << 15) | (cmd->rs2 << 20) | (cmd->funct7 << 25);
+    cmd->value = cmd->opcode | (cmd->rd << 7) | (cmd->funct3 << 12);
+    cmd->value += (cmd->rs1 << 15) | (cmd->rs2 << 20) | (cmd->funct7 << 25);
     sprintf(cmd->str, "%08x\t%s x%d, x%d, x%d",
-        decoded_val, name, cmd->rd, cmd->rs1, cmd->rs2);
-    sqr->push(decoded_val);
+        cmd->value, name, cmd->rd, cmd->rs1, cmd->rs2);
+    sqr->push_seq(cmd->value);
 }
 void seq_add(struct isa_rtype *cmd) {
     cmd->opcode = Vriscv_risc_pkg::OPCODE_R_TYPE;

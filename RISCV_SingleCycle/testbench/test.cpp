@@ -222,3 +222,146 @@ void test_itype_arithmetic_op32(Environment* env) {
     env->main();
     printf("INFO: Finished SRAIW command test\n\n");
 }
+
+
+void test_rtype(Environment* env) {
+
+    generate_rtype(Vriscv_risc_pkg::OP_ALU_ADD);
+    env->main();
+    printf("INFO: Finished ADD command test\n\n");
+
+    generate_rtype(Vriscv_risc_pkg::OP_ALU_SUB);
+    env->main();
+    printf("INFO: Finished SUB command test\n\n");
+
+    generate_rtype(Vriscv_risc_pkg::OP_ALU_XOR);
+    env->main();
+    printf("INFO: Finished XOR command test\n\n");
+
+    generate_rtype(Vriscv_risc_pkg::OP_ALU_OR);
+    env->main();
+    printf("INFO: Finished OR command test\n\n");
+
+    generate_rtype(Vriscv_risc_pkg::OP_ALU_AND);
+    env->main();
+    printf("INFO: Finished AND command test\n\n");
+
+    generate_rtype(Vriscv_risc_pkg::OP_ALU_SLL);
+    env->main();
+    printf("INFO: Finished SLL command test\n\n");
+
+    generate_rtype(Vriscv_risc_pkg::OP_ALU_SRL);
+    env->main();
+    printf("INFO: Finished SRL command test\n\n");
+
+    generate_rtype(Vriscv_risc_pkg::OP_ALU_SRA);
+    env->main();
+    printf("INFO: Finished SRA command test\n\n");
+
+    generate_rtype(Vriscv_risc_pkg::OP_ALU_SLT);
+    env->main();
+    printf("INFO: Finished SLT command test\n\n");
+
+    generate_rtype(Vriscv_risc_pkg::OP_ALU_SLTU);
+    env->main();
+    printf("INFO: Finished SLTU command test\n\n");
+
+}
+
+
+void test_rtype_op32(Environment* env) {
+    if (XLEN < 64) return;
+    generate_rtype(Vriscv_risc_pkg::OP_ALU_ADD, 1);
+    env->main();
+    printf("INFO: Finished ADDW command test\n\n");
+
+    generate_rtype(Vriscv_risc_pkg::OP_ALU_SUB, 1);
+    env->main();
+    printf("INFO: Finished SUBW command test\n\n");
+
+    generate_rtype(Vriscv_risc_pkg::OP_ALU_SLL, 1);
+    env->main();
+    printf("INFO: Finished SLLW command test\n\n");
+
+    generate_rtype(Vriscv_risc_pkg::OP_ALU_SRL, 1);
+    env->main();
+    printf("INFO: Finished SRLW command test\n\n");
+
+    generate_rtype(Vriscv_risc_pkg::OP_ALU_SRA, 1);
+    env->main();
+    printf("INFO: Finished SRAW command test\n\n");
+}
+
+
+void test_utype_jumps(Environment* env) {
+    generate_auipc();
+    env->main();
+    printf("INFO: Finished AUIPC test\n\n");
+
+    generate_jal_forward();
+    env->main();
+    printf("INFO: Finished JAL forward jumps test\n\n");
+
+    generate_jal_backward();
+    env->main();
+    printf("INFO: Finished JAL backward jumps test\n\n");
+}
+
+
+void test_btype_jumps_forward(Environment* env) {
+
+    generate_btype_forward(Vriscv_risc_pkg::OP_B_TYPE_BEQ);
+    env->main();
+    printf("INFO: Finished OP_B_TYPE_BEQ jump forward test\n\n");
+
+    generate_btype_forward(Vriscv_risc_pkg::OP_B_TYPE_BNE);
+    env->main();
+    printf("INFO: Finished OP_B_TYPE_BNE jump forward test\n\n");
+
+    generate_btype_forward(Vriscv_risc_pkg::OP_B_TYPE_BLT);
+    env->main();
+    printf("INFO: Finished OP_B_TYPE_BLT jump forward test\n\n");
+
+    generate_btype_forward(Vriscv_risc_pkg::OP_B_TYPE_BGE);
+    env->main();
+    printf("INFO: Finished OP_B_TYPE_BGE jump forward test\n\n");
+
+    generate_btype_forward(Vriscv_risc_pkg::OP_B_TYPE_BLTU);
+    env->main();
+    printf("INFO: Finished OP_B_TYPE_BLTU jump forward test\n\n");
+
+    generate_btype_forward(Vriscv_risc_pkg::OP_B_TYPE_BGEU);
+    env->main();
+    printf("INFO: Finished OP_B_TYPE_BGEU jump forward test\n\n");
+
+}
+
+
+
+void test_btype_jumps_backward(Environment* env) {
+
+    generate_btype_backward(Vriscv_risc_pkg::OP_B_TYPE_BEQ);
+    env->main();
+    printf("INFO: Finished OP_B_TYPE_BEQ jump backward test\n\n");
+
+    generate_btype_backward(Vriscv_risc_pkg::OP_B_TYPE_BNE);
+    env->main();
+    printf("INFO: Finished OP_B_TYPE_BNE jump backward test\n\n");
+
+    generate_btype_backward(Vriscv_risc_pkg::OP_B_TYPE_BLT);
+    env->main();
+    printf("INFO: Finished OP_B_TYPE_BLT jump backward test\n\n");
+
+    generate_btype_backward(Vriscv_risc_pkg::OP_B_TYPE_BGE);
+    env->main();
+    printf("INFO: Finished OP_B_TYPE_BGE jump backward test\n\n");
+
+    generate_btype_backward(Vriscv_risc_pkg::OP_B_TYPE_BLTU);
+    env->main();
+    printf("INFO: Finished OP_B_TYPE_BLTU jump backward test\n\n");
+
+    generate_btype_backward(Vriscv_risc_pkg::OP_B_TYPE_BGEU);
+    env->main();
+    printf("INFO: Finished OP_B_TYPE_BGEU jump backward test\n\n");
+
+}

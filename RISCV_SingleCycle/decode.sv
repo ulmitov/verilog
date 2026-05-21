@@ -26,7 +26,6 @@ module decode (
     logic is_32bit;
 
     assign is_32bit = &instruction[1:0];
-
     assign opcode   = instruction[6:0];
     assign rd_addr  = instruction[11:7];
     assign funct3   = instruction[14:12];
@@ -55,7 +54,8 @@ module decode (
         j_type = 1'b0;
 
         case(opcode)
-            OPCODE_R_TYPE:          r_type = 1'b1;
+            OPCODE_R_TYPE,
+            OPCODE_RTYPE_32:        r_type = 1'b1;
             OPCODE_S_TYPE:          s_type = 1'b1;
             OPCODE_B_TYPE:          b_type = 1'b1;
             OPCODE_U_TYPE_JAL:      j_type = 1'b1;

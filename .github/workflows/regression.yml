@@ -49,10 +49,10 @@ jobs:
         run: make risc SIM=v RM_OBJDIR=true 2>&1 | tee tb_rv32i.log
 
       - name: RV32I Design Verification C++ testbench
-        run: make riscdv ARG='-CFLAGS "-DVERBOSITY=0" -DXLEN=32' 2>&1 | tee uvm_riscdv32.log
+        run: make riscdv ARG=-DXLEN=32 2>&1 | tee uvm_riscdv32.log
 
       - name: RV64I Design Verification C++ testbench
-        run: make riscdv ARG='-CFLAGS "-DVERBOSITY=0" -DXLEN=64' 2>&1 | tee uvm_riscdv64.log
+        run: make riscdv ARG=-DXLEN=64 2>&1 | tee uvm_riscdv64.log
 
       - name: UART C++ and verilog tests
         run: make uart SIM=v RM_OBJDIR=true 2>&1 | tee tb_uart.log

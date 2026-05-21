@@ -30,11 +30,12 @@ module register_file #(parameter XLEN = 32) (
     assign rs1_data = reg_mem[rs1_addr];
     assign rs2_data = reg_mem[rs2_addr];
 
-    always_ff @(posedge clk or negedge res_n) begin
+    // writing on the negedge after data is stable. alternative is to force a delay.
+    always_ff @(negedge clk or negedge res_n) begin
         if (!res_n) begin
             for (i = 0; i < 32; i = i + 1)
                 reg_mem[i] <= {XLEN{1'b0}};
-        end else if (rf_wr_en && rd_addr != 5'b0)
+        end else if (rf_wr_en & |rd_addr)
             reg_mem[rd_addr] <= wr_data;
     end
 endmodule
