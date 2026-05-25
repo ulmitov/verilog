@@ -83,7 +83,7 @@ module riscv_core #(
     );
 
 
-    branch_control branch_block (
+    branch_control #(XLEN) branch_block (
         .b_type(b_type),
         .funct3(funct3),
         .rs1_data(rs1_data),

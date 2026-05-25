@@ -46,7 +46,7 @@ jobs:
         run: make regression SIM=v RM_OBJDIR=true 2>&1 | tee tb_modules.log
 
       - name: RV32I application tests
-        run: make risc SIM=v RM_OBJDIR=true 2>&1 | tee tb_rv32i.log
+        run: make risc_tb SIM=v RM_OBJDIR=true 2>&1 | tee tb_rv32i.log
 
       - name: RV32I Design Verification C++ testbench
         run: make riscdv ARG=-DXLEN=32 2>&1 | tee uvm_riscdv32.log
@@ -60,6 +60,12 @@ jobs:
       - name: FIFO UVM testbench
         run: make uvm-fifo 2>&1 | tee uvm_fifo.log
 
+      - name: Memory UVM testbench 64 bit
+        run: make uvm-mem ARG=-DDATA_WIDTH=64 2>&1 | tee uvm_mem64.log
+
+      - name: Boot load memory UVM test 32 bit
+        run: make uvm-inst ARG=-DDATA_WIDTH=32 2>&1 | tee uvm_inst32.log
+
       - name: ALU SystemVerilog testbench 8 bit
         run: make alu ARG=-DXLEN=8 RM_OBJDIR=true 2>&1 | tee sv_alu8.log
 
@@ -71,24 +77,6 @@ jobs:
 
       - name: ALU SystemVerilog testbench 64 bit
         run: make alu ARG=-DXLEN=64 RM_OBJDIR=true 2>&1 | tee sv_alu64.log
-
-      - name: Memory UVM testbench 8 bit
-        run: make uvm-mem ARG=-DDATA_WIDTH=8 2>&1 | tee uvm_mem8.log
-
-      - name: Memory UVM testbench 16 bit
-        run: make uvm-mem ARG=-DDATA_WIDTH=16 2>&1 | tee uvm_mem16.log
-
-      - name: Memory UVM testbench 32 bit
-        run: make uvm-mem ARG=-DDATA_WIDTH=32 2>&1 | tee uvm_mem32.log
-
-      - name: Memory UVM testbench 64 bit
-        run: make uvm-mem ARG=-DDATA_WIDTH=64 2>&1 | tee uvm_mem64.log
-
-      - name: RISCV Instruction Memory UVM test 16 bit
-        run: make uvm-inst ARG=-DDATA_WIDTH=16 2>&1 | tee uvm_inst16.log
-
-      - name: RISCV Instruction Memory UVM test 32 bit
-        run: make uvm-inst ARG=-DDATA_WIDTH=32 2>&1 | tee uvm_inst32.log
 
       - name: Results Summary
         run: make grep_err

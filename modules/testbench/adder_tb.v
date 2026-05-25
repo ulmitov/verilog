@@ -1,5 +1,5 @@
 /* 
-    Full adder and comparator testbench
+    Ripple carry and Fast Full adders and comparator tests
 */
 `include "consts.vh"
 `timescale 1ns / 100ps

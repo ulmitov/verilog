@@ -5,16 +5,15 @@
 
 struct Transaction ref_req;
 struct Transaction drv_req;
+// TODO: for 64 bit need to add loading upper 32 bits to lui in all tests
 
 
 void generate_bit_patterns(
-    long unsigned int *arr,
-    int bits_width,
-    int length = SEQUENCES_NUM,
-    unsigned long rand_min = 0,
-    unsigned long rand_max = 0
+    long *arr,
+    int bits_width = XLEN,
+    int length = SEQUENCES_NUM
 ) {
-    unsigned long long mask_ff = (1ULL << bits_width) - 1;
+    long mask_ff = bits_width == 64 ? -1 : (1ULL << bits_width) - 1;
     // high to low and low to high
     *arr++ = 0;
     *arr++ = mask_ff;
@@ -33,16 +32,16 @@ void generate_bit_patterns(
 
     // fill with random values up to requested array length
     while (length > bits_width) {
-        if (rand_max) {
-            *arr++ = mask_ff & (rand_min + rand() % rand_max);
+        if (bits_width > 32) {
+            *arr++ = mask_ff & ((long)rand() | ((long)rand() << 32));
         } else {
-            *arr++ = mask_ff & (rand_min + rand());
+            *arr++ = mask_ff & rand();
         }
         length--;
     }
 
     // toggle bit by bit
-    for (int i = 0; i < bits_width; i++) *arr++ = 1 << i;
+    for (int i = 0; i < length; i++) *arr++ = 1 << i;
 }
 
 
@@ -81,7 +80,7 @@ void generate_stype_acceptance() {
         if (XLEN < 64 && block_size > 5) break;
         // lui rd will hold the base address for stype
         lui_base.rd = 0;
-        lui_base.imm = rand() % 0x100000;
+        lui_base.imm = rand();
         seq_lui(&lui_base);
 
         // Stype: copy value from [rs2] into mem[[rs1]+imm]
@@ -105,21 +104,19 @@ void generate_stype_acceptance() {
 void generate_stype_imm_lui_imm(int bits_width) {
     struct isa_utype lui_base;
     struct isa_stype stype;
-    unsigned long int patterns_12[SEQUENCES_NUM];
-    unsigned long int patterns_20[SEQUENCES_NUM];
+    long patterns[SEQUENCES_NUM];
 
     printf("INFO: Generating transactions: %d bits Stype rs1 imm and lui imm fields verification\n", bits_width);
-    generate_bit_patterns(&patterns_12[0], 12);
-    generate_bit_patterns(&patterns_20[0], 20);
+    generate_bit_patterns(&patterns[0]);
 
     for (int i = 0; i < SEQUENCES_NUM; i++) {
         // lui rd will hold the base address for stype
         lui_base.rd = REGFILE_A0;
-        lui_base.imm = patterns_20[i];
+        lui_base.imm = patterns[i] >> 12;
         seq_lui(&lui_base);
 
         // Stype: copy value from [rs2] into mem[[rs1]+imm]
-        stype.imm = patterns_12[i];
+        stype.imm = patterns[i];
         stype.rs1 = lui_base.rd;
         stype.rs2 = 0;
         set_stype(&stype, bits_width);
@@ -141,12 +138,10 @@ void generate_stype_data(int bits_width) {
     struct isa_utype lui_data;
     struct isa_itype addi;
     struct isa_stype stype;
-    unsigned long int patterns_12[SEQUENCES_NUM];
-    unsigned long int patterns_20[SEQUENCES_NUM];
+    long patterns[SEQUENCES_NUM];
 
     printf("INFO: Generating transactions: %d bits Stype data verification\n", bits_width);
-    generate_bit_patterns(&patterns_12[0], 12);
-    generate_bit_patterns(&patterns_20[0], 20);
+    generate_bit_patterns(&patterns[0]);
 
     // TODO: if the loops get bigger then move it inside the loops
     lui_base.rd = REGFILE_A0;
@@ -159,17 +154,17 @@ void generate_stype_data(int bits_width) {
         for (int i = 0; i < SEQUENCES_NUM; i++) {
             // set the upper imm value
             lui_data.rd = dreg;
-            lui_data.imm = patterns_20[i];
+            lui_data.imm = patterns[i] >> 12;
             seq_lui(&lui_data);
 
             // set rd = rs1 + imm
             addi.rd = dreg;
             addi.rs1 = dreg;
-            addi.imm = patterns_12[i];
+            addi.imm = patterns[i];
             seq_addi(&addi);
 
             // Stype: copy value from [rs2] into mem[[rs1]+imm]
-            stype.imm = (patterns_12[i] / WORD_LEN) * WORD_LEN;    // 4 bytes aligned
+            stype.imm = (patterns[i] / WORD_LEN) * WORD_LEN;    // 4 bytes aligned
             stype.rs1 = lui_base.rd;
             stype.rs2 = dreg;
             set_stype(&stype, bits_width);
@@ -199,12 +194,12 @@ void generate_itype_load_acceptance() {
         if (XLEN < 64 && block_size > 5) break;
         // set into reg the address for load
         lui_base.rd = 0;
-        lui_base.imm = rand() % 0x100000;
+        lui_base.imm = rand();
         seq_lui(&lui_base);
 
         addi.rd = 0;
         addi.rs1 = 0;
-        addi.imm = rand() % 0x1000;
+        addi.imm = rand();
         seq_addi(&addi);
 
         load.rd = 0;
@@ -228,8 +223,8 @@ void generate_itype_load_address(int bits_width, char unsigned_commands = 0) {
     struct isa_utype lui_base;
     struct isa_itype load;
     struct isa_stype stype;
-    unsigned long int patterns_12[SEQUENCES_NUM];
-    unsigned long int patterns_20[SEQUENCES_NUM];
+    long patterns_12[SEQUENCES_NUM];
+    long patterns_20[SEQUENCES_NUM];
 
     printf("INFO: Generating transactions: %d bits Itype load command addr verification\n", bits_width);
     generate_bit_patterns(&patterns_12[0], 12);
@@ -294,12 +289,10 @@ void generate_itype_load_data(int bits_width, char unsigned_commands = 0) {
     struct isa_itype addi;
     struct isa_itype load;
     struct isa_stype stype;
-    unsigned long int patterns_12[SEQUENCES_NUM];
-    //unsigned long int patterns_20[SEQUENCES_NUM];
+    long patterns[SEQUENCES_NUM];
 
     printf("INFO: Generating transactions: %d bits Itype load command data verification\n", bits_width);
-    generate_bit_patterns(&patterns_12[0], 12);
-    //generate_bit_patterns(&patterns_20[0], 20);
+    generate_bit_patterns(&patterns[0], 12);
 
     for (int dreg = 1; dreg < MAX_REG; dreg++) {
         if (dreg == REGFILE_A0 || dreg == REGFILE_A1) continue;
@@ -314,19 +307,19 @@ void generate_itype_load_data(int bits_width, char unsigned_commands = 0) {
 
             // fill data destination reg high bits
             lui_data.rd = dreg;
-            lui_data.imm = rand() % 0x100000;
+            lui_data.imm = rand();
             seq_lui(&lui_data);
 
             // fill data destination reg lower bits
             addi.rd = dreg;
             addi.rs1 = dreg;
-            addi.imm = rand() % 0x1000;
+            addi.imm = rand();
             seq_addi(&addi);
 
             // Load Itype: copy value from mem[[rs1]+imm] into reg[rd]
             load.rd = dreg;
             load.rs1 = lui_base.rd;
-            load.imm = (patterns_12[i]);// / WORD_LEN) * WORD_LEN;    // 4 bytes aligned
+            load.imm = patterns[i]; // / WORD_LEN) * WORD_LEN;    // 4 bytes aligned
             set_itype_load(&load, bits_width, unsigned_commands);
 
             // Reference transaction (load + drive reaction)
@@ -344,12 +337,12 @@ void generate_itype_load_data(int bits_width, char unsigned_commands = 0) {
             // TODO: for external memory, add block size logic in load commands, then remove the data mask from here:
             // also apply stimulus here, need to verify high to low, etc...
             drv_req.rd_data = ref_req.rd_data;
+            drv_req.test_id = sqr->split_num;
             sprintf(drv_req.str, "%s\n%s\n%s\n%s\n",
                     lui_base.str, lui_data.str, addi.str, load.str);
-            drv_req.test_id = sqr->split_num;
             drv_fifo.push(drv_req);
             fprintf(logger->fptr, "GEN: pushed to driver transaction with addr %0lx, rd_data %0lx\n\n",
-            drv_req.addr, drv_req.rd_data);
+                    drv_req.addr, drv_req.rd_data);
 
             // Verify data was loaded correctly into destination reg
             // Store data from destination reg to some random memory:
@@ -359,7 +352,7 @@ void generate_itype_load_data(int bits_width, char unsigned_commands = 0) {
             seq_lui(&lui_base_stype);
 
             // Stype: copy value from [rs2] into mem[[rs1]+imm]
-            stype.imm = ((rand() % 0x1000) / WORD_LEN) * WORD_LEN;    // 4 bytes aligned
+            stype.imm = (rand() / WORD_LEN) * WORD_LEN;    // 4 bytes aligned
             stype.rs1 = lui_base_stype.rd;
             stype.rs2 = dreg;
             set_stype(&stype);
@@ -389,12 +382,10 @@ void generate_itype_arithmetic(int opcode, int op32 = 0) {
     struct isa_stype stype;
     struct isa_itype itype;
     struct isa_itype addi;
-    unsigned long int patterns_12[SEQUENCES_NUM];
-    //unsigned long int patterns_20[SEQUENCES_NUM];
+    long patterns[SEQUENCES_NUM];
 
     printf("INFO: Generating transactions: Itype arithmetic command with opcode %d\n", opcode);
-    generate_bit_patterns(&patterns_12[0], 12);
-    //generate_bit_patterns(&patterns_20[0], 20);
+    generate_bit_patterns(&patterns[0], 12);
 
     // first loop running with zeros, i.e acceptance test!
     for (int sreg = 0; sreg < MAX_REG; sreg++) {
@@ -404,19 +395,19 @@ void generate_itype_arithmetic(int opcode, int op32 = 0) {
 
                 // lui rd will hold the upper bits for itype.rs1
                 lui_base.rd = sreg;
-                lui_base.imm = rand() % 0x100000;   // patterns_20[i];
+                lui_base.imm = rand();
                 seq_lui(&lui_base);
 
                 // fill itype.rs1 lower bits
                 addi.rd = sreg;
                 addi.rs1 = sreg;
-                addi.imm = rand() % 0x1000;
+                addi.imm = rand();
                 seq_addi(&addi);
 
                 // rd = rs1 + imm
                 itype.rd = dreg;
                 itype.rs1 = sreg;
-                itype.imm = patterns_12[i];
+                itype.imm = patterns[i];
                 set_itype_arithmetic(&itype, opcode, op32);
 
                 // Stype: copy value from [rs2] into mem[[rs1]+imm]
@@ -487,10 +478,10 @@ void generate_rtype(int opcode, int op32 = 0) {
     struct isa_rtype rtype;
     struct isa_itype addi_rs1;
     struct isa_itype addi_rs2;
-    unsigned long int patterns_12_rs1[SEQUENCES_NUM];
-    unsigned long int patterns_20_rs1[SEQUENCES_NUM];
-    unsigned long int patterns_12_rs2[SEQUENCES_NUM];
-    unsigned long int patterns_20_rs2[SEQUENCES_NUM];
+    long patterns_12_rs1[SEQUENCES_NUM];
+    long patterns_20_rs1[SEQUENCES_NUM];
+    long patterns_12_rs2[SEQUENCES_NUM];
+    long patterns_20_rs2[SEQUENCES_NUM];
     long rs1;
     long rs2;
     int shift_amount;
@@ -532,7 +523,7 @@ void generate_rtype(int opcode, int op32 = 0) {
                 seq_addi(&addi_rs2);
 
                 // rd = rs1 + rs2
-                rtype.rd = i;
+                rtype.rd = i % 32;
                 rtype.rs1 = reg_rs1;
                 rtype.rs2 = reg_rs2;
                 set_rtype(&rtype, opcode, op32);
@@ -594,9 +585,10 @@ void generate_rtype(int opcode, int op32 = 0) {
                 ref_req.wr = 1;
                 ref_req.rd_data = 0;
                 ref_req.addr = sign_extend(stype.imm);
-                if (!i) ref_req.wr_data = 0;
+                if (!rtype.rd) ref_req.wr_data = 0;
                 sprintf(ref_req.str, "%s\n%s\n%s\n%s\n%s\n%s\n",
-                    lui_rs1.str, addi_rs1.str, lui_rs2.str, addi_rs2.str, rtype.str, stype.str);
+                        lui_rs1.str, addi_rs1.str, lui_rs2.str,
+                        addi_rs2.str, rtype.str, stype.str);
                 push_ref(&ref_req);
             }
         }
@@ -609,12 +601,12 @@ void generate_auipc() {
     struct isa_stype stype;
     struct isa_utype auipc;
     //unsigned long int patterns_12[SEQUENCES_NUM];
-    unsigned long int patterns_20[SEQUENCES_NUM];
+    long patterns[SEQUENCES_NUM];
     unsigned long pc = 0;
 
     printf("INFO: Generating transactions: AUIPC verification\n");
     //generate_bit_patterns(&patterns_12[0], 12);
-    generate_bit_patterns(&patterns_20[0], 20);
+    generate_bit_patterns(&patterns[0], 20);
 
     for (int dreg = 0; dreg < MAX_REG; dreg += 1) {
 
@@ -623,13 +615,13 @@ void generate_auipc() {
 
             // rd = pc + imm << 12
             auipc.rd = dreg;
-            auipc.imm = patterns_20[i];
+            auipc.imm = patterns[i];
             seq_auipc(&auipc);
 
             // Stype: copy value from [rs2] into mem[[rs1]+imm]
-            stype.imm = ((rand() % 0x700) / WORD_LEN) * WORD_LEN;    // positive ranges, 4 bytes aligned
             stype.rs1 = 0;
             stype.rs2 = dreg;
+            stype.imm = ((rand() % 0x700) / WORD_LEN) * WORD_LEN;    // positive ranges, 4 bytes aligned
             set_stype(&stype);
 
             // Reference transaction
@@ -654,19 +646,16 @@ void generate_jal_forward() {
     struct isa_utype jal;
     struct isa_stype stype;
     struct isa_stype dummy_stype;
-    //unsigned long int patterns_12[SEQUENCES_NUM];
-    unsigned long int patterns_20[SEQUENCES_NUM];
+    long patterns[SEQUENCES_NUM];
     unsigned long pc = 0;
     long max_jump = INSTRUCTIONS_LIMIT * 4;
     int next_stimulus;
     int fill_up;
     int offset;
     int n;
-    
 
     printf("INFO: Generating transactions: JAL positive jumps verification\n");
-    //generate_bit_patterns(&patterns_12[0], 12);
-    generate_bit_patterns(&patterns_20[0], 20);
+    generate_bit_patterns(&patterns[0], 20);
 
     for (int dreg = 0; dreg < MAX_REG; dreg++) {
 
@@ -674,7 +663,7 @@ void generate_jal_forward() {
             if (!dreg && i == 4) break; // 4 sequences is enough
 
             // positive numbers 4 bytes aligned
-            offset = (patterns_20[i] % max_jump) & 0x7FFFC;
+            offset = (patterns[i] % max_jump) & 0x7FFFC;
             if (!offset) offset = 4;
 
             // TODO: check also 2 bytes after adding C extension
@@ -714,14 +703,13 @@ void generate_jal_forward() {
             max_jump = INSTRUCTIONS_LIMIT * 4 - pc;
             next_stimulus = 0;
             if (i < SEQUENCES_NUM - 1 && max_jump) {
-                next_stimulus = (patterns_20[i+1] % max_jump) & 0x7FFFC;
+                next_stimulus = (patterns[i+1] % max_jump) & 0x7FFFC;
                 if (next_stimulus < 8) next_stimulus = 8;
             }
             if (!max_jump || pc + next_stimulus >= INSTRUCTIONS_LIMIT * 4) {
                 sqr->split();
                 pc = 0;
                 max_jump = INSTRUCTIONS_LIMIT * 4;
-                if (VERBOSITY) printf("-- SPLIT ---\n");
             }
         }
     }
@@ -737,8 +725,7 @@ void generate_jal_backward() {
     struct isa_utype jal_after;
     struct isa_stype stype;
     struct isa_stype dummy_stype;
-    //unsigned long int patterns_12[SEQUENCES_NUM];
-    unsigned long int patterns_20[SEQUENCES_NUM];
+    long patterns[SEQUENCES_NUM];
     unsigned long pc_stype = 0;
     unsigned long pc = 0;
     long max_jump = INSTRUCTIONS_LIMIT * 4;
@@ -748,15 +735,14 @@ void generate_jal_backward() {
     int n;
 
     printf("INFO: Generating transactions: JAL negative jumps verification\n");
-    //generate_bit_patterns(&patterns_12[0], 12);
-    generate_bit_patterns(&patterns_20[0], 20);
+    generate_bit_patterns(&patterns[0], 20);
 
     for (int dreg = 0; dreg < MAX_REG; dreg++) {
 
         for (int i = 0; i < SEQUENCES_NUM; i++) {
             if (!dreg && i == 4) break; // 4 sequences is enough
 
-            offset = (patterns_20[i] % max_jump) & 0x7FFFC; // 4 bytes aligned
+            offset = (patterns[i] % max_jump) & 0x7FFFC; // 4 bytes aligned
             if (offset < 8) offset = 8;     // min jump backward is 2 commands: stype + jal_after
 
             // jump forward to the tested command (offset + jal_tested cmd)
@@ -806,14 +792,164 @@ void generate_jal_backward() {
             max_jump = INSTRUCTIONS_LIMIT * 4 - pc;
             next_stimulus = 0;
             if (i < SEQUENCES_NUM - 1 && max_jump) {
-                next_stimulus = (patterns_20[i+1] % max_jump) & 0x7FFFC;
+                next_stimulus = (patterns[i+1] % max_jump) & 0x7FFFC;
                 if (next_stimulus < 8) next_stimulus = 8;
             }
             if (!max_jump || pc + next_stimulus >= INSTRUCTIONS_LIMIT * 4) {
                 sqr->split();
                 pc = 0;
                 max_jump = INSTRUCTIONS_LIMIT * 4;
-                if (VERBOSITY) printf("-- SPLIT ---\n");
+            }
+        }
+    }
+}
+
+
+
+/* Verify Btype does not jump
+ * This will verify the brunch comparator unit for returning correct results
+ */
+void generate_btype_no_jump(int btype_opcode) {
+    struct isa_btype btype;
+    struct isa_stype stype;
+    struct isa_utype lui;
+    struct isa_itype addi_rs1;
+    struct isa_itype addi_rs2;
+    struct isa_utype lui_help;
+    struct isa_itype addi_help;
+    struct isa_itype slli_help;
+    struct isa_rtype rhelp;
+    struct isa_rtype srl_help;
+    long patterns[SEQUENCES_NUM];
+    long pattern;
+    long rs1;
+    long rs2;
+    int reg_helper;
+
+    printf("INFO: Generating transactions: Btype opcode %d no jump verification\n", btype_opcode);
+    generate_bit_patterns(&patterns[0], XLEN);
+
+    for (int reg_rs1 = 0; reg_rs1 < MAX_REG; reg_rs1++) {
+        for (int reg_rs2 = 0; reg_rs2 < MAX_REG; reg_rs2++) {
+            for (int i = 0; i < SEQUENCES_NUM; i++) {
+                if ( (!reg_rs1 || !reg_rs2) && i == 4 ) break; // 4 sequences is enough
+
+                pattern = patterns[i];
+
+                switch(btype_opcode) {
+                    case Vriscv_risc_pkg::OP_B_TYPE_BEQ:
+                        if (reg_rs1 == reg_rs2) continue;
+                        if (!reg_rs2 && !pattern) continue;
+                        addi_rs2.imm = 1 + rand();
+                        break;
+                    case Vriscv_risc_pkg::OP_B_TYPE_BNE:
+                        // rs2 should be equal
+                        if (!reg_rs2 && pattern) continue;
+                        addi_rs2.imm = 0;
+                        break;
+                    case Vriscv_risc_pkg::OP_B_TYPE_BLT:
+                        // signed rs2 must be less or equal
+                        if (!reg_rs2 && pattern <= 0) continue;
+                        addi_rs2.imm = rand() | 0x800;
+                        break;
+                    case Vriscv_risc_pkg::OP_B_TYPE_BGE:
+                        // signed rs2 must be bigger
+                        if (reg_rs1 == reg_rs2) continue;
+                        if (!reg_rs2 && pattern >= 0) continue;
+                        if (pattern <= 0) continue;
+                        addi_rs2.imm = 1 + rand() & 0x7FF;
+                        break;
+                    case Vriscv_risc_pkg::OP_B_TYPE_BLTU:
+                        // unsigned rs2 must be less or equal
+                        if (!reg_rs1) continue;
+                        if (pattern >= 0) continue;
+                        addi_rs2.imm = rand() | 0x800;
+                        break;
+                    case Vriscv_risc_pkg::OP_B_TYPE_BGEU:
+                        // unsigned rs2 must be bigger
+                        if (reg_rs1 == reg_rs2) continue;
+                        if (!reg_rs2) continue;
+                        if (pattern <= 0) continue;
+                        addi_rs2.imm = 1 + rand() & 0x7FF;
+                        break;
+                    default:
+                        printf("ERROR: invalid BTYPE opcode provided by test\n");
+                        return;
+                }
+
+                lui.rd = reg_rs1;
+                lui.imm = (pattern - sign_extend(pattern & 0xFFF)) >> 12;
+                seq_lui(&lui);
+
+                addi_rs1.rd = reg_rs1;
+                addi_rs1.rs1 = reg_rs1;
+                addi_rs1.imm = pattern;
+                seq_addi(&addi_rs1);
+
+                // load upper 32 bits
+                if (XLEN > 32 && reg_rs1) {
+                    if (reg_rs1 != 1 && reg_rs2 != 1) {
+                        reg_helper = 1;
+                    } else if (reg_rs1 != 2 && reg_rs2 != 2) {
+                        reg_helper = 2;
+                    } else if (reg_rs1 != 3 && reg_rs2 != 3) {
+                        reg_helper = 3;
+                    }
+
+                    lui_help.rd = reg_helper;
+                    lui_help.imm = ((pattern >> 32) - sign_extend((pattern >> 32) & 0xFFF)) >> 12;
+                    seq_lui(&lui_help);
+
+                    addi_help.rd = reg_helper;
+                    addi_help.rs1 = reg_helper;
+                    addi_help.imm = pattern >> 32;
+                    seq_addi(&addi_help);
+
+                    slli_help.rd = reg_helper;
+                    slli_help.rs1 = reg_helper;
+                    slli_help.imm = 32;
+                    seq_slli(&slli_help);
+
+                    // remove sign bit in rs1
+                    slli_help.rd = reg_rs1;
+                    slli_help.rs1 = reg_rs1;
+                    slli_help.imm = 32;
+                    seq_slli(&slli_help);
+                    seq_srli(&slli_help);
+
+                    rhelp.rd = reg_rs1;
+                    rhelp.rs1 = reg_rs1;
+                    rhelp.rs2 = reg_helper;
+                    seq_or(&rhelp);
+                }
+
+                addi_rs2.rd = reg_rs2;
+                addi_rs2.rs1 = reg_rs1;
+                seq_addi(&addi_rs2);
+
+                btype.rs1 = reg_rs1;
+                btype.rs2 = reg_rs2;
+                btype.imm = pattern;
+                set_btype(&btype, btype_opcode);
+
+                // verify wr_data is equal to value of rs1
+                stype.imm = ((rand() % 0x700) / WORD_LEN) * WORD_LEN;    // positive ranges, 4 bytes aligned
+                stype.rs1 = 0;
+                stype.rs2 = reg_rs1;
+                set_stype(&stype);  // Stype: copy value from [rs2] into mem[[rs1]+imm]
+
+                rs1 = reg_rs1 ? pattern : 0;
+                rs2 = reg_rs2 ? rs1 + sign_extend(addi_rs2.imm) : 0;
+                if (reg_rs1 && reg_rs1 == reg_rs2) rs1 = rs2;
+
+                // Reference transaction
+                ref_req.wr = 1;
+                ref_req.rd_data = 0;
+                ref_req.wr_data = reg_rs1 ? rs1 : 0;
+                ref_req.addr = sign_extend(stype.imm);
+                sprintf(ref_req.str, "%s\n%s\n%s\n%s\n%s\n",
+                    lui.str, addi_rs1.str, addi_rs2.str, btype.str, stype.str);
+                push_ref(&ref_req);
             }
         }
     }
@@ -830,8 +966,8 @@ void generate_btype_forward(int btype_opcode) {
     struct isa_utype lui;
     struct isa_itype addi_rs1;
     struct isa_itype addi_rs2;
-    unsigned long int patterns_12[SEQUENCES_NUM];
-    //unsigned long int patterns_20[SEQUENCES_NUM];
+    long patterns_12[SEQUENCES_NUM];
+    long patterns_20[SEQUENCES_NUM];
     unsigned long pc = 0;
     long max_jump = INSTRUCTIONS_LIMIT * 4;
     long rs1;
@@ -845,7 +981,7 @@ void generate_btype_forward(int btype_opcode) {
 
     printf("INFO: Generating transactions: Btype opcode %d positive jumps verification\n", btype_opcode);
     generate_bit_patterns(&patterns_12[0], 12);
-    //generate_bit_patterns(&patterns_20[0], 20);
+    generate_bit_patterns(&patterns_20[0], 20);
 
     pc = const_offset - 4; // not counting the first cmd on pc 0
     max_jump -= const_offset;
@@ -858,13 +994,13 @@ void generate_btype_forward(int btype_opcode) {
 
                     // set rs1 equal to pc of the btype command
                     lui.rd = reg_rs1;
-                    lui.imm = (pc & 0xFFFFF) >> 12;
+                    lui.imm = patterns_20[i];
                     seq_lui(&lui);
 
                     // fill rs1 lower bits
                     addi_rs1.rd = reg_rs1;
                     addi_rs1.rs1 = reg_rs1;
-                    addi_rs1.imm = (pc & 0xFFF);
+                    addi_rs1.imm = patterns_12[i];
                     seq_addi(&addi_rs1);
 
                     // set rs2 equal to rs1 or differed by +/-1
@@ -872,7 +1008,6 @@ void generate_btype_forward(int btype_opcode) {
                     addi_rs2.rs1 = reg_rs1;
                     addi_rs2.imm = mode * (rand() % 0xFFF);
                     seq_addi(&addi_rs2);
-                    //if (addi_rs2.imm == 0 && reg_rs1 == reg_rs2) continue; // is there a point to test BEQ with same reg in rs1 and rs2
 
                     // --- now ready to jump ---
                     // positive numbers 4 bytes aligned
@@ -961,7 +1096,6 @@ void generate_btype_forward(int btype_opcode) {
                         sqr->split();
                         pc = const_offset - 4;
                         max_jump = INSTRUCTIONS_LIMIT * 4 - const_offset;
-                        if (VERBOSITY) printf("-- SPLIT ---\n");
                     }
                 }
             }
@@ -981,8 +1115,7 @@ void generate_btype_backward(int btype_opcode) {
     struct isa_itype addi_rs2;
     struct isa_utype jal_before;
     struct isa_utype jal_after;
-    unsigned long int patterns_12[SEQUENCES_NUM];
-    //unsigned long int patterns_20[SEQUENCES_NUM];
+    long patterns_12[SEQUENCES_NUM];
     unsigned long pc = 0;
     long max_jump = INSTRUCTIONS_LIMIT * 4;
     long rs1;
@@ -996,7 +1129,6 @@ void generate_btype_backward(int btype_opcode) {
 
     printf("INFO: Generating transactions: Btype opcode %d negative jumps verification\n", btype_opcode);
     generate_bit_patterns(&patterns_12[0], 12);
-    //generate_bit_patterns(&patterns_20[0], 20);
 
     //pc = const_offset - 4; // not counting the first cmd on pc 0
     max_jump -= const_offset;
@@ -1126,7 +1258,6 @@ void generate_btype_backward(int btype_opcode) {
                         sqr->split();
                         pc = 0;
                         max_jump = INSTRUCTIONS_LIMIT * 4 - const_offset;
-                        if (VERBOSITY) printf("-- SPLIT ---\n");
                     }
                 }
             }

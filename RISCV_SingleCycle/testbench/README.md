@@ -15,8 +15,8 @@
 - Prefill data memory
 
 **Strategy:**
-- The whole functionality can be verified using the Store commands, which will set output data onto the bus.
-So whole verification depends on LUI and Stype commands, so they will be tested first.
+- The whole functionality can be verified using the Store commands, which will set expected output data on the bus.
+So whole verification depends on LUI and Stype commands, hence they should be tested first.
 
 **Test plan:**
 Status Done:
@@ -27,11 +27,17 @@ Status Done:
 - Test Itype Load for data signals
 - Test all Itype arithmetic commands
 - Test all Rtype ALU commands
-- Test all Utype branch commands
-- Test all Btype branch commands
+- Test all Utype branch commands for positive jumps
+- Test all Utype branch commands for negative jumps
+- Test all Btype branch commands for no jump conditions
+- Test all Btype branch commands for positive jumps
+- Test all Btype branch commands for negative jumps
 
 Status TBD:
 - Additional tests... (interrupts, registers, negative)
+
+TODO:
+- RV64I: load test pattern upper bits into registers (like in Btype no jump test)
 
 
 

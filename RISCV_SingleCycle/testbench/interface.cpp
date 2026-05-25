@@ -46,20 +46,21 @@ public:
     unsigned int addr() {
         return top->dmem_addr;
     }
-    long int wr_data() {
+    long wr_data() {
         return top->dbus_wr_data;
     }
-    long int rd_data() {
+    long rd_data() {
         return top->dbus_rd_data;
     }
 
-    void set_rd_data(long int data) {
+    void set_rd_data(long data) {
         top->dbus_rd_data = data;
     }
 
     void set_clock(int val) {
         top->clk = val;
     }
+
     int get_clock() {
         return top->clk;
     }
@@ -143,7 +144,7 @@ public:
      * 
      * @return 1 if condition occurred, 0 otherwise
      */
-    int got_finish() {
+    int stop_event() {
         return top->rootp->riscv__DOT__core__DOT__fetch_block__DOT__imem_addr &&
         !top->rootp->riscv__DOT__core__DOT__instruction;
     }
@@ -162,7 +163,7 @@ public:
                 }
             }
             */
-            printf("[%lu] DEBUG: FETCH: req=%d  imem_addr=%08x  incr_pc=%d  instruction=%08x  imem_req=%d  pc_mux=%d  next_pc_alu=%08x  next_pc=%08x\n",
+            printf("[%lu] DEBUG: FETCH: imem_req=%d  imem_addr=%08x  incr_pc=%d  instruction=%08x  imem_req=%d  pc_mux=%d  next_pc_alu=%08x  next_pc=%08x\n",
                 timestamp,
                 top->rootp->riscv__DOT__core__DOT__fetch_block__DOT__req,
                 top->rootp->riscv__DOT__core__DOT__fetch_block__DOT__imem_addr,
@@ -201,38 +202,59 @@ public:
                 top->dbus_rd_data
             );
         } else {
-            fprintf(logger->fptr, "[%lu] CORE: pc=%08x  instruction=%08x  opcode=0x%0x  rf_wr_data_sel=%d  rd_addr=%08x  rs1_addr=%08x  rs2_addr=%08x  imm=%08x  alu_res=%d\n",
+            fprintf(logger->fptr, "[%lu] DEBUG: CORE: pc=%08x  inst=%08x  opcode=0x%0x  funct3=%d  imm=%08x  alu_a=%lx  alu_b=%lx  alu_res=%lx  brunch_lt=%d  brunch_ltu=%d\n",
                 timestamp,
                 top->rootp->riscv__DOT__core__DOT__fetch_block__DOT__imem_addr,
                 top->rootp->riscv__DOT__core__DOT__instruction,
                 top->rootp->riscv__DOT__core__DOT__opcode,
-                top->rootp->riscv__DOT__core__DOT__rf_wr_data_sel,
-                top->rootp->riscv__DOT__core__DOT__rd_addr,
-                top->rootp->riscv__DOT__core__DOT__rs1_addr,
-                top->rootp->riscv__DOT__core__DOT__rs2_addr,
-                top->rootp->riscv__DOT__core__DOT__immediate,
-                top->rootp->riscv__DOT__core__DOT__alu_block__DOT__alu_res
-            );
-            fprintf(logger->fptr, "[%lu] DEBUG: CORE:  opcode=%02x  funct3=%d  rf_wr_data_sel=%d  rd_addr=%08x  rs1_addr=%08x  rs1_data=%08x  rs2_addr=%08x  rs2_data=%08x  imm=%08x\n",
-                timestamp,
-                top->rootp->riscv__DOT__core__DOT__opcode,
                 top->rootp->riscv__DOT__core__DOT__funct3,
+                top->rootp->riscv__DOT__core__DOT__immediate,
+                top->rootp->riscv__DOT__core__DOT__alu_a,
+                top->rootp->riscv__DOT__core__DOT__alu_b,
+                top->rootp->riscv__DOT__core__DOT__alu_block__DOT__alu_res,
+                top->rootp->riscv__DOT__core__DOT__branch_block__DOT__lt,
+                top->rootp->riscv__DOT__core__DOT__branch_block__DOT__ltu
+            );
+            fprintf(logger->fptr, "[%lu] DEBUG: REGFILE: rf_wr_data_sel=%d  rd_addr=%x  rs1_addr=%x  rs2_addr=%x  rs1_data=%lx  rs2_data=%lx  rf_wr_data=%lx\n",
+                timestamp,
                 top->rootp->riscv__DOT__core__DOT__rf_wr_data_sel,
                 top->rootp->riscv__DOT__core__DOT__rd_addr,
                 top->rootp->riscv__DOT__core__DOT__rs1_addr,
-                top->rootp->riscv__DOT__core__DOT__rs1_data,
                 top->rootp->riscv__DOT__core__DOT__rs2_addr,
+                top->rootp->riscv__DOT__core__DOT__rs1_data,
                 top->rootp->riscv__DOT__core__DOT__rs2_data,
-                top->rootp->riscv__DOT__core__DOT__immediate
+                top->rootp->riscv__DOT__rf_wr_data
             );
-            fprintf(logger->fptr, "[%lu] DEBUG: DATABUS: addr=%08x  dmem_req=%d  dmem_wr=%d  wr_data=%08x  rd_data=%08x\n\n",
+            fprintf(logger->fptr, "[%lu] DEBUG: DATABUS: dmem_req=%d  dmem_wr=%d  addr=%08x  wr_data=%08x  rd_data=%08x\n\n",
                 timestamp,
-                top->dmem_addr,
                 top->dmem_req,
                 top->dmem_wr,
+                top->dmem_addr,
                 top->dbus_wr_data,
                 top->dbus_rd_data
             );
+            /*
+            fprintf(logger->fptr, "DUMP REGFILE: ");
+            for (int i = 0; i < 32; i++) {
+                try {
+                    fprintf(logger->fptr, "[%d]%lx ", i, top->rootp->riscv__DOT__reg_file__DOT__reg_mem[i]);
+                } catch (...) {
+                    fprintf(logger->fptr, "Error dumping array index %d\n", i);
+                }
+            }
+            fprintf(logger->fptr, "\n");*/
+        }
+    }
+
+    void dump_regfile() {
+        printf("DUMP REGFILE: ");
+        for (int i = 0; i < 32; i++) {
+            try {
+                printf("[%d]%lx ", i, top->rootp->riscv__DOT__reg_file__DOT__reg_mem[i]);
+                if (!(i % 8) || i == 31) printf("\n");
+            } catch (...) {
+                printf("Error dumping array index %d\n", i);
+            }
         }
     }
 };

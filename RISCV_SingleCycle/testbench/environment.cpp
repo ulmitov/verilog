@@ -53,6 +53,7 @@ public:
                 // phase failed: log output
                 printf("INFO: Caused by last transaction:\n");
                 inf->dump(1);
+                inf->dump_regfile();
                 printf("INFO: Peeking on the next transaction:\n");
                 inf->wait(CLK_PHASE * 2);
                 inf->dump(1);
@@ -61,7 +62,7 @@ public:
 
                 // post phase:
                 if (abort_on_first_err) {
-                    printf("INFO: Aborting test and all its phases\n");
+                    printf("WARNING: Aborting test and all its phases\n");
                     sqr->reset();
                     break;
                 } else if (sqr->size()) {
@@ -70,14 +71,14 @@ public:
                     drv->post_phase(phase_num + 1);
                 }
             }
-            // per phase post checks:
+            // phase post checks:
             if (!scb->err_count && sqr->cmd_count > 0) {
-                printf("WARNING: did not process %d commands for phase %d\n\n", sqr->cmd_count, phase_num);
+                printf("WARNING: did not process %d commands\n\n", sqr->cmd_count);
             }
             printf("INFO: Finished verification phase %d of %s\n\n", phase_num, memfile);
             phase_num++;
         }
-        // per test post checks:
+        // test post checks:
         // check driver stimulus was applied
         if (!scb->err_count && !drv_fifo.empty()) {
             printf("ERROR: unsent %ld transactions by driver\n\n", drv_fifo.size());
@@ -97,21 +98,21 @@ public:
         while (inf->timestamp < max_time) {
             drv->main();                // waits until hold time after posedge
             mon->main();                // waits until setup time before posedge
-            if (scb->main()) return 1;  // aborting phase on error
-
-            if (!sqr->cmd_count) {
+            if (scb->main()) {          // aborting phase on error
+                return 1;
+            }
+            if (inf->stop_event()) {
+                printf("INFO: Phase finished on interface stop condition\n");
                 break;
             }
-            if (inf->got_finish()) {
-                printf("WARNING: Phase finished according to interface stop condition\n");
+            if (!sqr->cmd_count) {  //  || sqr->cmd_count == INSTRUCTIONS_LIMIT
+                printf("INFO: Phase finished on commands counter exhaustion\n");
                 break;
             }
             sqr->cmd_count--;
         }
         if (inf->timestamp >= max_time) {
             printf("INFO: Phase finished on timeout\n");
-        } else if (!sqr->cmd_count) {
-            printf("INFO: Phase finished on all commands processed\n");
         }
         return 0;
     }

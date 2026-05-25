@@ -4,12 +4,13 @@ SHELL := $(pwd)vvp.sh
 #SHELL := /bin/bash
 SIM ?= iverilog
 RM_OBJDIR := false
-DEBUG_ARG := --runtime-debug -CFLAGS \"-O0 -g -DDEBUG_MODE\"
-RUNTIME_DBG := --prof-cfuncs -CFLAGS -DVL_DEBUG --stats --debug --runtime-debug
-_mkvcdir := $(shell mkdir -p vcd)
 RM_OBJDIR_CMD := find . -type d -name "obj_dir" -exec rm -rf {} +
+_mkvcdir := $(shell mkdir -p vcd)
 #export UVM_HOME := $(HOME)/dev/sda6/UVM/1800.2-2020/src
 export UVM_HOME := $(HOME)/dev/sda6/UVM/UVM1.2/src
+
+DEBUG_ARG := --runtime-debug -CFLAGS \"-O0 -g -DDEBUG_MODE\"
+RUNTIME_DBG := --prof-cfuncs -CFLAGS -DVL_DEBUG --stats --debug --runtime-debug
 
 VERILATOR_ARGS := 	-Wno-lint -Wno-TIMESCALEMOD -Wno-SELRANGE -Wno-UNOPTFLAT -Wno-SPLITVAR \
 					--coverage --pins-inout-enables \
@@ -50,6 +51,31 @@ define run_module
 endef
 
 
+ver:
+	$(call run_verilator,$(TOP),$(SRC))
+vvp:
+	$(call run_sim,$(TOP),$(SRC),"")
+
+dsim_report:
+	dcreport -out_dir dir metrics.db
+
+get_coverage:
+	$(call get_coverage)
+
+grep_err:
+	grep -H -a -i -E 'error|end of|warning|assertion|segmentation|fatal|fail' $(if $(ARG),$(ARG),*.log) | grep -a -v -i -E 'timescale|time unit|dangling|Not enough words|Part select|WARNING: did not process'
+	! grep -H -a -i -E 'error|assertion|segmentation|fatal|fail' $(if $(ARG),$(ARG),*.log) | grep -a -v -i -E 'UVM_ERROR :    0|UVM_FATAL :    0'
+
+lint:
+	verilator --lint-only -Wall -y $(pwd)modules -I$(pwd)modules/ $(ARG)
+lint-modules:
+	cd modules; verilator --lint-only -Wall $$(ls *.*v* | xargs)
+lint-risc:
+	cd RISCV_SingleCycle;
+	verilator --lint-only -Wall -y $(pwd)modules -I$(pwd)modules/ $(risc_src)
+lint-uart:
+	cd UART; verilator --lint-only -Wall -y $(pwd)modules -I$(pwd)modules/ $(uart_src)
+
 clean:
 	find . -type f -name "cov*.dat" -delete
 	find . -type f -name "dsim.*" -delete
@@ -62,45 +88,17 @@ clean:
 	find . -type d -name "dsim_work" -exec rm -rf {} +
 	find . -type d -name "obj_dir" -exec rm -rf {} +
 
-ver:
-	$(call run_verilator,$(TOP),$(SRC))
-vvp:
-	$(call run_sim,$(TOP),$(SRC),"")
-
-get_coverage:
-	$(call get_coverage)
-
-dsim_report:
-	dcreport -out_dir dir metrics.db
-
-lint:
-	verilator --lint-only -Wall -y $(pwd)modules -I$(pwd)modules/ $(ARG)
-lint-modules:
-	cd modules; verilator --lint-only -Wall $$(ls *.*v* | xargs)
-lint-risc:
-	cd RISCV_SingleCycle;
-	verilator --lint-only -Wall -y $(pwd)modules -I$(pwd)modules/ $(risc_src)
-lint-uart:
-	cd UART; verilator --lint-only -Wall -y $(pwd)modules -I$(pwd)modules/ $(uart_src)
-
 
 # Regression suites
-grep_err:
-	grep -H -a -i -E 'error|end of|warning|assertion|segmentation|fatal|fail' $(if $(ARG),$(ARG),*.log) | grep -a -v -i -E 'timescale|time unit|dangling|Not enough words|Part select'
-	! grep -H -a -i -E 'error|assertion|segmentation|fatal|fail' $(if $(ARG),$(ARG),*.log) | grep -a -v -i -E 'UVM_ERROR :    0|UVM_FATAL :    0'
-
 all:
-	$(MAKE) -s regression uart risc
+	$(MAKE) -s regression uart risc_tb
 regression:
 	$(MAKE) -s adder half_adder fastadder mux decoder priority_enc mux_cmos mux_behavioral_tb
 	$(MAKE) -s sequence counters fifo memory shift_reg shift
 uart:
 	$(MAKE) -s uart_baud_tb uart_rx_tb uart_tx_tb uart_tb uart_top_tb uartcpp
-risc:
+risc_tb:
 	$(MAKE) -s risc_tb_arr risc_tb_bub risc_tb_fib
-coverage:
-	$(MAKE) -s regression uart risc alu SIM=verilator RM_OBJDIR=true
-	$(call get_coverage)
 
 
 # Modules Testbenches
@@ -170,6 +168,7 @@ risc_mod := memory.sv adder.v shift.v mux.v
 define run_risc
 	$(call run_sim,$(1),RISCV_SingleCycle/testbench/testbench.sv $(foreach x,$(risc_src),RISCV_SingleCycle/$(x)) $(foreach x,$(risc_mod),modules/$(x)))
 endef
+
 # Application tests
 risc_tb_arr:
 	$(call run_risc,tb_asm_arr)

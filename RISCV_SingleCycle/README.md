@@ -57,7 +57,7 @@ make risc_tb_arr;   # find max in array asm
 make risc_tb_bub;   # bubble sort asm
 make risc_tb_fib;   # fibonacci asm
 
-make risc;          # all asm testbenches
+make risc_tb;          # all asm testbenches
 
 make riscdv         # Cpp testbench
 

@@ -308,6 +308,35 @@ void test_utype_jumps(Environment* env) {
 }
 
 
+void test_btype_no_jumps(Environment* env) {
+
+    generate_btype_no_jump(Vriscv_risc_pkg::OP_B_TYPE_BEQ);
+    env->main();
+    printf("INFO: Finished OP_B_TYPE_BEQ no jumps test\n\n");
+
+    generate_btype_no_jump(Vriscv_risc_pkg::OP_B_TYPE_BNE);
+    env->main();
+    printf("INFO: Finished OP_B_TYPE_BNE no jumps test\n\n");
+
+    generate_btype_no_jump(Vriscv_risc_pkg::OP_B_TYPE_BLT);
+    env->main();
+    printf("INFO: Finished OP_B_TYPE_BLT no jumps test\n\n");
+
+    generate_btype_no_jump(Vriscv_risc_pkg::OP_B_TYPE_BGE);
+    env->main();
+    printf("INFO: Finished OP_B_TYPE_BGE no jumps test\n\n");
+
+    generate_btype_no_jump(Vriscv_risc_pkg::OP_B_TYPE_BLTU);
+    env->main();
+    printf("INFO: Finished OP_B_TYPE_BLTU no jumps test\n\n");
+
+    generate_btype_no_jump(Vriscv_risc_pkg::OP_B_TYPE_BGEU);
+    env->main();
+    printf("INFO: Finished OP_B_TYPE_BGEU no jumps test\n\n");
+
+}
+
+
 void test_btype_jumps_forward(Environment* env) {
 
     generate_btype_forward(Vriscv_risc_pkg::OP_B_TYPE_BEQ);
@@ -335,7 +364,6 @@ void test_btype_jumps_forward(Environment* env) {
     printf("INFO: Finished OP_B_TYPE_BGEU jump forward test\n\n");
 
 }
-
 
 
 void test_btype_jumps_backward(Environment* env) {

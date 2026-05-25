@@ -26,11 +26,11 @@ void run_test(Environment* env) {
 
     test_acceptance(env);
 
+    // These stypes should run before other tests
     test_stype_addr(env);
     test_stype_data(env);
-    // after verified stype the order of testing does not matter
 
-    // precondition for addr tests: prefill data not to be changed by other tests!
+    // Precondition for addr tests: memory prefill not to be overwritten by other tests
     test_itype_load_addr_bits(env);
     test_itype_load_unsigned_addr_bits(env);
 
@@ -45,15 +45,16 @@ void run_test(Environment* env) {
 
     test_utype_jumps(env);
 
+    test_btype_no_jumps(env);
     test_btype_jumps_forward(env);
     test_btype_jumps_backward(env);
-
 }
 
 
 void run_single(Environment* env) {
-    test_btype_jumps_forward(env);
-    test_btype_jumps_backward(env);
+    test_itype_load_addr_bits(env);
+    test_itype_load_unsigned_addr_bits(env);
+    test_rtype(env);
 }
 
 
@@ -64,7 +65,7 @@ int main (int argc, char **argv) {
         Verilated::scopesDump();    // print available scopes
     }
 
-    // TODO: set the seed from verilator args if exists
+    // TODO: set the seed from verilator args if set
     unsigned int seed = time(NULL);
     srand(seed);
     print_config(seed);

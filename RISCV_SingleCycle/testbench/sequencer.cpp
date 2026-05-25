@@ -64,6 +64,7 @@ void Sequencer::reset() {
 
 void Sequencer::split() {
     push_seq(0);
+    if (VERBOSITY) printf("--- SPLIT ---\n");
 }
 
 

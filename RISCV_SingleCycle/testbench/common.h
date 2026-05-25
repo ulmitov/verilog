@@ -19,15 +19,18 @@
 #define VERBOSITY 0         // if 1 then prints additional output, enables VCD dump
 #endif
 
-#define SEQUENCES_NUM 32    // how much bit patterns to apply, MINIMUM is 32
+
 #define MAX_REG 4           // how much registers to check *** FOR FULL TEST MUST BE 32 ***
+
+//#define SEQUENCES_NUM 10
+#define SEQUENCES_NUM Vriscv_risc_pkg::RISCV_XLEN + 18    // how much bit patterns to apply
 
 // DUT parameters
 #define REGFILE_A0 0x01     // set A0 and A1 to some non x0 reg
 #define REGFILE_A1 0x02
 
 
-const int CLK_PHASE = 150;
+const int CLK_PHASE = 40;
 const int SETUP_TIME = 3;
 const int HOLD_TIME = 2;
 

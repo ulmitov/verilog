@@ -60,15 +60,15 @@ module adder #(parameter n = 4) (
     assign same_sign = X[n-1] ^ Y[n-1];
     assign overflow = C[n-1] ^ C[n];    // alternative: X[n-1] & Y[n-1] & ~sum[n-1];
 
-    // in case of comparison flags, Nadd_sub input is 1 and Y is 2 complemented
+    // for comparison flags, Nadd_sub input is 1 and Y is 2 complemented
     assign eq = ~(|sum);                // Equality. |(X ^~ Y)
-    assign ltu = ~eq & ~carry;          // Less Than unsigned  ~eq & ~carry   , ~sum[n-1]
+    assign ltu = ~eq & ~carry;          // Less Than unsigned  ~eq & ~carry  , ~sum[n-1]
     assign lt = ~eq & ((~same_sign & ~carry) | (same_sign & carry)); // Less Than signed. sum[n-1] ^ overflow
 endmodule
 
 
-/* TODO: Predict carry using the generation function of x[k] & y[k] */
-module fast_adder #(parameter n = 4) (
+/* TODO: see page 145. Predict carry using the generation function of x[k] & y[k] */
+module fast_adder #(parameter n = 8) (
     input Nadd_sub,             // Mode select: 0 = addition; 1 = subtraction
     input [n-1:0] X,
     input [n-1:0] Y,

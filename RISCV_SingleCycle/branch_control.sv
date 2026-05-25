@@ -1,17 +1,19 @@
 import risc_pkg::*;
 
 
-module branch_control (
+module branch_control #(parameter XLEN = 32) (
     input logic b_type,
     input logic [2:0] funct3,
-    input logic [31:0] rs1_data,
-    input logic [31:0] rs2_data,
+    input logic [XLEN-1:0] rs1_data,
+    input logic [XLEN-1:0] rs2_data,
     output logic branch_taken
 );
     `ifndef GATE_FLOW_OFF
-        wire eq, lt, ltu;
-        // TODO: replace with comparator
-        adder #(32) branch_comparator (
+        wire eq;
+        wire lt;
+        wire ltu;
+
+        adder #(XLEN) branch_comparator (
             .Nadd_sub(1'b1),
             .X(rs1_data),
             .Y(rs2_data),
@@ -19,7 +21,7 @@ module branch_control (
             .lt(lt),
             .ltu(ltu)
         );
-        
+
         always_comb begin
             if (b_type) begin
                 case (funct3)
