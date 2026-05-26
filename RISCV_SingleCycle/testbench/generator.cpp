@@ -94,7 +94,7 @@ void generate_stype_acceptance() {
         ref_req.addr = 0;
         ref_req.rd_data = 0;
         ref_req.wr_data = 0;
-        sprintf(ref_req.str, "%s\n%s\n", lui_base.str, stype.str);
+        sprintf(ref_req.str, "%s; %s", lui_base.str, stype.str);
         push_ref(&ref_req);
     }
 }
@@ -126,7 +126,7 @@ void generate_stype_imm_lui_imm(int bits_width) {
         ref_req.rd_data = 0;
         ref_req.wr_data = 0;
         ref_req.addr = (lui_base.imm << 12) + sign_extend(stype.imm);
-        sprintf(ref_req.str, "%s\n%s\n", lui_base.str, stype.str);
+        sprintf(ref_req.str, "%s; %s", lui_base.str, stype.str);
         push_ref(&ref_req);
     }
 }
@@ -174,7 +174,7 @@ void generate_stype_data(int bits_width) {
             ref_req.rd_data = 0;
             ref_req.wr_data = get_lui_base_imm_value(lui_data.imm, addi.imm) & stype.datamask;
             ref_req.addr = (lui_base.imm << 12) + sign_extend(stype.imm);
-            sprintf(ref_req.str, "%s\n%s\n%s\n%s\n",
+            sprintf(ref_req.str, "%s; %s; %s; %s",
                 lui_base.str, lui_data.str, addi.str, stype.str);
             push_ref(&ref_req);
         }
@@ -212,7 +212,7 @@ void generate_itype_load_acceptance() {
         ref_req.addr = 0;
         ref_req.rd_data = 0;
         ref_req.wr_data = 0;
-        sprintf(ref_req.str, "%s\n%s\n", lui_base.str, load.str);
+        sprintf(ref_req.str, "%s; %s", lui_base.str, load.str);
         push_ref(&ref_req);
     }
 }
@@ -254,7 +254,7 @@ void generate_itype_load_address(int bits_width, char unsigned_commands = 0) {
             } else {
                 ref_req.rd_data = 0;  // TODO Drive value?
             }
-            sprintf(ref_req.str, "%s\n%s\n", lui_base.str, load.str);
+            sprintf(ref_req.str, "%s; %s", lui_base.str, load.str);
             push_ref(&ref_req, 1);
 
             // Verify data was loaded into the reg Stype: copy value from [rs2] into mem[[rs1]+imm]
@@ -274,7 +274,7 @@ void generate_itype_load_address(int bits_width, char unsigned_commands = 0) {
             }
             ref_req.rd_data = 0;
             // ref_req.addr remains same
-            sprintf(ref_req.str, "%s\n%s\n%s\n", lui_base.str, load.str, stype.str);
+            sprintf(ref_req.str, "%s; %s; %s", lui_base.str, load.str, stype.str);
             push_ref(&ref_req);
         }
     }
@@ -327,7 +327,7 @@ void generate_itype_load_data(int bits_width, char unsigned_commands = 0) {
             ref_req.wr_data = 0;
             ref_req.addr = (lui_base.imm << 12) + sign_extend(load.imm);
             ref_req.rd_data = rand() & load.datamask;
-            sprintf(ref_req.str, "%s\n%s\n%s\n%s\n",
+            sprintf(ref_req.str, "%s; %s; %s; %s",
                     lui_base.str, lui_data.str, addi.str, load.str);
             push_ref(&ref_req, 1);
 
@@ -368,7 +368,7 @@ void generate_itype_load_data(int bits_width, char unsigned_commands = 0) {
             } else {
                 ref_req.wr_data = sign_extend(drv_req.rd_data, bits_width);
             }
-            sprintf(ref_req.str, "%s\n%s\n%s\n%s\n%s\n%s\n",
+            sprintf(ref_req.str, "%s; %s; %s; %s; %s; %s",
                     lui_base.str, lui_data.str, addi.str, load.str, lui_base_stype.str, stype.str);
             push_ref(&ref_req);
         }
@@ -421,7 +421,7 @@ void generate_itype_arithmetic(int opcode, int op32 = 0) {
                 ref_req.rd_data = 0;
                 ref_req.addr = sign_extend(stype.imm);
                 ref_req.wr_data = sreg ? get_lui_base_imm_value(lui_base.imm, addi.imm) : 0;
-                sprintf(ref_req.str, "%s\n%s\n%s\n%s\n", lui_base.str, addi.str, itype.str, stype.str);
+                sprintf(ref_req.str, "%s; %s; %s; %s", lui_base.str, addi.str, itype.str, stype.str);
 
                 switch(opcode) {
                     case Vriscv_risc_pkg::OP_ALU_ADD:
@@ -586,7 +586,7 @@ void generate_rtype(int opcode, int op32 = 0) {
                 ref_req.rd_data = 0;
                 ref_req.addr = sign_extend(stype.imm);
                 if (!rtype.rd) ref_req.wr_data = 0;
-                sprintf(ref_req.str, "%s\n%s\n%s\n%s\n%s\n%s\n",
+                sprintf(ref_req.str, "%s; %s; %s; %s; %s; %s",
                         lui_rs1.str, addi_rs1.str, lui_rs2.str,
                         addi_rs2.str, rtype.str, stype.str);
                 push_ref(&ref_req);
@@ -629,7 +629,7 @@ void generate_auipc() {
             ref_req.rd_data = 0;
             ref_req.wr_data = dreg ? pc * 4 + sign_extend(auipc.imm << 12, 32) : 0;
             ref_req.addr = sign_extend(stype.imm);
-            sprintf(ref_req.str, "%s\n%s\n", auipc.str, stype.str);
+            sprintf(ref_req.str, "%s; %s", auipc.str, stype.str);
             push_ref(&ref_req);
 
             pc += 2;
@@ -691,7 +691,7 @@ void generate_jal_forward() {
             ref_req.rd_data = 0;
             ref_req.wr_data = dreg ? pc + 4 : 0;
             ref_req.addr = sign_extend(stype.imm);
-            sprintf(ref_req.str, "%s\n%s\njump %lx->%lx\n", jal.str, stype.str, pc, pc + offset);
+            sprintf(ref_req.str, "%s; %s\njump %lx->%lx", jal.str, stype.str, pc, pc + offset);
             push_ref(&ref_req, 1);
 
             if (VERBOSITY) {
@@ -779,7 +779,7 @@ void generate_jal_backward() {
             ref_req.rd_data = 0;
             ref_req.wr_data = dreg ? pc : 0;
             ref_req.addr = sign_extend(stype.imm);
-            sprintf(ref_req.str, "%s\n%s\n%s\n%s (%d times)\n%s\njump %lx->%lx\n",
+            sprintf(ref_req.str, "%s; %s; %s; %s (%d times); %s\njump %lx->%lx",
                 jal_before.str, stype.str, jal_after.str, dummy_stype.str, fill_up, jal_tested.str, pc - 4, pc_stype);
             push_ref(&ref_req, 1);
 
@@ -835,12 +835,15 @@ void generate_btype_no_jump(int btype_opcode) {
                 if ( (!reg_rs1 || !reg_rs2) && i == 4 ) break; // 4 sequences is enough
 
                 pattern = patterns[i];
+                if (XLEN < 64) pattern = (int)pattern;
 
                 switch(btype_opcode) {
                     case Vriscv_risc_pkg::OP_B_TYPE_BEQ:
                         if (reg_rs1 == reg_rs2) continue;
                         if (!reg_rs2 && !pattern) continue;
-                        addi_rs2.imm = 1 + rand();
+                        do {
+                            addi_rs2.imm = rand() & 0xFFF;
+                        } while (addi_rs2.imm == 0);
                         break;
                     case Vriscv_risc_pkg::OP_B_TYPE_BNE:
                         // rs2 should be equal
@@ -850,6 +853,7 @@ void generate_btype_no_jump(int btype_opcode) {
                     case Vriscv_risc_pkg::OP_B_TYPE_BLT:
                         // signed rs2 must be less or equal
                         if (!reg_rs2 && pattern <= 0) continue;
+                        if (pattern < 0) continue;
                         addi_rs2.imm = rand() | 0x800;
                         break;
                     case Vriscv_risc_pkg::OP_B_TYPE_BGE:
@@ -857,7 +861,9 @@ void generate_btype_no_jump(int btype_opcode) {
                         if (reg_rs1 == reg_rs2) continue;
                         if (!reg_rs2 && pattern >= 0) continue;
                         if (pattern <= 0) continue;
-                        addi_rs2.imm = 1 + rand() & 0x7FF;
+                        do {
+                            addi_rs2.imm = rand() & 0x7FF;
+                        } while (addi_rs2.imm == 0);
                         break;
                     case Vriscv_risc_pkg::OP_B_TYPE_BLTU:
                         // unsigned rs2 must be less or equal
@@ -870,7 +876,9 @@ void generate_btype_no_jump(int btype_opcode) {
                         if (reg_rs1 == reg_rs2) continue;
                         if (!reg_rs2) continue;
                         if (pattern <= 0) continue;
-                        addi_rs2.imm = 1 + rand() & 0x7FF;
+                        do {
+                            addi_rs2.imm = rand() & 0x7FF;
+                        } while (addi_rs2.imm == 0);
                         break;
                     default:
                         printf("ERROR: invalid BTYPE opcode provided by test\n");
@@ -947,8 +955,8 @@ void generate_btype_no_jump(int btype_opcode) {
                 ref_req.rd_data = 0;
                 ref_req.wr_data = reg_rs1 ? rs1 : 0;
                 ref_req.addr = sign_extend(stype.imm);
-                sprintf(ref_req.str, "%s\n%s\n%s\n%s\n%s\n",
-                    lui.str, addi_rs1.str, addi_rs2.str, btype.str, stype.str);
+                sprintf(ref_req.str, "P=0x%x; %s; %s; %s; %s; %s",
+                        pattern, lui.str, addi_rs1.str, addi_rs2.str, btype.str, stype.str);
                 push_ref(&ref_req);
             }
         }
@@ -1072,7 +1080,7 @@ void generate_btype_forward(int btype_opcode) {
                     ref_req.rd_data = 0;
                     ref_req.wr_data = reg_rs1 ? rs1 : 0;
                     ref_req.addr = sign_extend(stype.imm);
-                    sprintf(ref_req.str, "%s\n%s\n%s\n%s\n%s(*%d)\n%s\njump %lx->%lx\n",
+                    sprintf(ref_req.str, "%s; %s; %s; %s; %s(*%d); %s\njump %lx->%lx",
                         lui.str, addi_rs1.str, addi_rs2.str, btype.str, dummy_stype.str,
                         fill_up, stype.str, pc, pc + offset);
                     push_ref(&ref_req, 1);
@@ -1233,9 +1241,9 @@ void generate_btype_backward(int btype_opcode) {
                         ref_req.rd_data = 0;
                         ref_req.wr_data = reg_rs1 ? rs1 : 0;
                         ref_req.addr = sign_extend(stype.imm);
-                        sprintf(ref_req.str, "%s\n%s\n%s\n%s\n%s\n%s\n%s(*%d)\n%s\njump %lx->%lx\n",
-                            lui.str, addi_rs1.str, addi_rs2.str, jal_before.str,
-                            stype.str, jal_after.str, dummy_stype.str, fill_up, btype.str, pc, pc - offset);
+                        sprintf(ref_req.str, "%s; %s; %s; %s; %s; %s; %s(*%d); %s\njump %lx->%lx",
+                                lui.str, addi_rs1.str, addi_rs2.str, jal_before.str,
+                                stype.str, jal_after.str, dummy_stype.str, fill_up, btype.str, pc, pc - offset);
                         push_ref(&ref_req, 1);
                     }
 

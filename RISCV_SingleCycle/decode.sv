@@ -63,6 +63,7 @@ module decode (
             OPCODE_U_TYPE_JAL:      j_type = 1'b1;
             OPCODE_U_TYPE_LUI,
             OPCODE_U_TYPE_AUIPC:    u_type = 1'b1;
+            OPCODE_SYSTEM,
             OPCODE_I_TYPE_ALU,
             OPCODE_ITYPE_IMM_32,
             OPCODE_I_TYPE_LOAD,

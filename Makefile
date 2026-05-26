@@ -63,7 +63,7 @@ get_coverage:
 	$(call get_coverage)
 
 grep_err:
-	grep -H -a -i -E 'error|end of|warning|assertion|segmentation|fatal|fail' $(if $(ARG),$(ARG),*.log) | grep -a -v -i -E 'timescale|time unit|dangling|Not enough words|Part select|WARNING: did not process'
+	grep -H -a -i -E 'error|end of|warning|assertion|segmentation|fatal|fail' $(if $(ARG),$(ARG),*.log) | grep -a -v -i -E 'timescale|time unit|dangling|Not enough words|Part select|WARNING: did not process|warning: format'
 	! grep -H -a -i -E 'error|assertion|segmentation|fatal|fail' $(if $(ARG),$(ARG),*.log) | grep -a -v -i -E 'UVM_ERROR :    0|UVM_FATAL :    0'
 
 lint:
@@ -83,6 +83,7 @@ clean:
 	find . -type f -name "*.info" -delete
 	find . -type f -name "*.log" -delete
 	find . -type f -name "*.txt" -delete
+	find . -type f -name "*.txt.mem" -delete
 	find . -type f -name "*.vvp" -delete
 	find . -type d -name "covhtml" -exec rm -rf {} +
 	find . -type d -name "dsim_work" -exec rm -rf {} +

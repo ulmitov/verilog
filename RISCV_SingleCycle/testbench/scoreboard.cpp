@@ -90,7 +90,8 @@ public:
         res_count++;
 
         if (err) {
-            printf("WARNING: unsuccessful instructions chain:\n%s\n", expres.str);
+            printf("WARNING: unsuccessful instructions chain:\n");
+            printf("WARNING: %s\n", expres.str);
             err_count++;
         }
         return err;

@@ -43,7 +43,7 @@ public:
             sprintf(memfile, "%s.mem", logger->get_name());
             sqr->main(memfile);
             printf("INFO: Starting phase %d with %d transactions out of %ld\n",
-                phase_num, sqr->cmd_count, sqr->size());
+                    phase_num, sqr->cmd_count, sqr->size());
 
             inf->boot_load(memfile);
             inf->reset();
@@ -75,7 +75,9 @@ public:
             if (!scb->err_count && sqr->cmd_count > 0) {
                 printf("WARNING: did not process %d commands\n\n", sqr->cmd_count);
             }
-            printf("INFO: Finished verification phase %d of %s\n\n", phase_num, memfile);
+            if (VERBOSITY) {
+                printf("INFO: Finished verification phase %d of %s\n\n", phase_num, memfile);
+            }
             phase_num++;
         }
         // test post checks:

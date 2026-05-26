@@ -21,7 +21,7 @@ void push_ref(Transaction *req, char no_zero_cmd = 0) {
     // Log the commands to file, each phase has dedicated file
     if (ref_fifo.empty()) logger->init_log();
     logger->start_log(sqr->split_num);
-    fprintf(logger->fptr, "%s[%ld]: EXPECT: addr=%08lx data=%08lx\n\n",
+    fprintf(logger->fptr, "%s\n[%ld]: EXPECT: addr=%08lx data=%08lx\n\n",
             req->str, ref_fifo.size(), req->addr, req->wr_data
     );
 

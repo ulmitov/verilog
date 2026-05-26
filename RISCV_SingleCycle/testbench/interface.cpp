@@ -247,11 +247,11 @@ public:
     }
 
     void dump_regfile() {
-        printf("DUMP REGFILE: ");
+        printf("DUMP REGFILE:\n");
         for (int i = 0; i < 32; i++) {
             try {
                 printf("[%d]%lx ", i, top->rootp->riscv__DOT__reg_file__DOT__reg_mem[i]);
-                if (!(i % 8) || i == 31) printf("\n");
+                if ((i && !(i % 8)) || i == 31) printf("\n");
             } catch (...) {
                 printf("Error dumping array index %d\n", i);
             }

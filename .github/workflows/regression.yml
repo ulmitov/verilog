@@ -21,8 +21,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Setup
         uses: actions/configure-pages@v5
+
       - name: Prepare
         run: |
           sudo apt-get update
@@ -80,6 +82,14 @@ jobs:
 
       - name: Results Summary
         run: make grep_err
+
+      - name: Save artifacts
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: dv_artifacts
+          path: ./vcd
+          overwrite: true
 
       - name: Coverage report
         run: make get_coverage || cat coverage_merged_notb.dat
