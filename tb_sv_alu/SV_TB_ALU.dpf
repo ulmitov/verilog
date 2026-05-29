@@ -8,11 +8,11 @@ simulations:
   - name: Sim MXD
     options: >-
       -top work.top_tb -build-all -cs-randc-max 16 +acc+b -code-cov a -waves
-      doc/tb_top_alu.mxd
+      vcd/top_tb_sv_alu.mxd
   - name: Sim VCD
     options: >-
       -top work.top_tb -build-all -cs-randc-max 16 +acc+b -code-cov a -waves
-      doc/tb_top_alu.vcd
+      vcd/top_tb_sv_alu.vcd
 source_files:
   - language: verilog
     path: ../RISCV_SingleCycle/risc_pkg.sv

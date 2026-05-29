@@ -30,7 +30,7 @@ module riscv #(
     logic dmem_zero_ex;
     op_enum_dmem_size dmem_size;
 
-    // TODO: make an address decoder, move memory outside, add AHB...
+    // TODO: address decoder
     assign mem_rd_data = (dmem_addr >= DMEM_BASE_ADDRESS && dmem_addr < DMEM_BASE_ADDRESS + MEM_DEPTH) ? dmem_rd_data : dbus_rd_data;
 
     riscv_core #(.XLEN(XLEN)) core (
@@ -40,7 +40,7 @@ module riscv #(
         .rs1_data(rs1_data),
         .rs2_data(rs2_data),
         .dmem_rd_data(mem_rd_data),
-        // outputs:
+    // outputs:
         .pc(imem_addr),
         .imem_req(imem_req),
         .rf_wr_en(rf_wr_en),
@@ -63,7 +63,7 @@ module riscv #(
         `else
             .DEPTH(2**10),      // 1kb, 256 instructions
         `endif
-        .DATA_WIDTH(32),
+        .DATA_WIDTH(ILEN),
         .ADDR_WIDTH(32),
         .MEM_FILE(MEM_FILE),
         .ENDIANESS(1)       // hex images are big endian
@@ -75,7 +75,7 @@ module riscv #(
         .addr(imem_addr),
         .blsize(op_enum_dmem_size'(OP_DMEM_WORD)),
         .ren(imem_req),
-        // outputs:
+    // outputs:
         .rd_data(instruction)
     );
 
@@ -88,7 +88,7 @@ module riscv #(
         .rs1_addr(rs1_addr),
         .rs2_addr(rs2_addr),
         .rs1_data(rs1_data),
-        // outputs:
+    // outputs:
         .rs2_data(rs2_data),
         .wr_data(rf_wr_data)
     );
@@ -100,7 +100,7 @@ module riscv #(
         .ADDR_WIDTH(32),
         .ENDIANESS(0)
     ) data_mem (
-        .wclk(clk),
+        .wclk(~clk),
         .res(~res_n),
         .ren(1'b1),
         .wen(dmem_wr),
@@ -108,7 +108,7 @@ module riscv #(
         .addr(dmem_addr),
         .blsize(dmem_size),
         .wr_data(dbus_wr_data),
-        // outputs:
+    // outputs:
         .rd_data(dmem_rd_data)
     );
 endmodule

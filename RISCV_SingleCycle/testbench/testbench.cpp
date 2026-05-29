@@ -30,7 +30,6 @@ void run_test(Environment* env) {
     test_stype_addr(env);
     test_stype_data(env);
 
-    // Precondition for addr tests: memory prefill not to be overwritten by other tests
     test_itype_load_addr_bits(env);
     test_itype_load_unsigned_addr_bits(env);
 
@@ -53,8 +52,6 @@ void run_test(Environment* env) {
 
 void run_single(Environment* env) {
     test_itype_load_addr_bits(env);
-    test_itype_load_unsigned_addr_bits(env);
-    test_rtype(env);
 }
 
 
@@ -73,9 +70,9 @@ int main (int argc, char **argv) {
     Interface *inf = new Interface(VERBOSITY);
     Environment* env = new Environment(inf);
 
-    inf->set_clock(1);
+    env->inf->set_clock(1);
     seq_prefill_data_memory();
-    inf->prefill_data_memory();
+    env->inf->prefill_data_memory();
 
     //run_single(env);
     run_test(env);

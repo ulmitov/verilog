@@ -164,7 +164,7 @@ uartcpp:
 
 
 # RISCV
-risc_src := risc_pkg.sv riscv.sv riscv_core.sv fetch.sv decode.sv register_file.sv branch_control.sv control.sv alu.sv sign_extender.sv data_handler.sv
+risc_src := risc_pkg.sv riscv.sv riscv_core.sv decode.sv register_file.sv branch_control.sv control.sv alu.sv sign_extender.sv data_handler.sv
 risc_mod := memory.sv adder.v shift.v mux.v
 define run_risc
 	$(call run_sim,$(1),RISCV_SingleCycle/testbench/testbench.sv $(foreach x,$(risc_src),RISCV_SingleCycle/$(x)) $(foreach x,$(risc_mod),modules/$(x)))

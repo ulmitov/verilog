@@ -69,6 +69,10 @@ void test_stype_data(Environment* env) {
 
 
 void test_itype_load_addr_bits(Environment* env) {
+    // Precondition for addr tests: memory prefill not to be overwritten by other tests
+    seq_prefill_data_memory();
+    env->inf->prefill_data_memory();
+
     generate_itype_load_address(8);
     env->main();
     printf("INFO: Finished LB command addr test\n\n");
@@ -93,6 +97,9 @@ void test_itype_load_addr_bits(Environment* env) {
 
 
 void test_itype_load_unsigned_addr_bits(Environment* env) {
+    // Precondition for addr tests: memory prefill not to be overwritten by other tests
+    env->inf->prefill_data_memory();
+
     generate_itype_load_address(8, 1);
     env->main();
     printf("INFO: Finished LBU command addr test\n\n");

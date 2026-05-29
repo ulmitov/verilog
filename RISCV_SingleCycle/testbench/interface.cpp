@@ -145,7 +145,7 @@ public:
      * @return 1 if condition occurred, 0 otherwise
      */
     int stop_event() {
-        return top->rootp->riscv__DOT__core__DOT__fetch_block__DOT__imem_addr &&
+        return top->rootp->riscv__DOT__core__DOT__pc &&
         !top->rootp->riscv__DOT__core__DOT__instruction;
     }
     
@@ -163,16 +163,14 @@ public:
                 }
             }
             */
-            printf("[%lu] DEBUG: FETCH: imem_req=%d  imem_addr=%08x  incr_pc=%d  instruction=%08x  imem_req=%d  pc_mux=%d  next_pc_alu=%08x  next_pc=%08x\n",
+            printf("[%lu] DEBUG: FETCH: imem_req=%d  imem_addr=%08x  instruction=%08x  imem_req=%d  next_pc_alu=%08x  next_pc=%08x\n",
                 timestamp,
-                top->rootp->riscv__DOT__core__DOT__fetch_block__DOT__req,
-                top->rootp->riscv__DOT__core__DOT__fetch_block__DOT__imem_addr,
-                top->rootp->riscv__DOT__core__DOT__fetch_block__DOT__incr_pc,
+                top->rootp->riscv__DOT__core__DOT__imem_req,
+                top->rootp->riscv__DOT__core__DOT__pc,
                 top->rootp->riscv__DOT__core__DOT__instruction,
                 top->rootp->riscv__DOT__core__DOT__imem_req,
-                top->rootp->riscv__DOT__core__DOT__pc_mux,
                 top->rootp->riscv__DOT__core__DOT__next_pc_alu,
-                top->rootp->riscv__DOT__core__DOT__fetch_block__DOT__next_pc
+                top->rootp->riscv__DOT__core__DOT__next_pc
             );
             printf("[%lu] DEBUG: CORE:  opcode=%02x  funct3=%d  rf_wr_data_sel=%d  rd_addr=%08x  rs1_addr=%08x  rs1_data=%08x  rs2_addr=%08x  rs2_data=%08x  imm=%08x\n",
                 timestamp,
@@ -202,9 +200,10 @@ public:
                 top->dbus_rd_data
             );
         } else {
-            fprintf(logger->fptr, "[%lu] DEBUG: CORE: pc=%08x  inst=%08x  opcode=0x%0x  funct3=%d  imm=%08x  alu_a=%lx  alu_b=%lx  alu_res=%lx  brunch_lt=%d  brunch_ltu=%d\n",
+            fprintf(logger->fptr, "[%lu] DEBUG: CORE: pc=%08x  next_pc=%08x  inst=%08x  opcode=0x%0x  funct3=%d  imm=%08x  alu_a=%lx  alu_b=%lx  alu_res=%lx  brunch_lt=%d  brunch_ltu=%d\n",
                 timestamp,
-                top->rootp->riscv__DOT__core__DOT__fetch_block__DOT__imem_addr,
+                top->rootp->riscv__DOT__core__DOT__pc,
+                top->rootp->riscv__DOT__core__DOT__next_pc,
                 top->rootp->riscv__DOT__core__DOT__instruction,
                 top->rootp->riscv__DOT__core__DOT__opcode,
                 top->rootp->riscv__DOT__core__DOT__funct3,

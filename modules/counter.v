@@ -98,13 +98,12 @@ module counter_tff_sync #(parameter n = 3) (
     input count_up,
     output wire [n-1:0] count
 );
-    
-    wire [n-1:0] en_and;;
+    wire [n-1:0] en_and;
+    genvar i;
     generate
-        genvar i;
         for (i = 0; i < n; i = i + 1) begin: tff
             if (i == 0)
-                assign en_and[0] = en;
+                assign en_and[i] = en;
             else
                 assign en_and[i] = en_and[i-1] & (count_up ^~ count[i-1]);
             ff_t tff_i(.clk(clk), .res_n(res_n), .T(en_and[i]), .Q(count[i]));

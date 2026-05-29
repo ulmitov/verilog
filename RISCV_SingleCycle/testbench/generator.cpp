@@ -955,7 +955,7 @@ void generate_btype_no_jump(int btype_opcode) {
                 ref_req.rd_data = 0;
                 ref_req.wr_data = reg_rs1 ? rs1 : 0;
                 ref_req.addr = sign_extend(stype.imm);
-                sprintf(ref_req.str, "P=0x%x; %s; %s; %s; %s; %s",
+                sprintf(ref_req.str, "P=0x%lx; %s; %s; %s; %s; %s",
                         pattern, lui.str, addi_rs1.str, addi_rs2.str, btype.str, stype.str);
                 push_ref(&ref_req);
             }

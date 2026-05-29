@@ -7,45 +7,49 @@
 package risc_pkg;
 parameter int RISCV_XLEN = `XLEN;
 parameter int IALIGN = 32;
+parameter int ILEN = 32;
 parameter int INST_BASE_ADDRESS = 32'h0;
 parameter int DMEM_BASE_ADDRESS = 32'h0;
 
 
+// RegFile rd data source select mux
+typedef enum logic [1:0] {
+    OP_RF_SEL_ALU,
+    OP_RF_SEL_MEM,
+    OP_RF_SEL_IMM,
+    OP_RF_SEL_PC
+} op_enum_wr_data_sel;
+
+
+// Major opcodes
 typedef enum logic [6:0] {
-    OPCODE_R_TYPE       = 7'b0110011,   // R-Type. Register to register arithmetic and logic
-    OPCODE_S_TYPE       = 7'b0100011,   // S-Type. Store to mem - SB, SH, SW, SD, FSQ
-    OPCODE_B_TYPE       = 7'b1100011,   // B-Type. Conditional branches
+    OPCODE_S_TYPE       = 7'b0100011,
+    OPCODE_B_TYPE       = 7'b1100011,
     OPCODE_U_TYPE_LUI   = 7'b0110111,   // U-Type. LUI and AUIPC - large immediates
     OPCODE_U_TYPE_AUIPC = 7'b0010111,   // U-Type. LUI and AUIPC - large immediates
     OPCODE_U_TYPE_JAL   = 7'b1101111,   // UJ-Type. JAL command  - Unconditional jumps
+    OPCODE_R_TYPE       = 7'b0110011,   // R-Type. Register to register arithmetic, multiplication
+    OPCODE_RTYPE_32     = 7'b0111011,   // R-Type. Arithmetic 32 bits (OP-32) RV64I
     OPCODE_I_TYPE_ALU   = 7'b0010011,   // I-Type. Arithmetic with immediate (OP-IMM)
     OPCODE_ITYPE_IMM_32 = 7'b0011011,   // I-Type. Arithmetic 32 bits with immediate (OP-32-IMM) RV64I
-    OPCODE_RTYPE_32     = 7'b0111011,   // R-Type. Arithmetic 32 bits (OP-32) RV64I
     OPCODE_I_TYPE_LOAD  = 7'b0000011,   // I-Type. Load from mem. Also this mask can be used to detect 32 bit instructions!!!
     OPCODE_I_TYPE_JALR  = 7'b1100111,   // I-Type. JALR - Jump and Link Register
-    OPCODE_FLOATP       = 7'b0000111,   // I-Type. Floating pont instructions
-    OPCODE_SYSTEM       = 7'b1110011    // I-Type. System instructions - ECALL, EBREAK
+    OPCODE_I_TYPE_FL    = 7'b0000111,   // I-Type. Load Floating point
+    OPCODE_SYSTEM       = 7'b1110011    // I-Type. System instructions - ECALL, EBREAK, CSR
 } op_enum_base_opcodes /*verilator public*/;
 
 
+// Block sizes funct3
 typedef enum logic [2:0] {
     OP_DMEM_BYTE = 3'b000,
     OP_DMEM_HALF = 3'b001,
-    OP_DMEM_WORD = 3'b010,      // FLW (OPCODE_FLOATP)
-    OP_DMEM_DUBL = 3'b011,      // FLD (OPCODE_FLOATP)
-    OP_I_TYPE_LBU = 3'b100,     // FLQ (OPCODE_FLOATP)
+    OP_DMEM_WORD = 3'b010,  // FLW
+    OP_DMEM_DUBL = 3'b011,  // FLD
+    OP_I_TYPE_LBU = 3'b100, // FLQ
     OP_I_TYPE_LHU = 3'b101,
     OP_I_TYPE_LWU = 3'b110,
-    OP_DMEM_TRPL = 3'b111       // Custom command, load tripple unsigned. Warning: this code will be probably used by LDU!
+    OP_DMEM_TRPL = 3'b111   // Custom command, load tripple unsigned. Warning: this opcode will be probably used by LDU!
 } op_enum_dmem_size /*verilator public*/;
-
-
-typedef enum logic [1:0] {
-    OP_RF_SEL_ALU   = 2'b00,
-    OP_RF_SEL_MEM   = 2'b01,
-    OP_RF_SEL_IMM   = 2'b10,
-    OP_RF_SEL_PC    = 2'b11
-} op_enum_wr_data_sel;
 
 
 // B type funct3

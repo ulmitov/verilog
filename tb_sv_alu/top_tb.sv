@@ -35,23 +35,26 @@ module top_tb;
     main_test TEST(itf);
 
     initial begin
-        $dumpfile("top_tb_alu.vcd");
+        $dumpfile("vcd/top_tb_sv_alu.vcd");
         $dumpvars();
     end
 endmodule
 
 
 program main_test(intf itf);
+    // reducing for 64 bits, runs too much time
+    parameter int SEQ_NUM = RISCV_XLEN > 32 ? RISCV_XLEN * 3 : RISCV_XLEN * 10;
     environment env;
+    
     initial begin
         env = new(itf);
         env.pre_test();
         env.test_bit_by_bit();
-        env.test_random_bit(RISCV_XLEN * 10);
-        env.test_random_val(RISCV_XLEN * 10);
+        env.test_random_bit(SEQ_NUM);
+        env.test_random_val(SEQ_NUM);
         env.test_manual_val();
         env.post_test();
-        $display("End of testbench: top_tb_alu.vcd");
+        $display("End of testbench: top_tb_sv_alu.vcd");
         $finish;
     end
 endprogram

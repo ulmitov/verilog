@@ -16,7 +16,10 @@ module decode (
     output logic s_type,
     output logic b_type,
     output logic u_type,
-    output logic j_type
+    output logic j_type,
+    output logic op_sys,
+    output logic is_op32,
+    output logic is_32bit
 );
     logic [31:0] imm_i;
     logic [31:0] imm_s;
@@ -24,16 +27,22 @@ module decode (
     logic [31:0] imm_u;
     logic [31:0] imm_j;
     logic [1:0] opcode16;
-    logic is_32bit;
+
+    generate
+        if (IALIGN < 32)
+            assign is_32bit = 1'b0;
+        else
+            assign is_32bit  = ~|instruction[6:0] | &opcode16;
+    endgenerate
 
     assign opcode16 = instruction[1:0];
-    assign is_32bit = &opcode16;
     assign opcode   = instruction[6:0];
+
     assign rd_addr  = instruction[11:7];
-    assign funct3   = is_32bit ? instruction[14:12] : instruction[15:13];
     assign rs1_addr = instruction[19:15];
     assign rs2_addr = instruction[24:20];
     assign funct7   = instruction[31:25];
+    assign funct3   = is_32bit ? instruction[14:12] : instruction[15:13];
 
     assign imm_j = {{12{instruction[31]}}, instruction[19:12], instruction[20], instruction[30:21], 1'b0};
     assign imm_b = {{20{instruction[31]}}, instruction[7], instruction[30:25], instruction[11:8], 1'b0};
@@ -54,20 +63,32 @@ module decode (
         r_type = 1'b0;
         u_type = 1'b0;
         j_type = 1'b0;
+        op_sys = 1'b0;
+        is_op32 = 1'b0;
 
         case(opcode)
-            OPCODE_R_TYPE,
-            OPCODE_RTYPE_32:        r_type = 1'b1;
+            OPCODE_RTYPE_32: begin
+                r_type = 1'b1;
+                is_op32 = 1'b1;
+            end
+            OPCODE_R_TYPE:          r_type = 1'b1;
             OPCODE_S_TYPE:          s_type = 1'b1;
             OPCODE_B_TYPE:          b_type = 1'b1;
             OPCODE_U_TYPE_JAL:      j_type = 1'b1;
             OPCODE_U_TYPE_LUI,
             OPCODE_U_TYPE_AUIPC:    u_type = 1'b1;
-            OPCODE_SYSTEM,
             OPCODE_I_TYPE_ALU,
-            OPCODE_ITYPE_IMM_32,
             OPCODE_I_TYPE_LOAD,
+            OPCODE_I_TYPE_FL,
             OPCODE_I_TYPE_JALR:     i_type = 1'b1;
+            OPCODE_ITYPE_IMM_32: begin
+                i_type = 1'b1;
+                is_op32 = 1'b1;
+            end
+            OPCODE_SYSTEM: begin
+                i_type = 1'b1;
+                op_sys = 1'b1;
+            end
         endcase
     end
 endmodule
