@@ -10,6 +10,14 @@ parameter int IALIGN = 32;
 parameter int ILEN = 32;
 parameter int INST_BASE_ADDRESS = 32'h0;
 parameter int DMEM_BASE_ADDRESS = 32'h0;
+parameter int TRAP_ADDRESS = 30'h1000;
+
+
+// Interrupts:
+//`define ZICSR
+//`define CLINT_EX_IRQ 8          // enable CLINT and how much external interrupts supported
+// CLINT internal csr, memory mapping. CLINT BASE is h02000000, MSIP offset is 0
+`define CLINT_MSIP 'h02000000
 
 
 // RegFile rd data source select mux
@@ -89,5 +97,39 @@ typedef enum logic [3:0] {
     OP_ALU_SLT,
     OP_ALU_SLTU
 } op_enum_alu /*verilator public*/;
+
+
+// CSRs
+typedef enum logic [1:0] {
+    OP_FUNCT3_CSRRW = 2'b01,
+    OP_FUNCT3_CSRRS = 2'b10,
+    OP_FUNCT3_CSRRC = 2'b11
+} op_csr_funct3 /*verilator public*/;
+
+
+typedef enum logic [11:0] {
+    CSR_MIE         = 'h304,
+    CSR_MIP         = 'h344,
+    CSR_MTVEC       = 'h305,
+    CSR_MSCRACTH    = 'h340,
+    CSR_MEPC        = 'h341,
+    CSR_MCAUSE      = 'h342,
+    CSR_MTINST      = 'h34A,
+    CSR_MSTATUS     = 'h300,
+    CSR_MSTATUSH    = 'h310
+} op_enum_csr_addr /*verilator public*/;
+
+
+typedef enum logic [11:0] {
+    IMM_ECALL   = 'h000,
+    IMM_EBREAK  = 'h001,
+    IMM_WRS_NTO = 'h00D,
+    IMM_WRS_STO = 'h01D,
+    IMM_WFI     = 'h105,
+    IMM_SRET    = 'h102,
+    IMM_MRET    = 'h302,
+    IMM_MNRET   = 'h702
+} op_enum_system_imm /*verilator public*/;
+
 endpackage
 /* verilator lint_on UNUSEDPARAM */

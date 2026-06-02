@@ -49,11 +49,15 @@ module tb_riscv #(parameter mem_file = `BUBBLES, parameter FINISH = 1);
         res_n = 1'b1;
         #`T_CYC res_n = 1'b0;
         #`T_CYC res_n = 1'b1;
-        wait (dut.instruction === 'h00100073);
         @(posedge clk);
         @(posedge clk);
-        $display("End of testbench: %s on cycle %0d", mem_file, cycle_count);
-        if (FINISH) $finish;
+        $display("End of testbench: %s", mem_file);
+        if (FINISH) begin
+            wait (dut.instruction === 'h00100073) $finish;
+        end else begin
+            // force limit
+            wait (cycle_count > 500) $finish;
+        end
     end
 endmodule
 

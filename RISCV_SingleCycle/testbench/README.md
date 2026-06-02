@@ -34,7 +34,8 @@ Status Done:
 - Test all Btype branch commands for negative jumps
 
 Status TBD:
-- Additional tests... (interrupts, registers, negative)
+- JALR tests
+- Additional tests... (interrupts, zicsr, negative)
 
 TODO:
 - RV64I: load test pattern upper bits into registers (like in Btype no jump test)

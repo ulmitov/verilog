@@ -12,7 +12,7 @@ module control (
     input logic b_type,
     input logic u_type,
     input logic j_type,
-    input logic op_sys,
+    input logic c_type,
 
     output logic pc_sel,
     output logic alua_sel,
@@ -28,10 +28,11 @@ module control (
     localparam word_len = $clog2(RISCV_XLEN) - 3;
     op_enum_alu op_add;
     op_enum_alu op_sri;
-    logic bit30;
+    logic bit_30;
     logic l_type;
 
-    assign bit30    = funct7[5];
+
+    assign bit_30   = funct7[5];
     assign rf_wr_en = ~s_type & ~b_type;
     assign alub_sel = ~r_type;                          // 0- rs2_data, 1- imm
     assign dmem_wr  = s_type;
@@ -95,9 +96,9 @@ module control (
 
     // I type and R type arithmetics
     always_comb begin
-        alu_op = OP_ALU_ADD;        // for branching, jumps, OPCODE_I_TYPE_JALR... this will force ADD for any funct3
+        alu_op = OP_ALU_ADD;        // for branching, jumps, OPCODE_I_TYPE_JALR
 
-        if (bit30) begin
+        if (bit_30) begin
             op_sri =  OP_ALU_SRA;
             op_add =  OP_ALU_SUB;
         end else begin
@@ -118,26 +119,25 @@ module control (
             endcase
         end
 
-        if (i_type & opcode[4]) begin: alu_imm_operations
+        if (c_type) begin: csr_instructions // reusing ALU for csr extension
             case (funct3)
-                OP_FUNCT3_SLT: begin
-                    if (op_sys)
-                        alu_op = OP_ALU_OR;
-                    else
-                        alu_op = OP_ALU_SLT;
-                end
-                OP_FUNCT3_SLTU: begin
-                    if (op_sys)
-                        alu_op = OP_ALU_XOR;
-                    else
-                        alu_op = OP_ALU_SLTU;
-                end
+                OP_FUNCT3_SLT,
+                OP_FUNCT3_OR:   alu_op = OP_ALU_OR;
+                OP_FUNCT3_SLTU,
+                OP_FUNCT3_XOR:  alu_op = OP_ALU_XOR;
+                default:        alu_op = OP_ALU_ADD;
+            endcase
+        end 
+        else if (i_type & opcode[4]) begin: alu_imm_operations
+            case (funct3)
+                OP_FUNCT3_SLT: alu_op = OP_ALU_SLT;
+                OP_FUNCT3_SLTU: alu_op = OP_ALU_SLTU;
                 OP_FUNCT3_XOR:  alu_op = OP_ALU_XOR;
                 OP_FUNCT3_OR:   alu_op = OP_ALU_OR;
                 OP_FUNCT3_AND:  alu_op = OP_ALU_AND;
-                OP_FUNCT3_SLL:  alu_op = OP_ALU_SLL;    //op_sys ? OP_ALU_ADD : 
-                OP_FUNCT3_SRL:  alu_op = op_sri;        //op_sys ? OP_ALU_ADD : 
-                default:        alu_op = OP_ALU_ADD;    // case OP_FUNCT3_ADD
+                OP_FUNCT3_SLL:  alu_op = OP_ALU_SLL;
+                OP_FUNCT3_SRL:  alu_op = op_sri;
+                default:        alu_op = OP_ALU_ADD;
             endcase
         end
     end

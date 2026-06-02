@@ -17,9 +17,11 @@ module decode (
     output logic b_type,
     output logic u_type,
     output logic j_type,
-    output logic op_sys,
     output logic is_op32,
-    output logic is_32bit
+    output logic is_32bit,
+    output logic c_type,    // CSR commands
+    output logic y_type,    // System commands
+    output logic illegal
 );
     logic [31:0] imm_i;
     logic [31:0] imm_s;
@@ -27,6 +29,10 @@ module decode (
     logic [31:0] imm_u;
     logic [31:0] imm_j;
     logic [1:0] opcode16;
+    logic reg_ok;
+    logic func3_ok;
+    logic illegal_op;
+    logic illegal_funct3;
 
     generate
         if (IALIGN < 32)
@@ -35,9 +41,11 @@ module decode (
             assign is_32bit  = ~|instruction[6:0] | &opcode16;
     endgenerate
 
+    assign illegal  = illegal_op | illegal_funct3;
+    assign reg_ok   = |rd_addr | |rs1_addr;
+    assign func3_ok = |funct3;
     assign opcode16 = instruction[1:0];
     assign opcode   = instruction[6:0];
-
     assign rd_addr  = instruction[11:7];
     assign rs1_addr = instruction[19:15];
     assign rs2_addr = instruction[24:20];
@@ -63,8 +71,11 @@ module decode (
         r_type = 1'b0;
         u_type = 1'b0;
         j_type = 1'b0;
-        op_sys = 1'b0;
+        c_type = 1'b0;
+        y_type = 1'b0;
         is_op32 = 1'b0;
+        illegal_op = 1'b0;
+        illegal_funct3 = 1'b0;
 
         case(opcode)
             OPCODE_RTYPE_32: begin
@@ -73,22 +84,40 @@ module decode (
             end
             OPCODE_R_TYPE:          r_type = 1'b1;
             OPCODE_S_TYPE:          s_type = 1'b1;
-            OPCODE_B_TYPE:          b_type = 1'b1;
+            OPCODE_B_TYPE: begin
+                b_type = 1'b1;
+                if (funct3 === 3'b010 | funct3 === 3'b011) illegal_funct3 = 1'b1;
+            end
             OPCODE_U_TYPE_JAL:      j_type = 1'b1;
             OPCODE_U_TYPE_LUI,
             OPCODE_U_TYPE_AUIPC:    u_type = 1'b1;
+            OPCODE_I_TYPE_FL:       illegal_op = 1'b1;  // (Not implemented) this is i_type = 1'b1;
             OPCODE_I_TYPE_ALU,
             OPCODE_I_TYPE_LOAD,
-            OPCODE_I_TYPE_FL,
             OPCODE_I_TYPE_JALR:     i_type = 1'b1;
             OPCODE_ITYPE_IMM_32: begin
                 i_type = 1'b1;
                 is_op32 = 1'b1;
             end
             OPCODE_SYSTEM: begin
-                i_type = 1'b1;
-                op_sys = 1'b1;
+                if (funct3 === 'b100)
+                    // r_type = 1'b1;   // (Not implemented) Hypervisor Virtual-Machine Load and Store Instructions
+                    illegal_funct3 = 1'b1;
+                else begin
+                    i_type = 1'b1;
+                    if (func3_ok & reg_ok)
+                        `ifdef ZICSR
+                            c_type = 1'b1;
+                        `else
+                            illegal_funct3 = 1'b1;
+                        `endif
+                    else if (~func3_ok & ~reg_ok)
+                        y_type = 1'b1;    
+                    else
+                        illegal_funct3 = 1'b1;  // but not for HFENCE
+                end
             end
+            default: illegal_op = 1'b1;
         endcase
     end
 endmodule

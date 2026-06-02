@@ -52,7 +52,12 @@ module riscv_core #(
     op_enum_wr_data_sel rf_wr_data_sel;
     logic inst_req;
     logic is_op32;
-    logic op_sys;
+    logic y_type;
+    logic c_type;
+    logic mem_req;
+    logic illegal;
+    logic illegal_dec;
+    logic rf_en;
 
 
     alu #(XLEN) alu_block (
@@ -84,17 +89,17 @@ module riscv_core #(
         .b_type(b_type),
         .u_type(u_type),
         .j_type(j_type),
-        .op_sys(op_sys),
+        .c_type(c_type),
     // outputs:
         .alu_op(alu_op),
         .pc_sel(pc_sel),
         .alua_sel(alua_sel),
         .alub_sel(alub_sel),
         .dmem_size(dmem_size),
-        .dmem_req(dmem_req),
+        .dmem_req(mem_req),
         .dmem_wr(dmem_wr),
         .dmem_zero_ex(dmem_zero_ex),
-        .rf_wr_en(rf_wr_en),
+        .rf_wr_en(rf_en),
         .rf_wr_data_sel(rf_wr_data_sel)
     );
 
@@ -116,8 +121,10 @@ module riscv_core #(
         .u_type(u_type),
         .j_type(j_type),
         .is_32bit(is_32b_instr),
-        .op_sys(op_sys),
-        .is_op32(is_op32)
+        .is_op32(is_op32),
+        .y_type(y_type),
+        .c_type(c_type),
+        .illegal(illegal_dec)
     );
 
 
@@ -138,6 +145,20 @@ module riscv_core #(
     );
 
 
+    `ifndef ZICSR
+        assign irq_break = y_type & immediate[11:0] == IMM_EBREAK;
+        assign irq_start = 1'b0;
+        assign illegal = imem_req & illegal_dec;
+    `endif
+
+
+    assign rf_wr_en = rf_en & ~illegal;
+    assign dmem_addr = alu_res;
+    `ifndef CLINT
+        assign dmem_req = mem_req;
+    `endif
+
+
     // ALU_A select mux: 0- rs1_data, 1- pc
     always_comb begin
         if (alua_sel)
@@ -148,42 +169,10 @@ module riscv_core #(
 
     // ALU_B select mux: 0- rs2_data, 1- imm
     always_comb begin
-        if (~alub_sel)
-            alu_b = rs2_data;
-        else
+        if (alub_sel)
             alu_b = {{(XLEN-32){immediate[31]}}, immediate};
-    end
-
-
-    // PC select order prioritized
-    always_comb begin
-        if (branch_taken | pc_sel)         // pc_sel: 0- next_pc, 1- alu_res(jump)
-            next_pc = {alu_res[31:1], 1'b0};    // for now Inst ROM is always 32 bits, so taking alu_res from bit 31
         else
-            next_pc = next_pc_alu;
-    end
-
-
-    // --- PC LOGIC ---
-
-    // halt on cmd 0, but allow cmd zero to be the first one
-    assign inst_req = pc == INST_BASE_ADDRESS | |opcode;
-    assign dmem_addr = alu_res;
-
-    always_ff @(posedge clk or negedge res_n) begin
-        if (~res_n)
-            imem_req <= 0;
-        else
-            imem_req <= inst_req;
-    end
-
-
-    // PC register
-    always_ff @(posedge clk or negedge res_n) begin
-        if (~res_n)
-            pc <= INST_BASE_ADDRESS;
-        else if (imem_req)
-            pc <= next_pc;
+            alu_b = rs2_data;
     end
 
 
@@ -197,15 +186,40 @@ module riscv_core #(
 
 
     always_comb begin
-        case (rf_wr_data_sel)
-            OP_RF_SEL_ALU: rf_wr_data = alu_res_signed;
-            OP_RF_SEL_MEM: rf_wr_data = signed_rd_data;
-            OP_RF_SEL_IMM: rf_wr_data = {{(XLEN-32){immediate[31]}}, immediate};
-            OP_RF_SEL_PC:  rf_wr_data = {{(XLEN-32){1'b0}}, next_pc_alu};
-        endcase
+        if (~c_type) begin
+            case (rf_wr_data_sel)
+                OP_RF_SEL_ALU: rf_wr_data = alu_res_signed;
+                OP_RF_SEL_MEM: rf_wr_data = signed_rd_data;
+                OP_RF_SEL_IMM: rf_wr_data = {{(XLEN-32){immediate[31]}}, immediate};
+                OP_RF_SEL_PC:  rf_wr_data = {{(XLEN-32){1'b0}}, next_pc_alu};
+            endcase
+        end
     end
 
 
+    // --- FETCH LOGIC ---
+    // halt on cmd zero, but allow cmd zero to be the first one
+    assign inst_req = ~irq_break & (pc === INST_BASE_ADDRESS | |opcode);
+    always_ff @(posedge clk or negedge res_n) begin
+        if (~res_n)
+            imem_req <= 0;
+        else
+            imem_req <= inst_req;
+    end
+    // PC register
+    always_ff @(posedge clk or negedge res_n) begin
+        if (~res_n)
+            pc <= INST_BASE_ADDRESS;
+        else if (imem_req)
+            pc <= next_pc;
+    end
+    // PC select
+    always_comb begin
+        if (~branch_taken & ~pc_sel)            // pc_sel: 0- next_pc, 1- alu_res(jump)
+            next_pc = next_pc_alu;
+        else
+            next_pc = {alu_res[31:1], 1'b0};    // also for zicsr. for now Inst ROM is always 32 bits.
+    end
     // TODO: dont need 32 bits for Y
     adder #(32) pc_adder (
         .Nadd_sub(1'b0),
