@@ -11,6 +11,11 @@ module riscv_core #(
     input logic [XLEN-1:0] rs1_data,
     input logic [XLEN-1:0] rs2_data,
     input logic [XLEN-1:0] dmem_rd_data,
+    `ifndef CLINT_EX_IRQ
+    input logic irq,
+    `else
+    input logic [`CLINT_EX_IRQ-1:0] irq,
+    `endif
 
     output logic imem_req,
     output logic rf_wr_en,
@@ -58,6 +63,17 @@ module riscv_core #(
     logic illegal;
     logic illegal_dec;
     logic rf_en;
+
+    // ZICSR and CLINT:
+    logic irq_start;
+    logic irq_stop;
+    logic irq_ecall;
+    logic irq_align;
+    logic irq_fault;
+    logic illegal_csr;
+    logic irq_sw_pending;
+    logic [XLEN-1:0] mcause_data;
+    logic [XLEN-1:0] csr_data_out;
 
 
     alu #(XLEN) alu_block (
@@ -149,18 +165,89 @@ module riscv_core #(
         assign irq_break = y_type & immediate[11:0] == IMM_EBREAK;
         assign irq_start = 1'b0;
         assign illegal = imem_req & illegal_dec;
+    `else
+        assign illegal = imem_req & (illegal_dec | illegal_csr);
+
+        csr #(XLEN) csr_block (
+            .clk(clk),
+            .res(~res_n),
+            .c_type(c_type),
+            .y_type(y_type),
+            .funct3(funct3),
+            .sys_rd(rd_addr),
+            .sys_rs1(rs1_addr),
+            .sys_imm(immediate[11:0]),
+            .pc(pc),
+            .rs1_data(rs1_data),
+            .csr_din(alu_res),
+            `ifdef CLINT_EX_IRQ
+                .irq_start(irq_start),
+                .irq_sw_pending(irq_sw_pending),
+                .mcause_data(mcause_data),
+            `else
+                .irq_start(1'b0),
+                .irq_sw_pending(1'b0),
+                .mcause_data('h0),
+            `endif
+        // outputs:
+            .irq_stop(irq_stop),
+            .irq_ecall(irq_ecall),
+            .irq_break(irq_break),
+            .illegal(illegal_csr),
+            .csr_out(csr_data_out)
+        );
+    `endif
+
+
+    `ifdef ZICSR
+    `ifdef CLINT_EX_IRQ
+        assign irq_align = ILEN > 16 ? imem_req & pc[0] & pc[1] : imem_req & pc[0];
+        assign irq_fault = imem_req & $isunknown(instruction);
+
+        clint #(XLEN) clint_block (
+            .clk(clk),
+            .res(~res_n),
+            .csr_req(c_type),
+            .irq_stop(irq_stop),
+            .irq_external(irq),
+            .irq_illegal(illegal),
+            .irq_ecall(irq_ecall),
+            .irq_break(irq_break),
+            .irq_align(irq_align),
+            .irq_fault(irq_fault),
+            .mie(csr_data_out),
+            .mem_req(mem_req),
+            .data_addr(dmem_addr),
+            .data_in(dmem_wr_data),
+        // outputs:
+            .irq_start(irq_start),
+            .irq_sw_pending(irq_sw_pending),
+            .mcause(mcause_data)
+        );
+    `endif
     `endif
 
 
     assign rf_wr_en = rf_en & ~illegal;
     assign dmem_addr = alu_res;
-    `ifndef CLINT
+    `ifndef CLINT_EX_IRQ
         assign dmem_req = mem_req;
+    `else
+        assign dmem_req = mem_req & dmem_addr !== `CLINT_MSIP; // TODO address decoder
     `endif
 
 
     // ALU_A select mux: 0- rs1_data, 1- pc
     always_comb begin
+    `ifdef ZICSR
+        if (irq_stop)           // take mepc
+            alu_a = csr_data_out;
+        else if (irq_start)     // take mtvec
+            alu_a = {csr_data_out[31:2], 2'b00};
+        else if (c_type & funct3[2])
+            alu_a = {{(XLEN-5){1'b0}}, rs1_addr};
+        else
+    `endif
         if (alua_sel)
             alu_a = pc;
         else
@@ -169,6 +256,18 @@ module riscv_core #(
 
     // ALU_B select mux: 0- rs2_data, 1- imm
     always_comb begin
+    `ifdef ZICSR
+        if (irq_stop)
+            alu_b = 'h4;    // jump to mepc + 4
+        else if (irq_start)
+            // if it is not an exception and mtvec not in vectored mode then jump to base+offset
+            alu_b = (mcause_data[31] & csr_data_out[0]) ? {mcause_data[29:0], 2'b00} : 'h0;
+        else if (c_type & funct3[1])
+            alu_b = csr_data_out;
+        else if (c_type & ~funct3[1])
+            alu_b = {XLEN{1'b0}};
+        else
+    `endif
         if (alub_sel)
             alu_b = {{(XLEN-32){immediate[31]}}, immediate};
         else
@@ -194,6 +293,9 @@ module riscv_core #(
                 OP_RF_SEL_PC:  rf_wr_data = {{(XLEN-32){1'b0}}, next_pc_alu};
             endcase
         end
+        `ifdef ZICSR
+            else rf_wr_data = csr_data_out;
+        `endif
     end
 
 
@@ -215,10 +317,15 @@ module riscv_core #(
     end
     // PC select
     always_comb begin
-        if (~branch_taken & ~pc_sel)            // pc_sel: 0- next_pc, 1- alu_res(jump)
-            next_pc = next_pc_alu;
+    `ifdef ZICSR
+        if (irq_stop | irq_start)
+            next_pc = {alu_res[31:1], 1'b0};
         else
-            next_pc = {alu_res[31:1], 1'b0};    // also for zicsr. for now Inst ROM is always 32 bits.
+    `endif
+        if (branch_taken | pc_sel)              // pc_sel: 0- next_pc, 1- alu_res(jump)
+            next_pc = {alu_res[31:1], 1'b0};    // for now Inst ROM is always 32 bits
+        else
+            next_pc = next_pc_alu;
     end
     // TODO: dont need 32 bits for Y
     adder #(32) pc_adder (

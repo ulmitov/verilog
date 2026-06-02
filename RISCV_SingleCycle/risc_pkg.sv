@@ -15,7 +15,8 @@ parameter int TRAP_ADDRESS = 30'h1000;
 
 // Interrupts:
 //`define ZICSR
-//`define CLINT_EX_IRQ 8          // enable CLINT and how much external interrupts supported
+// enable CLINT and how much external interrupts supported
+//`define CLINT_EX_IRQ 8
 // CLINT internal csr, memory mapping. CLINT BASE is h02000000, MSIP offset is 0
 `define CLINT_MSIP 'h02000000
 

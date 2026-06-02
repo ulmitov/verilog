@@ -1,6 +1,9 @@
 # RISCV single cycle implementation
 - Currently supported design is the Base instruction set for **RV32I and RV64I**.
 - Interrupts and registers are in status **TBD**.
+- Zicsr extension
+- CLINT with a number of external interrupts, 1 SW interrupt, without timer and local interrupts.
+https://sifive.cdn.prismic.io/sifive/0d163928-2128-42be-a75a-464df65e04e0_sifive-interrupt-cookbook.pdf
 
 
 

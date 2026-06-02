@@ -9,7 +9,7 @@
 
 Each folder has a Readme
 
- - ![RISCV implementation](./RISCV_SingleCycle) of RV32I and RV64I single cycle
+ - ![RISCV implementation](./RISCV_SingleCycle) of RV32I and RV64I single cycle and CLINT interrupts block
 
  - ![RISCV Design verification](./RISCV_SingleCycle/testbench) A Cpp UVM like testbench and assembly application tests
 

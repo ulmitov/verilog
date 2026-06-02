@@ -10,6 +10,12 @@ module riscv #(
     input logic clk,
     input logic res_n,
     input logic [XLEN-1:0] dbus_rd_data,
+    `ifndef CLINT_EX_IRQ
+    input logic irq,
+    `else
+    input logic [`CLINT_EX_IRQ-1:0] irq,
+    `endif
+
     output logic [XLEN-1:0] dbus_wr_data,
     output logic [31:0] dmem_addr,
     output logic dmem_req,
@@ -40,6 +46,7 @@ module riscv #(
         .rs1_data(rs1_data),
         .rs2_data(rs2_data),
         .dmem_rd_data(mem_rd_data),
+        .irq(irq),
     // outputs:
         .pc(imem_addr),
         .imem_req(imem_req),
