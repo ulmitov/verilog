@@ -3,7 +3,6 @@ import risc_pkg::*;
 
 module decode (
     input logic [IALIGN-1:0] instruction,
-    
     output logic [6:0] opcode,
     output logic [4:0] rd_addr,
     output logic [4:0] rs1_addr,
@@ -21,7 +20,9 @@ module decode (
     output logic is_32bit,
     output logic c_type,    // CSR commands
     output logic y_type,    // System commands
-    output logic illegal
+    output logic illegal,
+    output logic rd_ok,
+    output logic rs1_ok
 );
     logic [31:0] imm_i;
     logic [31:0] imm_s;
@@ -29,7 +30,6 @@ module decode (
     logic [31:0] imm_u;
     logic [31:0] imm_j;
     logic [1:0] opcode16;
-    logic reg_ok;
     logic func3_ok;
     logic illegal_op;
     logic illegal_funct3;
@@ -41,9 +41,10 @@ module decode (
             assign is_32bit  = ~|instruction[6:0] | &opcode16;
     endgenerate
 
-    assign illegal  = illegal_op | illegal_funct3;
-    assign reg_ok   = |rd_addr | |rs1_addr;
+    assign rd_ok    = |rd_addr;
+    assign rs1_ok   = |rs1_addr;
     assign func3_ok = |funct3;
+    assign illegal  = illegal_op | illegal_funct3;
     assign opcode16 = instruction[1:0];
     assign opcode   = instruction[6:0];
     assign rd_addr  = instruction[11:7];
@@ -100,18 +101,18 @@ module decode (
                 is_op32 = 1'b1;
             end
             OPCODE_SYSTEM: begin
-                if (funct3 === 'b100)
-                    // r_type = 1'b1;   // (Not implemented) Hypervisor Virtual-Machine Load and Store Instructions
+                if (funct3 === 3'b100)
+                    // r_type = 1'b1; (Not implemented) Hypervisor Virtual-Machine Load and Store Instructions
                     illegal_funct3 = 1'b1;
                 else begin
                     i_type = 1'b1;
-                    if (func3_ok & reg_ok)
+                    if (func3_ok)
                         `ifdef ZICSR
                             c_type = 1'b1;
                         `else
                             illegal_funct3 = 1'b1;
                         `endif
-                    else if (~func3_ok & ~reg_ok)
+                    else if (~func3_ok & ~rs1_ok & ~rd_ok)
                         y_type = 1'b1;    
                     else
                         illegal_funct3 = 1'b1;  // but not for HFENCE

@@ -51,13 +51,12 @@ module tb_riscv #(parameter mem_file = `BUBBLES, parameter FINISH = 1);
         #`T_CYC res_n = 1'b1;
         @(posedge clk);
         @(posedge clk);
+        if (FINISH)
+            wait (dut.instruction === 'h0);
+        else
+            wait (cycle_count > 500);   // force limit
         $display("End of testbench: %s", mem_file);
-        if (FINISH) begin
-            wait (dut.instruction === 'h00100073) $finish;
-        end else begin
-            // force limit
-            wait (cycle_count > 500) $finish;
-        end
+        $finish;
     end
 endmodule
 
@@ -67,9 +66,9 @@ module tb_asm_arr;
     tb_riscv #(.mem_file(`ARR_MAX), .FINISH(0)) tb();
 
     initial begin
-        wait (tb.dut.instruction === 'h00100073);
-        @(posedge tb.clk);
-        @(posedge tb.clk);
+        repeat(2) @(posedge tb.clk);
+        wait (tb.dut.instruction === 'h0);
+        repeat(1) @(posedge tb.clk);
 
         exp = tb.dut.data_mem.MEMX[24];
         if (exp !== 'h2A)
@@ -86,9 +85,9 @@ module tb_asm_bub;
     tb_riscv #(.mem_file(`BUBBLES), .FINISH(0)) tb();
 
     initial begin
-        wait (tb.dut.instruction === 'h00100073);
-        @(posedge tb.clk);
-        @(posedge tb.clk);
+        repeat(2) @(posedge tb.clk);
+        wait (tb.dut.instruction === 'h0);
+        repeat(1) @(posedge tb.clk);
 
         exp = 0;
         for (i = 11; i < 15; i = i + 1)
@@ -107,9 +106,9 @@ module tb_asm_fib;
     tb_riscv #(.mem_file(`FIBONACCI), .FINISH(0)) tb();
 
     initial begin
-        wait (tb.dut.instruction === 'h00100073);
-        @(posedge tb.clk);
-        @(posedge tb.clk);
+        repeat(2) @(posedge tb.clk);
+        wait (tb.dut.instruction === 'h0);
+        repeat(1) @(posedge tb.clk);
 
         exp = 1;
         for (i = 24; i < 40; i = i + 4)

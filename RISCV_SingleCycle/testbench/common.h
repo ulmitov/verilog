@@ -10,8 +10,8 @@
 #include "Vriscv__Dpi.h"
 #include "Vriscv.h"
 #include "Vriscv___024root.h"
+#include "logger.cpp"
 
-// Globals
 #define COMMON_H
 
 // Test parameters:
@@ -19,9 +19,7 @@
 #define VERBOSITY 0         // if 1 then prints additional output, enables VCD dump
 #endif
 
-
-#define MAX_REG 4           // how much registers to check *** FOR FULL TEST MUST BE 32 ***
-
+#define REGS_NUM 6           // *** FOR FULL TEST SET TO MAX_REG ***
 //#define SEQUENCES_NUM 10
 #define SEQUENCES_NUM Vriscv_risc_pkg::RISCV_XLEN + 18    // how much bit patterns to apply
 
@@ -41,8 +39,20 @@ const int DATA_MEMORY_BASE_ADDR = Vriscv_risc_pkg::DMEM_BASE_ADDRESS;
 const int DATA_MEMORY_LAST_ADDR = DATA_MEMORY_BASE_ADDR + DATA_MEMORY_DEPTH;
 const int DATA_MEMORY_ADDR_WIDTH = Vriscv___024root::riscv__DOT__data_mem__DOT__ADDR_WIDTH;
 const int INSTRUCTIONS_LIMIT = (Vriscv___024root::riscv__DOT__instruction_mem__DOT__DEPTH / IALIGN) - 20;
+const int MAX_REG = Vriscv___024root::riscv__DOT__reg_file__DOT__NUM;
 const int WORD_LEN = XLEN / 8;
 int RETURN_CODE = 0;
+int CSR_ADDR[8] = {
+    Vriscv_risc_pkg::CSR_MIE, 
+    Vriscv_risc_pkg::CSR_MIP, 
+    Vriscv_risc_pkg::CSR_MTVEC, 
+    Vriscv_risc_pkg::CSR_MSCRACTH, 
+    Vriscv_risc_pkg::CSR_MEPC, 
+    Vriscv_risc_pkg::CSR_MCAUSE, 
+    Vriscv_risc_pkg::CSR_MTINST, 
+    Vriscv_risc_pkg::CSR_MSTATUS
+};
+int const CSR_REGS = sizeof(CSR_ADDR) / sizeof(CSR_ADDR[0]);
 
 
 struct Transaction {
@@ -51,13 +61,14 @@ struct Transaction {
     long addr;
     long wr_data;
     long rd_data;
-    char str[512];      // stores the instructions chain text
     int test_id;        // id of the test phase is set here
+    char str[512];      // stores the instructions chain text
 };
 
 
-extern std::queue<Transaction> ref_fifo;
-extern std::queue<Transaction> drv_fifo;
+std::queue<Transaction> ref_fifo;
+std::queue<Transaction> drv_fifo;
+extern Logger *logger;
 
 
 struct isa_utype {

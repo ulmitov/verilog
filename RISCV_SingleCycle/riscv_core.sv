@@ -11,11 +11,9 @@ module riscv_core #(
     input logic [XLEN-1:0] rs1_data,
     input logic [XLEN-1:0] rs2_data,
     input logic [XLEN-1:0] dmem_rd_data,
-    `ifndef CLINT_EX_IRQ
-    input logic irq,
-    `else
-    input logic [`CLINT_EX_IRQ-1:0] irq,
-    `endif
+    input logic irq_sw_pending,
+    input logic irq_ex_pending,
+    input logic irq_timer_pending,
 
     output logic imem_req,
     output logic rf_wr_en,
@@ -31,8 +29,8 @@ module riscv_core #(
     output logic dmem_wr,
     output op_enum_dmem_size dmem_size
 );
-    logic [31:0] next_pc_alu;
-    logic [31:0] next_pc;   // the real next pc that should be taken according to ALU or branch control
+    logic [31:0] next_pc_default;
+    logic [31:0] next_pc;
     logic [31:0] immediate;
     logic [XLEN-1:0] alu_a;
     logic [XLEN-1:0] alu_b;
@@ -59,20 +57,16 @@ module riscv_core #(
     logic is_op32;
     logic y_type;
     logic c_type;
-    logic mem_req;
-    logic illegal;
     logic illegal_dec;
     logic rf_en;
+    logic pc_jump;
+    logic rd_ok;
+    logic rs1_ok;
 
-    // ZICSR and CLINT:
+    // ZICSR:
     logic irq_start;
     logic irq_stop;
-    logic irq_ecall;
-    logic irq_align;
-    logic irq_fault;
-    logic illegal_csr;
-    logic irq_sw_pending;
-    logic [XLEN-1:0] mcause_data;
+    logic [XLEN-1:0] mtvec_offset;
     logic [XLEN-1:0] csr_data_out;
 
 
@@ -112,7 +106,7 @@ module riscv_core #(
         .alua_sel(alua_sel),
         .alub_sel(alub_sel),
         .dmem_size(dmem_size),
-        .dmem_req(mem_req),
+        .dmem_req(dmem_req),
         .dmem_wr(dmem_wr),
         .dmem_zero_ex(dmem_zero_ex),
         .rf_wr_en(rf_en),
@@ -140,7 +134,9 @@ module riscv_core #(
         .is_op32(is_op32),
         .y_type(y_type),
         .c_type(c_type),
-        .illegal(illegal_dec)
+        .illegal(illegal_dec),
+        .rd_ok(rd_ok),
+        .rs1_ok(rs1_ok)
     );
 
 
@@ -162,91 +158,62 @@ module riscv_core #(
 
 
     `ifndef ZICSR
-        assign irq_break = y_type & immediate[11:0] == IMM_EBREAK;
         assign irq_start = 1'b0;
-        assign illegal = imem_req & illegal_dec;
+        assign irq_stop = 1'b0;
     `else
-        assign illegal = imem_req & (illegal_dec | illegal_csr);
-
         csr #(XLEN) csr_block (
             .clk(clk),
             .res(~res_n),
             .c_type(c_type),
             .y_type(y_type),
-            .funct3(funct3),
-            .sys_rd(rd_addr),
-            .sys_rs1(rs1_addr),
+            .rd_ok(rd_ok),
+            .rs_ok(rs1_ok),
+            .imem_req(imem_req),
+            .instruction(instruction),
             .sys_imm(immediate[11:0]),
             .pc(pc),
-            .rs1_data(rs1_data),
             .csr_din(alu_res),
+            .irq_illegal(illegal_dec),
             `ifdef CLINT_EX_IRQ
-                .irq_start(irq_start),
+                .irq_ex_pending(irq_ex_pending),
                 .irq_sw_pending(irq_sw_pending),
-                .mcause_data(mcause_data),
+                .irq_timer_pending(irq_timer_pending),
             `else
-                .irq_start(1'b0),
+                .irq_ex_pending(1'b0),
                 .irq_sw_pending(1'b0),
-                .mcause_data('h0),
+                .irq_timer_pending(1'b0),
             `endif
         // outputs:
+            .irq_start(irq_start),
             .irq_stop(irq_stop),
-            .irq_ecall(irq_ecall),
-            .irq_break(irq_break),
-            .illegal(illegal_csr),
+            .offset(mtvec_offset),
             .csr_out(csr_data_out)
         );
     `endif
 
 
-    `ifdef ZICSR
-    `ifdef CLINT_EX_IRQ
-        assign irq_align = ILEN > 16 ? imem_req & pc[0] & pc[1] : imem_req & pc[0];
-        assign irq_fault = imem_req & $isunknown(instruction);
-
-        clint #(XLEN) clint_block (
-            .clk(clk),
-            .res(~res_n),
-            .csr_req(c_type),
-            .irq_stop(irq_stop),
-            .irq_external(irq),
-            .irq_illegal(illegal),
-            .irq_ecall(irq_ecall),
-            .irq_break(irq_break),
-            .irq_align(irq_align),
-            .irq_fault(irq_fault),
-            .mie(csr_data_out),
-            .mem_req(mem_req),
-            .data_addr(dmem_addr),
-            .data_in(dmem_wr_data),
-        // outputs:
-            .irq_start(irq_start),
-            .irq_sw_pending(irq_sw_pending),
-            .mcause(mcause_data)
-        );
-    `endif
-    `endif
-
-
-    assign rf_wr_en = rf_en & ~illegal;
     assign dmem_addr = alu_res;
-    `ifndef CLINT_EX_IRQ
-        assign dmem_req = mem_req;
-    `else
-        assign dmem_req = mem_req & dmem_addr !== `CLINT_MSIP; // TODO address decoder
-    `endif
-
+    assign rf_wr_en = rf_en & rd_ok & ~irq_start;
 
     // ALU_A select mux: 0- rs1_data, 1- pc
     always_comb begin
     `ifdef ZICSR
         if (irq_stop)           // take mepc
             alu_a = csr_data_out;
-        else if (irq_start)     // take mtvec
-            alu_a = {csr_data_out[31:2], 2'b00};
-        else if (c_type & funct3[2])
-            alu_a = {{(XLEN-5){1'b0}}, rs1_addr};
         else
+        if (irq_start)          // take mtvec
+            alu_a = {csr_data_out[XLEN-1:2], 2'b00};
+        else
+        if (c_type) begin
+            case (funct3)
+                OP_FUNCT3_CSRRW:    alu_a = rs1_data;
+                OP_FUNCT3_CSRRS:    alu_a = rs1_data;
+                OP_FUNCT3_CSRRC:    alu_a = ~rs1_data;
+                OP_FUNCT3_CSRRWI:   alu_a = {{(XLEN-5){1'b0}}, rs1_addr};
+                OP_FUNCT3_CSRRSI:   alu_a = {{(XLEN-5){1'b0}}, rs1_addr};   // set
+                OP_FUNCT3_CSRRCI:   alu_a = {{(XLEN-5){1'b1}}, ~rs1_addr};  // clear
+            endcase
+        end else
     `endif
         if (alua_sel)
             alu_a = pc;
@@ -258,13 +225,12 @@ module riscv_core #(
     always_comb begin
     `ifdef ZICSR
         if (irq_stop)
-            alu_b = 'h4;    // jump to mepc + 4
+            alu_b = 'h4;                // jump to mepc + 4
         else if (irq_start)
-            // if it is not an exception and mtvec not in vectored mode then jump to base+offset
-            alu_b = (mcause_data[31] & csr_data_out[0]) ? {mcause_data[29:0], 2'b00} : 'h0;
-        else if (c_type & funct3[1])
+            alu_b = mtvec_offset;
+        else if (c_type & funct3[1])    // CSRRS/C
             alu_b = csr_data_out;
-        else if (c_type & ~funct3[1])
+        else if (c_type & ~funct3[1])   // CSRRW
             alu_b = {XLEN{1'b0}};
         else
     `endif
@@ -290,18 +256,18 @@ module riscv_core #(
                 OP_RF_SEL_ALU: rf_wr_data = alu_res_signed;
                 OP_RF_SEL_MEM: rf_wr_data = signed_rd_data;
                 OP_RF_SEL_IMM: rf_wr_data = {{(XLEN-32){immediate[31]}}, immediate};
-                OP_RF_SEL_PC:  rf_wr_data = {{(XLEN-32){1'b0}}, next_pc_alu};
+                OP_RF_SEL_PC:  rf_wr_data = {{(XLEN-32){1'b0}}, next_pc_default};
             endcase
         end
         `ifdef ZICSR
-            else rf_wr_data = csr_data_out;
+        else rf_wr_data = csr_data_out;
         `endif
     end
 
 
     // --- FETCH LOGIC ---
     // halt on cmd zero, but allow cmd zero to be the first one
-    assign inst_req = ~irq_break & (pc === INST_BASE_ADDRESS | |opcode);
+    assign inst_req = (pc === INST_BASE_ADDRESS | |opcode);
     always_ff @(posedge clk or negedge res_n) begin
         if (~res_n)
             imem_req <= 0;
@@ -312,26 +278,22 @@ module riscv_core #(
     always_ff @(posedge clk or negedge res_n) begin
         if (~res_n)
             pc <= INST_BASE_ADDRESS;
-        else if (imem_req)
+        else if (imem_req === 1'b1)
             pc <= next_pc;
     end
     // PC select
+    assign pc_jump = branch_taken | pc_sel | (irq_start) | irq_stop;
     always_comb begin
-    `ifdef ZICSR
-        if (irq_stop | irq_start)
-            next_pc = {alu_res[31:1], 1'b0};
-        else
-    `endif
-        if (branch_taken | pc_sel)              // pc_sel: 0- next_pc, 1- alu_res(jump)
+        if (pc_jump)
             next_pc = {alu_res[31:1], 1'b0};    // for now Inst ROM is always 32 bits
         else
-            next_pc = next_pc_alu;
+            next_pc = next_pc_default;
     end
     // TODO: dont need 32 bits for Y
     adder #(32) pc_adder (
         .Nadd_sub(1'b0),
         .X(pc),
         .Y({{29{1'b0}}, imem_req & is_32b_instr, imem_req & ~is_32b_instr, {1'b0}}),  // 100 or 010 or 000
-        .sum(next_pc_alu)
+        .sum(next_pc_default)
     );
 endmodule

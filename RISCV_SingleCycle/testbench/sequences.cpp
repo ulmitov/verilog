@@ -1,9 +1,38 @@
 #ifndef COMMON_H
 #include "common.h"
 #endif
+#include "sequencer.cpp"
 
-extern Logger *logger;
-extern Sequencer *sqr;
+Sequencer *sqr = new Sequencer();
+
+
+extern "C" {
+    /** Get a transaction from Reference model
+    * This function is customized for DPI
+    *
+    * @param tx: pointer to transaction
+    * @return 1 on success, 0 if queue empty or error
+    */
+    int get_ref(Transaction *tx, int set_str = 1) {
+        if (ref_fifo.empty()) return 0;
+        if (tx == nullptr) {
+            printf("ERROR: Transaction struct is null\n");
+            return 0;
+        }
+        Transaction temp = ref_fifo.front();
+        //*tx = temp; For DPI need to set them one by one:
+        tx->req = temp.req;
+        tx->wr = temp.wr;
+        tx->addr = temp.addr;
+        tx->wr_data = temp.wr_data;
+        tx->rd_data = temp.rd_data;
+        tx->test_id = temp.test_id;
+        if (set_str) strcpy(tx->str, temp.str); // not copying for DPI
+        //printf("EXPECT:  wr: %d  addr: %lx  wr_data: %lx  rd_data: %lx\n", tx->wr, tx->addr, tx->wr_data, tx->rd_data);
+        ref_fifo.pop();
+        return 1;
+    }
+}
 
 
 void push_ref(Transaction *req, char no_zero_cmd = 0) {
@@ -18,10 +47,10 @@ void push_ref(Transaction *req, char no_zero_cmd = 0) {
         req->addr &= (1UL << DATA_MEMORY_ADDR_WIDTH) - 1;
     }
 
-    // Log the commands to file, each phase has dedicated file
+    // each phase commands are logged into separate files
     if (ref_fifo.empty()) logger->init_log();
     logger->start_log(sqr->split_num);
-    fprintf(logger->fptr, "%s\n[%ld]: EXPECT: addr=%08lx data=%08lx\n\n",
+    fprintf(logger->fptr, "%s\n[%ld]: EXPECTED: addr=%08lx data=%08lx\n\n",
             req->str, ref_fifo.size(), req->addr, req->wr_data
     );
 
@@ -158,6 +187,12 @@ void seq_itype(const char *name, struct isa_itype *cmd, char bit30 = 0) {
     if (cmd->opcode == Vriscv_risc_pkg::OPCODE_I_TYPE_LOAD) {
         sprintf(cmd->str, "%08x\t%s x%d, 0x%0x(x%d)",
                 cmd->value, name, cmd->rd, cmd->imm, cmd->rs1);
+    } else if (cmd->opcode == Vriscv_risc_pkg::OPCODE_SYSTEM && cmd->funct3) {
+        sprintf(cmd->str, "%08x\t%s x%d, 0x%0x, x%d",
+                cmd->value, name, cmd->rd, cmd->imm, cmd->rs1);
+    } else if (cmd->opcode == Vriscv_risc_pkg::OPCODE_SYSTEM && !cmd->funct3) {
+        sprintf(cmd->str, "%08x\t%s",
+                cmd->value, name);
     } else {
         sprintf(cmd->str, "%08x\t%s x%d, x%d, 0x%0x",
                 cmd->value, name, cmd->rd, cmd->rs1, cmd->imm);
@@ -614,6 +649,64 @@ void set_rtype(struct isa_rtype *rtype, int alu_opcode, int op32 = 0) {
             break;
         default:
             printf("ERROR: invalid ALU opcode provided by test\n");
+            return;
+    }
+}
+
+
+// ZiCSR
+void seq_csrrw(struct isa_itype *cmd) {
+    cmd->opcode = Vriscv_risc_pkg::OPCODE_SYSTEM;
+    cmd->funct3 = 1;
+    seq_itype("csrrw", cmd);
+}
+void seq_csrrwi(struct isa_itype *cmd) {
+    cmd->opcode = Vriscv_risc_pkg::OPCODE_SYSTEM;
+    cmd->funct3 = 5;
+    seq_itype("csrrwi", cmd);
+}
+void seq_csrrs(struct isa_itype *cmd) {
+    cmd->opcode = Vriscv_risc_pkg::OPCODE_SYSTEM;
+    cmd->funct3 = 2;
+    seq_itype("csrrs", cmd);
+}
+void seq_csrrsi(struct isa_itype *cmd) {
+    cmd->opcode = Vriscv_risc_pkg::OPCODE_SYSTEM;
+    cmd->funct3 = 6;
+    seq_itype("csrrsi", cmd);
+}
+void seq_csrrc(struct isa_itype *cmd) {
+    cmd->opcode = Vriscv_risc_pkg::OPCODE_SYSTEM;
+    cmd->funct3 = 3;
+    seq_itype("csrrc", cmd);
+}
+void seq_csrrci(struct isa_itype *cmd) {
+    cmd->opcode = Vriscv_risc_pkg::OPCODE_SYSTEM;
+    cmd->funct3 = 7;
+    seq_itype("csrrci", cmd);
+}
+void set_csr(struct isa_itype *itype, int funct3) {
+    switch(funct3) {
+        case Vriscv_risc_pkg::OP_FUNCT3_CSRRW:
+            seq_csrrw(itype);
+            break;
+        case Vriscv_risc_pkg::OP_FUNCT3_CSRRS:
+            seq_csrrs(itype);
+            break;
+        case Vriscv_risc_pkg::OP_FUNCT3_CSRRC:
+            seq_csrrc(itype);
+            break;
+        case Vriscv_risc_pkg::OP_FUNCT3_CSRRWI:
+            seq_csrrwi(itype);
+            break;
+        case Vriscv_risc_pkg::OP_FUNCT3_CSRRSI:
+            seq_csrrsi(itype);
+            break;
+        case Vriscv_risc_pkg::OP_FUNCT3_CSRRCI:
+            seq_csrrci(itype);
+            break;
+        default:
+            printf("ERROR: invalid CSR funct3 provided by test\n");
             return;
     }
 }

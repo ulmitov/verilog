@@ -6,8 +6,9 @@
 void test_acceptance(Environment* env) {
     generate_stype_acceptance();
     generate_itype_load_acceptance();
+    generate_csr_acceptance();
     env->main();
-    printf("INFO: Finished LUI + Addi + Stype + Itype load commands acceptance test\n\n");
+    printf("INFO: Finished LUI + Addi + Stype + Itype load + ZiCSR commands acceptance tests\n\n");
 }
 
 
@@ -112,7 +113,7 @@ void test_itype_load_unsigned_addr_bits(Environment* env) {
     if (XLEN >= 32) {
         generate_itype_load_address(24, 1);
         env->main();
-        printf("INFO: Finished LT command addr test\n\n");
+        printf("INFO: Finished LTU command addr test\n\n");
 
         generate_itype_load_address(32, 1);
         env->main();
@@ -159,7 +160,7 @@ void test_itype_load_unsigned_data_bits(Environment* env) {
     if (XLEN >= 32) {
         generate_itype_load_data(24, 1);
         env->main();
-        printf("INFO: Finished LT command data test\n\n");
+        printf("INFO: Finished LTU command data test\n\n");
 
         generate_itype_load_data(32, 1);
         env->main();
@@ -344,7 +345,7 @@ void test_btype_no_jumps(Environment* env) {
 }
 
 
-void test_btype_jumps_forward(Environment* env) {
+void test_btype_jump_forward(Environment* env) {
 
     generate_btype_forward(Vriscv_risc_pkg::OP_B_TYPE_BEQ);
     env->main();
@@ -373,7 +374,7 @@ void test_btype_jumps_forward(Environment* env) {
 }
 
 
-void test_btype_jumps_backward(Environment* env) {
+void test_btype_jump_backward(Environment* env) {
 
     generate_btype_backward(Vriscv_risc_pkg::OP_B_TYPE_BEQ);
     env->main();
@@ -399,4 +400,32 @@ void test_btype_jumps_backward(Environment* env) {
     env->main();
     printf("INFO: Finished OP_B_TYPE_BGEU jump backward test\n\n");
 
+}
+
+
+void test_zicsr(Environment *env) {
+
+    generate_csr_read_write(Vriscv_risc_pkg::OP_FUNCT3_CSRRW);
+    env->main();
+    printf("INFO: Finished OP_FUNCT3_CSRRW test\n\n");
+
+    generate_csr_read_write(Vriscv_risc_pkg::OP_FUNCT3_CSRRS);
+    env->main();
+    printf("INFO: Finished OP_FUNCT3_CSRRS test\n\n");
+
+    generate_csr_read_write(Vriscv_risc_pkg::OP_FUNCT3_CSRRC);
+    env->main();
+    printf("INFO: Finished OP_FUNCT3_CSRRC test\n\n");
+
+    generate_csr_read_write(Vriscv_risc_pkg::OP_FUNCT3_CSRRWI);
+    env->main();
+    printf("INFO: Finished OP_FUNCT3_CSRRWI test\n\n");
+
+    generate_csr_read_write(Vriscv_risc_pkg::OP_FUNCT3_CSRRSI);
+    env->main();
+    printf("INFO: Finished OP_FUNCT3_CSRRSI test\n\n");
+
+    generate_csr_read_write(Vriscv_risc_pkg::OP_FUNCT3_CSRRCI);
+    env->main();
+    printf("INFO: Finished OP_FUNCT3_CSRRCI test\n\n");
 }

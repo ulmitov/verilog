@@ -35,6 +35,9 @@ module riscv #(
     logic rf_wr_en;
     logic dmem_zero_ex;
     op_enum_dmem_size dmem_size;
+    logic irq_sw_pending;
+    logic irq_ex_pending;
+    logic irq_timer_pending;
 
     // TODO: address decoder
     assign mem_rd_data = (dmem_addr >= DMEM_BASE_ADDRESS && dmem_addr < DMEM_BASE_ADDRESS + MEM_DEPTH) ? dmem_rd_data : dbus_rd_data;
@@ -46,7 +49,9 @@ module riscv #(
         .rs1_data(rs1_data),
         .rs2_data(rs2_data),
         .dmem_rd_data(mem_rd_data),
-        .irq(irq),
+        .irq_sw_pending(irq_sw_pending),
+        .irq_ex_pending(irq_ex_pending),
+        .irq_timer_pending(irq_timer_pending),
     // outputs:
         .pc(imem_addr),
         .imem_req(imem_req),
@@ -62,6 +67,22 @@ module riscv #(
         .dmem_size(dmem_size),
         .dmem_addr(dmem_addr)
     );
+
+
+    `ifdef CLINT_EX_IRQ
+        clint #(XLEN) clint_block (
+            .clk(clk),
+            .res(~res_n),
+            .irq_external(irq),
+            .wr_en(dmem_req & dmem_wr),
+            .data_addr(dmem_addr),
+            .data_in(dmem_wr_data),
+        // outputs:
+            .irq_sw_pending(irq_sw_pending),
+            .irq_ex_pending(irq_ex_pending),
+            .irq_timer_pending(irq_timer_pending)
+        );
+    `endif
 
 
     memory #(
@@ -87,7 +108,7 @@ module riscv #(
     );
 
 
-    register_file #(XLEN) reg_file (
+    register_file #(.XLEN(XLEN)) reg_file (
         .clk(clk),
         .res_n(res_n),
         .rf_wr_en(rf_wr_en),
@@ -111,7 +132,11 @@ module riscv #(
         .res(~res_n),
         .ren(1'b1),
         .wen(dmem_wr),
-        .req(dmem_req),
+        `ifdef CLINT_EX_IRQ
+            .req(dmem_req & dmem_addr[31:16] !== (CLINT_MSIP >> 16)), // TODO address decoder,
+        `else
+            .req(dmem_req),
+        `endif
         .addr(dmem_addr),
         .blsize(dmem_size),
         .wr_data(dbus_wr_data),

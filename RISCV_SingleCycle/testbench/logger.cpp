@@ -1,6 +1,4 @@
-#ifndef COMMON_H
-#include "common.h"
-#endif
+#include <stdio.h>
 
 
 class Logger {

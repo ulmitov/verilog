@@ -2,8 +2,6 @@
 #include "common.h"
 #endif
 
-extern Logger *logger;
-
 
 class Interface {
 public:
@@ -163,13 +161,12 @@ public:
                 }
             }
             */
-            printf("[%lu] DEBUG: FETCH: imem_req=%d  imem_addr=%08x  instruction=%08x  imem_req=%d  next_pc_alu=%08x  next_pc=%08x\n",
+            printf("[%lu] DEBUG: FETCH: imem_req=%d  imem_addr=%08x  instruction=%08x  imem_req=%d  next_pc=%08x\n",
                 timestamp,
                 top->rootp->riscv__DOT__core__DOT__imem_req,
                 top->rootp->riscv__DOT__core__DOT__pc,
                 top->rootp->riscv__DOT__core__DOT__instruction,
                 top->rootp->riscv__DOT__core__DOT__imem_req,
-                top->rootp->riscv__DOT__core__DOT__next_pc_alu,
                 top->rootp->riscv__DOT__core__DOT__next_pc
             );
             printf("[%lu] DEBUG: CORE:  opcode=%02x  funct3=%d  rf_wr_data_sel=%d  rd_addr=%08x  rs1_addr=%08x  rs1_data=%08x  rs2_addr=%08x  rs2_data=%08x  imm=%08x\n",
@@ -213,6 +210,26 @@ public:
                 top->rootp->riscv__DOT__core__DOT__alu_block__DOT__alu_res,
                 top->rootp->riscv__DOT__core__DOT__branch_block__DOT__lt,
                 top->rootp->riscv__DOT__core__DOT__branch_block__DOT__ltu
+            );
+            fprintf(logger->fptr, "[%lu] DEBUG: IRQ: imem_req=%d  irq_en=%d  irq_start=%d  irq_stop=%d  irq_fault=%d  illegal_dec=%d  irq_align=%d  irq_timer=%d  irq_software=%d  irq_external=%d  irq_ecall=%d  irq_break=%d  illegal_csr=%d  irq_illegal_ack=%d irq_illegal=%d  csr_data_out=%x\n",
+                timestamp,
+                
+                top->rootp->riscv__DOT__core__DOT__imem_req,
+                top->rootp->riscv__DOT__core__DOT__csr_block__DOT__irq_en,
+                top->rootp->riscv__DOT__core__DOT__irq_start,
+                top->rootp->riscv__DOT__core__DOT__irq_stop,
+                top->rootp->riscv__DOT__core__DOT__csr_block__DOT__irq_fault,
+                top->rootp->riscv__DOT__core__DOT__illegal_dec,
+                top->rootp->riscv__DOT__core__DOT__csr_block__DOT__irq_align,
+                top->rootp->riscv__DOT__core__DOT__csr_block__DOT__irq_timer,
+                top->rootp->riscv__DOT__core__DOT__csr_block__DOT__irq_software,
+                top->rootp->riscv__DOT__core__DOT__csr_block__DOT__irq_external,
+                top->rootp->riscv__DOT__core__DOT__csr_block__DOT__irq_ecall,
+                top->rootp->riscv__DOT__core__DOT__csr_block__DOT__irq_break,
+                top->rootp->riscv__DOT__core__DOT__csr_block__DOT__illegal,
+                top->rootp->riscv__DOT__core__DOT__csr_block__DOT__irq_illegal_ack,
+                top->rootp->riscv__DOT__core__DOT__csr_block__DOT__irq_illegal,
+                top->rootp->riscv__DOT__core__DOT__csr_data_out
             );
             fprintf(logger->fptr, "[%lu] DEBUG: REGFILE: rf_wr_data_sel=%d  rd_addr=%x  rs1_addr=%x  rs2_addr=%x  rs1_data=%lx  rs2_data=%lx  rf_wr_data=%lx\n",
                 timestamp,

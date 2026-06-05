@@ -39,16 +39,16 @@ jobs:
           ls $HOME/dev/sda6/UVM/UVM1.2/src
 
       - name: Regression with GATE_FLOW OFF (iverilog)
-        run: make all ARG="-DGATE_FLOW_OFF" 2>&1 | tee tb_dataflow.log
+        run: make all ARG="-DGATE_FLOW_OFF" 2>&1 > >(tee tb_dataflow.log)
 
       - name: Regression with GATE_FLOW ON (iverilog)
-        run: make all 2>&1 | tee tb_gateflow.log
+        run: make all 2>&1 > >(tee tb_gateflow.log)
 
       - name: Modules regression (verilator)
-        run: make regression SIM=v RM_OBJDIR=true 2>&1 | tee tb_modules.log
+        run: make regression SIM=v RM_OBJDIR=true 2>&1 > >(tee tb_modules.log)
 
       - name: RV32I application tests
-        run: make risc_tb SIM=v RM_OBJDIR=true 2>&1 | tee tb_rv32i.log
+        run: make risc_tb SIM=v RM_OBJDIR=true 2>&1 > >(tee tb_rv32i.log)
 
       - name: RV32I Design Verification C++ testbench
         run: make riscdv ARG=-DXLEN=32 2>&1 | tee cpp_riscdv32.log

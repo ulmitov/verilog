@@ -2,23 +2,17 @@
 `ifndef XLEN
 `define XLEN 32
 `endif
+`define ZICSR
+//`define CLINT_EX_IRQ 8    // enable CLINT and how much external interrupts supported
 
 
 package risc_pkg;
 parameter int RISCV_XLEN = `XLEN;
 parameter int IALIGN = 32;
 parameter int ILEN = 32;
-parameter int INST_BASE_ADDRESS = 32'h0;
-parameter int DMEM_BASE_ADDRESS = 32'h0;
-parameter int TRAP_ADDRESS = 30'h1000;
-
-
-// Interrupts:
-//`define ZICSR
-// enable CLINT and how much external interrupts supported
-//`define CLINT_EX_IRQ 8
-// CLINT internal csr, memory mapping. CLINT BASE is h02000000, MSIP offset is 0
-`define CLINT_MSIP 'h02000000
+parameter int INST_BASE_ADDRESS = 'h0;
+parameter int DMEM_BASE_ADDRESS = 'h0;
+parameter int TRAP_BASE_ADDRESS = 'h1000;
 
 
 // RegFile rd data source select mux
@@ -72,7 +66,7 @@ typedef enum logic [2:0] {
 } op_enum_b_type_funct3 /*verilator public*/;
 
 
-// I type and R type arithmetics
+// I type and R type arithmetics funct3
 typedef enum logic [2:0] {
     OP_FUNCT3_ADD  = 3'h0,
     OP_FUNCT3_SLL  = 3'h1,
@@ -100,27 +94,7 @@ typedef enum logic [3:0] {
 } op_enum_alu /*verilator public*/;
 
 
-// CSRs
-typedef enum logic [1:0] {
-    OP_FUNCT3_CSRRW = 2'b01,
-    OP_FUNCT3_CSRRS = 2'b10,
-    OP_FUNCT3_CSRRC = 2'b11
-} op_csr_funct3 /*verilator public*/;
-
-
-typedef enum logic [11:0] {
-    CSR_MIE         = 'h304,
-    CSR_MIP         = 'h344,
-    CSR_MTVEC       = 'h305,
-    CSR_MSCRACTH    = 'h340,
-    CSR_MEPC        = 'h341,
-    CSR_MCAUSE      = 'h342,
-    CSR_MTINST      = 'h34A,
-    CSR_MSTATUS     = 'h300,
-    CSR_MSTATUSH    = 'h310
-} op_enum_csr_addr /*verilator public*/;
-
-
+// System commands
 typedef enum logic [11:0] {
     IMM_ECALL   = 'h000,
     IMM_EBREAK  = 'h001,
@@ -131,6 +105,39 @@ typedef enum logic [11:0] {
     IMM_MRET    = 'h302,
     IMM_MNRET   = 'h702
 } op_enum_system_imm /*verilator public*/;
+
+
+// ZiCSR
+typedef enum logic [2:0] {
+    OP_FUNCT3_CSRRW = 3'b001,
+    OP_FUNCT3_CSRRS = 3'b010,
+    OP_FUNCT3_CSRRC = 3'b011,
+    OP_FUNCT3_CSRRWI = 3'b101,
+    OP_FUNCT3_CSRRSI = 3'b110,
+    OP_FUNCT3_CSRRCI = 3'b111
+} op_csr_funct3 /*verilator public*/;
+
+
+// CSR mapping
+typedef enum logic [11:0] {
+    CSR_MIE         = 'h304,
+    CSR_MIP         = 'h344,
+    CSR_MTVEC       = 'h305,
+    CSR_MSCRACTH    = 'h340,
+    CSR_MEPC        = 'h341,
+    CSR_MCAUSE      = 'h342,
+    CSR_MTINST      = 'h34A,
+    CSR_MSTATUS     = 'h300,
+    CSR_MSTATUSH    = 'h310     // (Not implemented)
+} op_enum_csr_addr /*verilator public*/;
+
+
+// CLINT internal csrs memory mapping
+typedef enum logic [31:0] {
+    CLINT_MSIP      = 'h02000000,   // this is also the base address
+    CLINT_MTIME     = 'h0200BFF8,
+    CLINT_MTIMECMP  = 'h02004000
+} op_clint_csr /*verilator public*/;
 
 endpackage
 /* verilator lint_on UNUSEDPARAM */

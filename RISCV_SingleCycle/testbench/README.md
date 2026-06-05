@@ -32,13 +32,14 @@ Status Done:
 - Test all Btype branch commands for no jump conditions
 - Test all Btype branch commands for positive jumps
 - Test all Btype branch commands for negative jumps
+- Zicsr tests
 
 Status TBD:
 - JALR tests
-- Additional tests... (interrupts, zicsr, negative)
+- Additional tests... (interrupts, negative)
 
 TODO:
-- RV64I: load test pattern upper bits into registers (like in Btype no jump test)
+- RV64I: load test pattern upper bits into registers (like in test_btype_no_jumps)
 
 
 

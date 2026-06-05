@@ -1,10 +1,9 @@
 #ifndef COMMON_H
 #include "common.h"
 #endif
-#include "logger.cpp"
+#include "generator.cpp"
 #include "interface.cpp"
 #include "environment.cpp"
-#include "generator.cpp"
 #include "test.cpp"
 
 
@@ -45,13 +44,18 @@ void run_test(Environment* env) {
     test_utype_jumps(env);
 
     test_btype_no_jumps(env);
-    test_btype_jumps_forward(env);
-    test_btype_jumps_backward(env);
+    test_btype_jump_forward(env);
+    test_btype_jump_backward(env);
+
+    if (XLEN ==32) test_zicsr(env);
 }
 
 
 void run_single(Environment* env) {
-    test_itype_load_addr_bits(env);
+    //test_itype_load_unsigned_addr_bits(env);
+    //test_itype_load_unsigned_data_bits(env);
+    //test_btype_jump_forward(env);
+    test_zicsr(env);
 }
 
 
@@ -78,7 +82,5 @@ int main (int argc, char **argv) {
     run_test(env);
 
     delete env;
-    delete inf;
-    delete logger;
     exit(RETURN_CODE);
 }

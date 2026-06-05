@@ -121,10 +121,10 @@ module control (
 
         if (c_type) begin: csr_instructions // reusing ALU for csr extension
             case (funct3)
-                OP_FUNCT3_SLT,
-                OP_FUNCT3_OR:   alu_op = OP_ALU_OR;
-                OP_FUNCT3_SLTU,
-                OP_FUNCT3_XOR:  alu_op = OP_ALU_XOR;
+                OP_FUNCT3_CSRRS,
+                OP_FUNCT3_CSRRSI:   alu_op = OP_ALU_OR;
+                OP_FUNCT3_CSRRC,
+                OP_FUNCT3_CSRRCI:   alu_op = OP_ALU_AND;
                 default:        alu_op = OP_ALU_ADD;
             endcase
         end 

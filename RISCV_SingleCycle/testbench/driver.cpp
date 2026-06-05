@@ -2,9 +2,6 @@
 #include "common.h"
 #endif
 
-// maybe move it later into the class
-std::queue<Transaction> drv_fifo;
-
 
 class Driver {
 private:

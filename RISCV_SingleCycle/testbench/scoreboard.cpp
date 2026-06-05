@@ -2,11 +2,8 @@
 #include "common.h"
 #endif
 
-extern Logger *logger;
-
 // maybe move it later into the class
 std::queue<Transaction> rx_fifo;
-std::queue<Transaction> ref_fifo;
 
 
 class Scoreboard {
@@ -16,6 +13,7 @@ public:
     int res_count;  // count of received transactions
     int err_count;  // count of errors per phase
     int err_total;  // count of errors in all tests
+    Transaction expres;
 
     Scoreboard(): res_count(0), err_total(0) {}
 
@@ -41,13 +39,12 @@ public:
 
         Transaction &monreq = rx_fifo.front();
 
-        if (ref_fifo.empty()) {
-            printf("ERROR: reference transactions are NONE, "
-                "but monitor sent a new transaction:\n%s\n", monreq.str);
+        if (!get_ref(&expres)) {
+            printf( "ERROR: reference transactions are NONE, "
+                    "but monitor sent a new transaction:\n%s\n", monreq.str );
             return 1;
         }
-
-        Transaction &expres = ref_fifo.front();
+        //expres = ref_fifo.front();
 
         if (monreq.addr != expres.addr) {
             printf("ERROR Tr#%d: addr %08lx not as expected %08lx\n",
@@ -85,7 +82,7 @@ public:
                 fprintf(logger->fptr, "PASS Tr#%d: rd_data = %08lx\n\n", res_count, monreq.rd_data);
             }
         }
-        ref_fifo.pop();
+        //ref_fifo.pop();
         rx_fifo.pop();
         res_count++;
 

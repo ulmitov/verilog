@@ -1,8 +1,7 @@
 # RISCV single cycle implementation
 - Currently supported design is the Base instruction set for **RV32I and RV64I**.
-- Interrupts and registers are in status **TBD**.
 - Zicsr extension
-- CLINT with a number of external interrupts, 1 SW interrupt, without timer and local interrupts.
+- CLINT module
 https://sifive.cdn.prismic.io/sifive/0d163928-2128-42be-a75a-464df65e04e0_sifive-interrupt-cookbook.pdf
 
 
@@ -11,7 +10,7 @@ https://sifive.cdn.prismic.io/sifive/0d163928-2128-42be-a75a-464df65e04e0_sifive
  - ![Design verification](./testbench) **C++ testbench designed like UVM**: ![See README](./testbench)
  - `alu.sv` is verified in ![**SystemVerilog testbench**](../tb_sv_alu)
  - `memory.sv` is verified in ![**UMV testbench**](../tb_uvm_mem)
- - ![testbench/testbench.sv](./testbench/testbench.sv) is a Verilog application level test
+ - ![testbench/testbench.sv](./testbench/testbench.sv) is a Verilog application level test which runs assembly code on risc.
 
 
 
@@ -22,9 +21,8 @@ https://sifive.cdn.prismic.io/sifive/0d163928-2128-42be-a75a-464df65e04e0_sifive
 
 ## Design notes
 - Separate memories for instructions and data (Harvard architecture)
-- Instruction memory loads asm code from a hex file and stores it.
-- Fetch unit reads the current instruction according to the current program counter pointer (PC).
-- Decode unit decodes the fields from the instruction bits and passes them to Control block and Register File.
+- Fetch stage reads the current instruction according to the current program counter pointer (PC).
+- Decode stage decodes the fields from the instruction bits and passes them to Control block and Register File.
 - Register File is the register space of 32x registers, while x0 is the zero reg and all the rest are general purpose.
 - ALU unit performs the arithmetics. The inputs to ALU are values from the x-registers or from the immediate value from the instruction. Also the PC is used for branch jump calculations.
 - Data Memory serves as a RAM, storing and loading values.
@@ -32,7 +30,7 @@ https://sifive.cdn.prismic.io/sifive/0d163928-2128-42be-a75a-464df65e04e0_sifive
 - Control block operates all the signals for all other units according to the decoded instruction.
 - Lastly, in the high level have to control the PC to point to the next instrucion and to control system reset.
 
-This architecture performs an instruction in one clock cycle.
+This architecture executes an instruction in one clock cycle.
 So the clock frequency should be calculated according to the longest data path.
 The ALU unit's add operation takes 3 gate delays per bit.
 The longset path commands are load and store.

@@ -5,7 +5,6 @@
 
 struct Transaction ref_req;
 struct Transaction drv_req;
-// TODO: for 64 bit need to add loading upper 32 bits to lui in all tests
 
 
 void generate_bit_patterns(
@@ -77,25 +76,27 @@ void generate_stype_acceptance() {
     printf("INFO: Generating transactions: LUI and Stype commands with zero values\n");
 
     for (int block_size = 3; block_size < 7; block_size++) {
-        if (XLEN < 64 && block_size > 5) break;
-        // lui rd will hold the base address for stype
-        lui_base.rd = 0;
-        lui_base.imm = rand();
-        seq_lui(&lui_base);
+        for (int i = 0; i < MAX_REG; i++) {
+            if (XLEN < 64 && block_size > 5) break;
+            // lui rd will hold the base address for stype
+            lui_base.rd = 0;
+            lui_base.imm = rand();
+            seq_lui(&lui_base);
 
-        // Stype: copy value from [rs2] into mem[[rs1]+imm]
-        stype.imm = 0;
-        stype.rs1 = 0;
-        stype.rs2 = 0;
-        set_stype(&stype, 1 << block_size);
+            // Stype: copy value from [rs2] into mem[[rs1]+imm]
+            stype.imm = 0;
+            stype.rs1 = i;
+            stype.rs2 = i;
+            set_stype(&stype, 1 << block_size);
 
-        // Reference transaction
-        ref_req.wr = 1;
-        ref_req.addr = 0;
-        ref_req.rd_data = 0;
-        ref_req.wr_data = 0;
-        sprintf(ref_req.str, "%s; %s", lui_base.str, stype.str);
-        push_ref(&ref_req);
+            // Reference transaction
+            ref_req.wr = 1;
+            ref_req.addr = 0;
+            ref_req.rd_data = 0;
+            ref_req.wr_data = 0;
+            sprintf(ref_req.str, "%s; %s", lui_base.str, stype.str);
+            push_ref(&ref_req);
+        }
     }
 }
 
@@ -148,7 +149,7 @@ void generate_stype_data(int bits_width) {
     lui_base.imm = DATA_MEMORY_BASE_ADDR >> 12;
     seq_lui(&lui_base);
 
-    for (int dreg = 1; dreg < MAX_REG; dreg++) {
+    for (int dreg = 1; dreg < REGS_NUM; dreg++) {
         if (dreg == REGFILE_A0) continue;
 
         for (int i = 0; i < SEQUENCES_NUM; i++) {
@@ -191,29 +192,31 @@ void generate_itype_load_acceptance() {
     printf("INFO: Generating transactions: Itype load command acceptance\n");
 
     for (int block_size = 3; block_size < 7; block_size++) {
-        if (XLEN < 64 && block_size > 5) break;
-        // set into reg the address for load
-        lui_base.rd = 0;
-        lui_base.imm = rand();
-        seq_lui(&lui_base);
+        for (int i = 0; i < MAX_REG; i++) {
+            if (XLEN < 64 && block_size > 5) break;
+            // set into reg the address for load
+            lui_base.rd = 0;
+            lui_base.imm = rand();
+            seq_lui(&lui_base);
 
-        addi.rd = 0;
-        addi.rs1 = 0;
-        addi.imm = rand();
-        seq_addi(&addi);
+            addi.rd = 0;
+            addi.rs1 = 0;
+            addi.imm = rand();
+            seq_addi(&addi);
 
-        load.rd = 0;
-        load.rs1 = 0;
-        load.imm = 0;
-        set_itype_load(&load, 1 << block_size, 0);
+            load.rd = i;
+            load.rs1 = i;
+            load.imm = 0;
+            set_itype_load(&load, 1 << block_size, 0);
 
-        // Reference transaction
-        ref_req.wr = 0;
-        ref_req.addr = 0;
-        ref_req.rd_data = 0;
-        ref_req.wr_data = 0;
-        sprintf(ref_req.str, "%s; %s", lui_base.str, load.str);
-        push_ref(&ref_req);
+            // Reference transaction
+            ref_req.wr = 0;
+            ref_req.addr = 0;
+            ref_req.rd_data = 0;
+            ref_req.wr_data = 0;
+            sprintf(ref_req.str, "%s; %s", lui_base.str, load.str);
+            push_ref(&ref_req);
+        }
     }
 }
 
@@ -230,7 +233,7 @@ void generate_itype_load_address(int bits_width, char unsigned_commands = 0) {
     generate_bit_patterns(&patterns_12[0], 12);
     generate_bit_patterns(&patterns_20[0], 20);
 
-    for (int dreg = 1; dreg < MAX_REG; dreg++) {
+    for (int dreg = 1; dreg < REGS_NUM; dreg++) {
 
         for (int i = 0; i < SEQUENCES_NUM; i++) {
             // set into reg the address for load
@@ -294,7 +297,7 @@ void generate_itype_load_data(int bits_width, char unsigned_commands = 0) {
     printf("INFO: Generating transactions: %d bits Itype load command data verification\n", bits_width);
     generate_bit_patterns(&patterns[0], 12);
 
-    for (int dreg = 1; dreg < MAX_REG; dreg++) {
+    for (int dreg = 1; dreg < REGS_NUM; dreg++) {
         if (dreg == REGFILE_A0 || dreg == REGFILE_A1) continue;
 
         for (int i = 0; i < SEQUENCES_NUM; i++) {
@@ -388,8 +391,8 @@ void generate_itype_arithmetic(int opcode, int op32 = 0) {
     generate_bit_patterns(&patterns[0], 12);
 
     // first loop running with zeros, i.e acceptance test!
-    for (int sreg = 0; sreg < MAX_REG; sreg++) {
-        for (int dreg = 0; dreg < MAX_REG; dreg++) {
+    for (int sreg = 0; sreg < REGS_NUM; sreg++) {
+        for (int dreg = 0; dreg < REGS_NUM; dreg++) {
             for (int i = 0; i < SEQUENCES_NUM; i++) {
                 if (dreg == 0 && i == 4) break; // for x0 4 first sequences is enough
 
@@ -493,8 +496,8 @@ void generate_rtype(int opcode, int op32 = 0) {
     generate_bit_patterns(&patterns_20_rs2[0], 20);
 
     // first loop running with zeros, i.e acceptance test!
-    for (int reg_rs1 = 0; reg_rs1 < MAX_REG; reg_rs1++) {
-        for (int reg_rs2 = 0; reg_rs2 < MAX_REG; reg_rs2++) {
+    for (int reg_rs1 = 0; reg_rs1 < REGS_NUM; reg_rs1++) {
+        for (int reg_rs2 = 0; reg_rs2 < REGS_NUM; reg_rs2++) {
 
             for (int i = 0; i < SEQUENCES_NUM; i++) {
                 if ((!reg_rs1 || !reg_rs2) && i == 6) break;    // 6 sequences is enough
@@ -608,7 +611,7 @@ void generate_auipc() {
     //generate_bit_patterns(&patterns_12[0], 12);
     generate_bit_patterns(&patterns[0], 20);
 
-    for (int dreg = 0; dreg < MAX_REG; dreg += 1) {
+    for (int dreg = 0; dreg < REGS_NUM; dreg++) {
 
         for (int i = 0; i < SEQUENCES_NUM; i++) {
             if (!dreg && i == 4) break; // 4 sequences is enough
@@ -657,7 +660,7 @@ void generate_jal_forward() {
     printf("INFO: Generating transactions: JAL positive jumps verification\n");
     generate_bit_patterns(&patterns[0], 20);
 
-    for (int dreg = 0; dreg < MAX_REG; dreg++) {
+    for (int dreg = 0; dreg < REGS_NUM; dreg++) {
 
         for (int i = 0; i < SEQUENCES_NUM; i++) {
             if (!dreg && i == 4) break; // 4 sequences is enough
@@ -737,7 +740,7 @@ void generate_jal_backward() {
     printf("INFO: Generating transactions: JAL negative jumps verification\n");
     generate_bit_patterns(&patterns[0], 20);
 
-    for (int dreg = 0; dreg < MAX_REG; dreg++) {
+    for (int dreg = 0; dreg < REGS_NUM; dreg++) {
 
         for (int i = 0; i < SEQUENCES_NUM; i++) {
             if (!dreg && i == 4) break; // 4 sequences is enough
@@ -829,8 +832,8 @@ void generate_btype_no_jump(int btype_opcode) {
     printf("INFO: Generating transactions: Btype opcode %d no jump verification\n", btype_opcode);
     generate_bit_patterns(&patterns[0], XLEN);
 
-    for (int reg_rs1 = 0; reg_rs1 < MAX_REG; reg_rs1++) {
-        for (int reg_rs2 = 0; reg_rs2 < MAX_REG; reg_rs2++) {
+    for (int reg_rs1 = 0; reg_rs1 < REGS_NUM; reg_rs1++) {
+        for (int reg_rs2 = 0; reg_rs2 < REGS_NUM; reg_rs2++) {
             for (int i = 0; i < SEQUENCES_NUM; i++) {
                 if ( (!reg_rs1 || !reg_rs2) && i == 4 ) break; // 4 sequences is enough
 
@@ -994,8 +997,8 @@ void generate_btype_forward(int btype_opcode) {
     pc = const_offset - 4; // not counting the first cmd on pc 0
     max_jump -= const_offset;
 
-    for (int reg_rs1 = 0; reg_rs1 < MAX_REG; reg_rs1++) {
-        for (int reg_rs2 = 0; reg_rs2 < MAX_REG; reg_rs2++) {
+    for (int reg_rs1 = 0; reg_rs1 < REGS_NUM; reg_rs1++) {
+        for (int reg_rs2 = 0; reg_rs2 < REGS_NUM; reg_rs2++) {
             for (int mode = -1; mode < 2; mode++) {
                 for (int i = 0; i < SEQUENCES_NUM; i++) {
                     if ((!reg_rs1 || !reg_rs2) && i == 4) break; // 4 sequences is enough
@@ -1141,8 +1144,8 @@ void generate_btype_backward(int btype_opcode) {
     //pc = const_offset - 4; // not counting the first cmd on pc 0
     max_jump -= const_offset;
 
-    for (int reg_rs1 = 0; reg_rs1 < MAX_REG; reg_rs1++) {
-        for (int reg_rs2 = 0; reg_rs2 < MAX_REG; reg_rs2++) {
+    for (int reg_rs1 = 0; reg_rs1 < REGS_NUM; reg_rs1++) {
+        for (int reg_rs2 = 0; reg_rs2 < REGS_NUM; reg_rs2++) {
             for (int mode = -1; mode < 2; mode++) {
                 for (int i = 0; i < SEQUENCES_NUM; i++) {
                     if ((!reg_rs1 || !reg_rs2) && i == 4) break; // 4 sequences is enough
@@ -1266,6 +1269,198 @@ void generate_btype_backward(int btype_opcode) {
                         sqr->split();
                         pc = 0;
                         max_jump = INSTRUCTIONS_LIMIT * 4 - const_offset;
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+/* CSR acceptance test - do read only*/
+void generate_csr_acceptance() {
+    struct isa_stype stype;
+    struct isa_itype ctype;
+    printf("INFO: Generating transactions: ZiCSR acceptance\n");
+    for (int cmd = 0; cmd < 6; cmd++) {
+        for (int dreg = 0; dreg < MAX_REG; dreg++) {
+            for (int i = 0; i < CSR_REGS; i++) {
+                ctype.rd = dreg;
+                ctype.rs1 = 0;
+                ctype.imm = CSR_ADDR[i];
+                switch (cmd) {
+                    case 0:
+                        seq_csrrw(&ctype);
+                        break;
+                    case 1:
+                        seq_csrrwi(&ctype);
+                        break;
+                    case 2:
+                        seq_csrrs(&ctype);
+                        break;
+                    case 3:
+                        seq_csrrsi(&ctype);
+                        break;
+                    case 4:
+                        seq_csrrc(&ctype);
+                        break;
+                    case 5:
+                        seq_csrrci(&ctype);
+                        break;
+                    default:
+                        printf("ERROR: invalid csr cmd number\n");
+                }
+                
+                // Stype: copy value from [rs2] into mem[[rs1]+imm]
+                stype.rs1 = 0;
+                stype.rs2 = dreg;
+                stype.imm = ((rand() % 0x700) / WORD_LEN) * WORD_LEN;    // positive ranges, 4 bytes aligned
+                set_stype(&stype);
+
+                // Reference transaction
+                ref_req.wr = 1;
+                ref_req.rd_data = 0;
+                ref_req.wr_data = 0;
+                if (dreg && CSR_ADDR[i] == Vriscv_risc_pkg::CSR_MTVEC) {
+                    ref_req.wr_data = Vriscv_risc_pkg::TRAP_BASE_ADDRESS;
+                }
+                ref_req.addr = sign_extend(stype.imm);
+                sprintf(ref_req.str, "%s; %s", ctype.str, stype.str);
+                push_ref(&ref_req);
+            }
+        }
+    }
+}
+
+
+void get_initial_csr_values(long *arr) {
+    for (int csr = 0; csr < CSR_REGS; csr++) {
+        if (CSR_ADDR[csr] == Vriscv_risc_pkg::CSR_MTVEC) {
+            *arr++ = Vriscv_risc_pkg::TRAP_BASE_ADDRESS;
+        } else {
+            *arr++ = 0;
+        }
+    }
+}
+/* CSR commands: valid write+read then valid read only
+OP_FUNCT3_CSRRS:   rd = csr, csr = csr | rs1
+OP_FUNCT3_CSRRC:   rd = csr, csr = csr & ~rs1
+OP_FUNCT3_CSRRW:   rd = csr, csr = rs1
+*/
+void generate_csr_read_write(int funct3) {
+    struct isa_stype stype;
+    struct isa_itype ctype;
+    struct isa_utype lui_data;
+    struct isa_itype addi_rs;
+    struct isa_itype addi_rd;
+    long patterns[SEQUENCES_NUM];
+    long csr_values[CSR_REGS];
+    long prev_split_num = sqr->split_num;
+
+    printf("INFO: Generating transactions: CSR opcode %d\n", funct3);
+    generate_bit_patterns(&patterns[0], XLEN);
+    get_initial_csr_values(&csr_values[0]);
+
+    for (int rd = 0; rd < REGS_NUM; rd++) {
+        for (int rs = 0; rs < REGS_NUM; rs++) {
+            for (int csr = 0; csr < CSR_REGS; csr++) {
+                for (int i = 0; i < SEQUENCES_NUM; i++) {
+                    // set rs1 value
+                    lui_data.rd = rs;
+                    lui_data.imm = (patterns[i] - (sign_extend(patterns[i] & 0xFFF))) >> 12;
+                    seq_lui(&lui_data);
+
+                    // set rd = rs1 + imm
+                    addi_rs.rd = rs;
+                    addi_rs.rs1 = rs;
+                    addi_rs.imm = patterns[i];
+                    seq_addi(&addi_rs);
+
+                    // prefill rd with random val (if same reg then nop)
+                    addi_rd.rd = rd != rs ? rd : 0;
+                    addi_rd.rs1 = 0;
+                    addi_rd.imm = rand();
+                    seq_addi(&addi_rd);
+
+                    // if rd=0 then write only (no read)
+                    // if rs=0 then read only (no write)
+                    ctype.rd = rd;
+                    ctype.rs1 = rs;
+                    ctype.imm = CSR_ADDR[csr];
+                    set_csr(&ctype, funct3);
+
+                    // Check rd holds value BEFORE write
+                    // Stype: copy value from [rs2] into mem[[rs1]+imm]
+                    stype.rs1 = 0;
+                    stype.rs2 = rd;
+                    stype.imm = ((rand() % 0x700) / WORD_LEN) * WORD_LEN;    // positive ranges, 4 bytes aligned
+                    set_stype(&stype);
+
+                    // Reference transaction
+                    ref_req.wr = 1;
+                    ref_req.rd_data = 0;
+                    ref_req.wr_data = rd ? csr_values[csr] : 0;
+                    ref_req.addr = sign_extend(stype.imm);
+                    sprintf(ref_req.str, "%s; %s; %s; %s; %s",
+                            lui_data.str, addi_rs.str, addi_rd.str, ctype.str, stype.str);
+                    push_ref(&ref_req, 1);
+
+                    // valid read into rd
+                    ctype.rd = rd ? rd : REGFILE_A0;
+                    ctype.rs1 = 0;
+                    ctype.imm = CSR_ADDR[csr];
+                    seq_csrrw(&ctype);
+
+                    // Check rd holds value AFTER write
+                    // Stype: copy value from [rs2] into mem[[rs1]+imm]
+                    stype.rs1 = 0;
+                    stype.rs2 = ctype.rd;
+                    stype.imm = ((rand() % 0x700) / WORD_LEN) * WORD_LEN;    // positive ranges, 4 bytes aligned
+                    set_stype(&stype);
+
+                    // Reference transaction
+                    ref_req.wr = 1;
+                    ref_req.rd_data = 0;
+
+                    switch(funct3) {
+                        case Vriscv_risc_pkg::OP_FUNCT3_CSRRW:
+                            ref_req.wr_data = rs ? patterns[i] : csr_values[csr];
+                            break;
+                        case Vriscv_risc_pkg::OP_FUNCT3_CSRRS:
+                            ref_req.wr_data = rs ? csr_values[csr] | patterns[i] : csr_values[csr];
+                            break;
+                        case Vriscv_risc_pkg::OP_FUNCT3_CSRRC:
+                            ref_req.wr_data = rs ? csr_values[csr] & ~patterns[i] : csr_values[csr];
+                            break;
+                        case Vriscv_risc_pkg::OP_FUNCT3_CSRRWI:
+                            ref_req.wr_data = rs ? rs : csr_values[csr];
+                            break;
+                        case Vriscv_risc_pkg::OP_FUNCT3_CSRRSI:
+                            ref_req.wr_data = csr_values[csr] | rs;
+                            break;
+                        case Vriscv_risc_pkg::OP_FUNCT3_CSRRCI:
+                            ref_req.wr_data = csr_values[csr] & ~rs;
+                            break;
+                        default:
+                            printf("ERROR: invalid CSR funct3 provided by test\n");
+                    }
+
+                    
+                    if (CSR_ADDR[csr] == Vriscv_risc_pkg::CSR_MIP) {
+                        // MTIP and MEIP are Read only
+                        ref_req.wr_data &= ~0x880;
+                        ref_req.wr_data |= csr_values[csr] & 0x880;
+                    }
+                    ref_req.addr = sign_extend(stype.imm);
+                    sprintf(ref_req.str, "%s; %s", ctype.str, stype.str);
+                    push_ref(&ref_req);
+
+                    // update expected values
+                    if (rs) csr_values[csr] = ref_req.wr_data;
+                    // reinit after each reset
+                    if (sqr->split_num != prev_split_num) {
+                        prev_split_num = sqr->split_num;
+                        get_initial_csr_values(&csr_values[0]);
                     }
                 }
             }
