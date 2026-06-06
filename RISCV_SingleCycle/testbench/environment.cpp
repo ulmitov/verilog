@@ -95,7 +95,7 @@ public:
      */
     int run_phase() {
         unsigned long max_time = inf->timestamp + CLK_PHASE * 2 * (sqr->cmd_count + 3);
-        printf("INFO: timestamp limit for this phase is %ld\n", max_time);
+        printf("INFO: timestamp limit for this phase is %lu\n", max_time);
 
         while (inf->timestamp < max_time) {
             drv->main();                // waits until hold time after posedge

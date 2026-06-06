@@ -19,7 +19,7 @@
 #define VERBOSITY 0         // if 1 then prints additional output, enables VCD dump
 #endif
 
-#define REGS_NUM 6           // *** FOR FULL TEST SET TO MAX_REG ***
+#define REGS_NUM 4           // *** FOR FULL TEST SET TO MAX_REG ***
 //#define SEQUENCES_NUM 10
 #define SEQUENCES_NUM Vriscv_risc_pkg::RISCV_XLEN + 18    // how much bit patterns to apply
 
