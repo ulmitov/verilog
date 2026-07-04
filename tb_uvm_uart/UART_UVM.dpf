@@ -1,0 +1,50 @@
+---
+# Note: The contents of this file are automatically generated.
+# Any changes made by hand may be overwritten.
+version: '0.2'
+work_dir: .
+design_root_dir: .
+simulations:
+  - name: Elaborate
+    options: '-top work.top -genimage image -dump-agg +acc+b -uvm 1.2'
+  - name: Sim DEBUG
+    options: >-
+      -top work.top -code-cov a -waves waves.vcd -dump-agg +acc+b -uvm 1.2
+      -debug-verbose pp:hier:lib +UVM_NO_DPI +UVM_NO_RELNOTES
+      +UVM_CONFIG_DB_TRACE +UVM_VERBOSITY=UVM_FULL +UVM_TESTNAME=test_regression
+      +UVM_REPORT_DISABLE_FILE_LINE
+  - name: Sim Vcd
+    options: >-
+      -image image -code-cov a -waves waves.vcd -dump-agg +acc+b -uvm 1.2
+      +UVM_NO_DPI +UVM_NO_RELNOTES +UVM_TESTNAME=test_write_read
+  - name: Sim Mxd
+    options: >-
+      -image image -code-cov a -waves waves.mxd -dump-agg +acc+b -uvm 1.2
+      +UVM_NO_DPI +UVM_NO_RELNOTES  +UVM_REPORT_DISABLE_FILE_LINE
+      +UVM_TESTNAME=test_regression +UVM_VERBOSITY=UVM_MEDIUM
+  - name: Sim no waves
+    options: >-
+      -image image -code-cov a -uvm 1.2 +UVM_NO_RELNOTES +UVM_NO_DPI
+      +UVM_VERBOSITY=UVM_FULL
+
+      +UVM_REPORT_DISABLE_FILE_LINE +UVM_TESTNAME=test_lib
+  - name: Elab+Sim MXD 2020
+    options: >-
+      -top work.top -code-cov a -dump-agg +acc+b -waves waves.mxd -uvm 1.2
+      +UVM_NO_RELNOTES +UVM_VERBOSITY=UVM_MEDIUM +UVM_TESTNAME=test_write_read
+      +UVM_REPORT_DISABLE_FILE_LINE
+source_files:
+  - language: verilog
+    path: ../modules/shift_reg.v
+    options: '-incdir ../modules'
+  - language: verilog
+    path: ../modules/fifo.v
+    options: '-incdir ../modules'
+  - language: verilog
+    path: ../UART/uart_apb.sv
+    options: '-incdir ../modules -incdir ../UART'
+  - language: verilog
+    path: top.sv
+    options: '-uvm 1.2 -incdir ../UART -incdir ../modules'
+library_search_paths:
+  - $STD_LIBS/ieee93

@@ -123,3 +123,13 @@ void UartDriver::send_str(const char *str) {
 void UartDriver::send(const uint8_t *arr, int length) {
     while (length--) tx_byte(*arr++);
 }
+
+short UartDriver::poll_tx_finished(unsigned short timeout) {
+    short res;
+    while (timeout-- && !(res = get_line_status() & (1 << UART_LSR_TE))) {
+        #ifdef DEBUG_MODE
+        printf("T");
+        #endif
+    }
+    return res;
+}

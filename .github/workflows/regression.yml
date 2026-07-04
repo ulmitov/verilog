@@ -56,11 +56,14 @@ jobs:
       - name: RV64I Design Verification C++ testbench
         run: make riscdv ARG=-DXLEN=64 2>&1 | tee cpp_riscdv64.log
 
-      - name: UART C++ and verilog tests
-        run: make uart SIM=v RM_OBJDIR=true 2>&1 | tee tb_uart.log
-
       - name: FIFO UVM testbench
         run: make uvm-fifo 2>&1 | tee uvm_fifo.log
+
+      - name: UART application tests and C driver validation
+        run: make uart SIM=v RM_OBJDIR=true 2>&1 | tee tb_uart.log
+
+      - name: UART UVM testbench
+        run: make uart-uvm 2>&1 | tee uvm_uart.log
 
       - name: Memory UVM testbench 64 bit
         run: make uvm-mem ARG=-DDATA_WIDTH=64 2>&1 | tee uvm_mem64.log

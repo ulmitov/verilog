@@ -14,6 +14,8 @@ public:
 
     void reset();
 
+    void half_tick();
+
     void tick();
 
     void wait_ticks(int repeat = 1);

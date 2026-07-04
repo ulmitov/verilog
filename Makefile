@@ -20,7 +20,8 @@ define get_coverage
 	pwd
 	ls *.dat || true; ls ./vcd *.dat || true;
 	verilator_coverage --write coverage_merged.dat $$(find ./vcd -type f -name "cov_*.dat" | xargs)
-	grep -v -E "UVM/|testbench|verilated_std.sv|tb_sv_alu|tb_uvm_fifo|tb_uvm_mem" coverage_merged.dat > coverage_merged_notb.dat
+	#grep -v -E "UVM/|testbench|verilated_std.sv|tb_sv_alu|tb_uvm_fifo|tb_uvm_mem" coverage_merged.dat > coverage_merged_notb.dat
+	grep -v -E "UVM/|verilated_std.sv" coverage_merged.dat > coverage_merged_notb.dat
 	verilator_coverage --write-info coverage_merged.info coverage_merged_notb.dat
 	# sed -i 's|../modules|modules|g' coverage_merged.info
 	# verilator_coverage --annotate-all obj_dir_merged merged_coverage.dat
@@ -97,7 +98,8 @@ regression:
 	$(MAKE) -s adder half_adder fastadder mux decoder priority_enc mux_cmos mux_behavioral_tb
 	$(MAKE) -s sequence counters fifo memory shift_reg shift
 uart:
-	$(MAKE) -s uart_baud_tb uart_rx_tb uart_tx_tb uart_tb uart_top_tb uartcpp
+	$(MAKE) -s uart_baud_tb uart_rx_tb uart_tx_tb uart_tb uart_top_tb
+	#uartcpp
 risc_tb:
 	$(MAKE) -s risc_tb_arr risc_tb_bub risc_tb_fib
 
@@ -161,7 +163,13 @@ uartcpp:
 	verilator $$args --top $$tb $$src $(uart_src) && ./obj_dir/V$$tb
 	mv coverage.dat vcd/cov_uartcpp.dat
 	# for debugging add: ARG='-CFLAGS "-g -DDEBUG_MODE"'
-
+uart-uvm:
+	$(RM_OBJDIR_CMD)
+	$(VERILATOR_UVM_NO_DPI) --top top -Itb_uvm_uart -IUART \
+	$(UVM_HOME)/uvm_pkg.sv modules/shift_reg.v modules/fifo.v UART/uart_apb.sv tb_uvm_uart/top.sv;
+	./obj_dir/Vtop +UVM_TESTNAME=test_regression
+	#+UVM_VERBOSITY=UVM_FULL
+	mv coverage.dat vcd/cov_$$(date +%s).dat
 
 # RISCV
 risc_src := risc_pkg.sv riscv.sv riscv_core.sv csr.sv clint.sv decode.sv register_file.sv branch_control.sv control.sv alu.sv sign_extender.sv data_handler.sv

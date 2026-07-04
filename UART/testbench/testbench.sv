@@ -85,13 +85,12 @@ module uart_rx_tb;
     clock_divider rx_baud (.clk_in(clk), .res(~res_n), .div(DIV), .clk_out(b_tick));
 
     uart_rx dut (
-        .clk(clk),
         .res_n(res_n),
         .rx_baud(b_tick),
         .rx_din(din),
-        .lcreg(8'b00001111),
+        .lcreg(8'b0010_1111),// stick parity 1
         .rx_out(uart_rx_out),
-        .rx_ready(valid)
+        .rx_done(valid)
     );
 
     always #`TCLK clk  = ~clk;
@@ -107,14 +106,16 @@ module uart_rx_tb;
             for (i = 0; i < DATA_WIDTH; i = i + 1)    
                 #baud_wait din = tx_data[i];
             // parity
-            #baud_wait din = ^tx_data;
+            #baud_wait din = 1'b1;
             // stop bits
             #baud_wait din = 1'b1;
             #baud_wait din = 1'b1;
             if (uart_rx_out != {err_fr, err_par, tx_data})
                 $error("uart_rx_out %0h is not as expected %0h", uart_rx_out, {err_fr, err_par, tx_data});
+            else $display("PASSED: Rx as expected");
             if (^uart_rx_out[8:0])
                 $error("parity bit %0b is not correct", err_par);
+            else $display("PASSED: parity is ok");
             // some wait
             #baud_wait;
             #baud_wait;
@@ -169,15 +170,13 @@ module uart_tx_tb;
     );
 
     uart_tx dut (
-        .clk(clk),
         .res_n(res_n),
-        .tx_baud(b_tick),
+        .baudout(b_tick),
         .tx_start(en),
         .tx_din(din),
-        .lcreg(8'b0001_1111),
+        .lcreg(8'b0011_1111),// stick parity 0
         .tx_dout(uart_tx_out),
-        .tx_ready(valid),
-        .tsr_data()
+        .tx_ready(valid)
     );
 
     always #`TCLK clk  = ~clk;
@@ -204,15 +203,16 @@ module uart_tx_tb;
         repeat(16*DIV) @(posedge clk);
         din = 8'hC2;
         en = 1'b1;
-        @(posedge valid);
-        @(posedge valid);
-        if (tsr_data !== 'b110110000100)
+        @(posedge dut.sreg_en);
+        din = 8'hA9;
+        @(posedge dut.sreg_en);
+        if (tsr_data !== 'b11011000010)
             $error("tx dout %0b is not as expected", tsr_data);
         else
             $display("PASSED: tx dout %0h is correct!", tsr_data);
-        din = 8'hA9;
-        @(posedge valid);
-        if (tsr_data !== 'b111101010010)
+        
+        @(posedge dut.sreg_en);
+        if (tsr_data !== 'b11010101001)
             $error("tx dout %0b is not as expected", tsr_data);
         else 
             $display("PASSED: tx dout %0h is correct!", tsr_data);
@@ -240,7 +240,6 @@ module uart_tb;
     logic rx_empty;
     logic tx_full;
     logic [DWIDTH-1:0] wr_data;
-    logic [DWIDTH-1:0] tsr_data;
     logic [DWIDTH-1:0] lcreg;
     logic [DWIDTH+1:0] rd_data;
     logic rx_ready;
@@ -260,13 +259,13 @@ module uart_tb;
         .rx_empty(rx_empty),
         .tx_full(tx_full),
         .rd_data(rd_data),
-        .tsr_data(tsr_data),
         .rx_ready(rx_ready),
         .rx_full(rx_full),
         .tx_empty(tx_empty),
         .tx_ready(tx_ready),
         .lcreg(lcreg),
-        .fcreg(8'b0000_0001)
+        .fcreg(8'b0000_0001),
+        .loopback(1'b1)
     );
 
     task expect_result;

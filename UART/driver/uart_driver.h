@@ -6,6 +6,7 @@
 
 #define CLK_FREQ_MHZ 4
 #define BASE_ADDRESS 0x00
+#define FIFO_DEPTH  16
 #define UART_EOM '\0'       // End of message
 
 #define BAUD_OSRATE  16
@@ -18,6 +19,7 @@
 #define UART_REG_LSR 0x5
 #define UART_REG_DLL 0x0
 #define UART_REG_DLM 0x1
+#define UART_REG_MCR 0x4
 
 #define UART_LCR_WLS 0
 #define UART_LCR_PEN 3
@@ -91,6 +93,13 @@ class UartDriver {
         * @return 1: if full; 0: otherwise
         */
         unsigned char tx_fifo_empty();
+
+        /**
+        * wait until tx finished to transmit
+        *
+        * @return 1: if finished; 0: otherwise
+        */
+        short poll_tx_finished(unsigned short timeout = 1000);
 
         /**
         * transmit a byte with tx fifo status polling

@@ -3,6 +3,8 @@ References:
 https://media.digikey.com/pdf/Data%20Sheets/Texas%20Instruments%20PDFs/PC16550D.pdf
 https://www.ti.com/lit/ds/symlink/tl16c550c.pdf
 */
+`include "consts.vh"
+
 
 `define UART_DIV_WIDTH 16    // Divider range bits: 1 to 2**16
 `define UART_TICKS_NUM 16
@@ -41,9 +43,9 @@ https://www.ti.com/lit/ds/symlink/tl16c550c.pdf
 
 // Interrupt Identification (status) Register bits (IIR, ISR): R only
 `define UART_IIR_IPEND  0	    // Interrupt pending when 0
-`define UART_IIR_INTID  3:1	    // Interrupt identification
-`define UART_IIR_UNUSED 5:4
-`define UART_IIR_FIOEN  7:6	    // FIFO enable. 0 disable, 3 enable
+`define UART_IIR_INTID  1	    // Interrupt identification
+`define UART_IIR_UNUSED 4
+`define UART_IIR_FIFOEN 6	    // FIFO enable. 0 disable, 3 enable
 
 // Interrupt identification values for bits 3:1
 `define UART_IIR_RLS	3'b011	// Receiver Line Status
@@ -63,21 +65,20 @@ https://www.ti.com/lit/ds/symlink/tl16c550c.pdf
 `define UART_LSR_EI	    7	    // Error in Rx Fifo RXFIFOE
 
 // Line Control register bits
-`define UART_LCR_WLS    1:0     // Word length select bit 0 (WLS1:WLS0)
+`define UART_LCR_WLS    0       // Word length select bit 0 (WLS1:WLS0)
 `define UART_LCR_STB    2	    // stop bits
 `define UART_LCR_PEN    3	    // parity enable
 `define UART_LCR_EPS    4	    // even parity select
-`define UART_LCR_SP	    5	    // stick parity
-`define UART_LCR_PS	    5:3	    // parity bits 5:3
-`define UART_LCR_BC	    6	    // Break control                        /* Unimplemented */
-`define UART_LCR_DL	    7	    // Divisor Latch access bit (DLAB)
+`define UART_LCR_SP     5	    // stick parity
+`define UART_LCR_BC     6	    // Break control                        /* Unimplemented */
+`define UART_LCR_DL     7	    // Divisor Latch access bit (DLAB)
 
 // Fifo Control register bits (FCR): W only
-`define UART_FCR_FIFOEN     0   // FIFO Enable                          /* Unimplemented */ fifo always on
+`define UART_FCR_FIFOEN     0   // FIFO Enable
 `define UART_FCR_RXCLR      1   // Receiver FIFO Reset
 `define UART_FCR_TXCLR      2   // Transmitter FIFO Reset
-`define UART_FCR_DMAMODE1   3   // DMA Mode select                      /* Unimplemented */
-`define UART_FCR_RXFIFTL    7:6 // Receiver fifo threshold levels       /* Unimplemented */ always 01
+`define UART_FCR_DMAMODE    3   // DMA Mode select                      /* Unimplemented */
+`define UART_FCR_RXFIFTL    6   // Receiver fifo threshold levels       /* Unimplemented */ always 01
 
 // FIFO threshold trigger level RXFIFTL (RXFIFTM:RXFIFTL) values
 `define UART_FCR_TL_1	2'b00

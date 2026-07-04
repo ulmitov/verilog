@@ -3,7 +3,6 @@
 TODO:
 1. issue with override
 2. IIR mode
-3. UVM like testbench
 */
 #include <iostream>
 #include <string.h>
@@ -19,13 +18,14 @@ uint8_t buffer[1024];
 
 
 void print_header(const char *header) {
-    std::cout << "************ " << header << " ************" << std::endl;
+    std::cout << "***** " << header << " *****" << std::endl;
 }
 
 
 void setup(UartDriver *obj, int baud, int stop_bits, int parity, int word_len) {
     std::string result = "";
     std::cout << "################## SETUP #####################" << std::endl;
+    obj->io_write(UART_REG_MCR, 1 << 4);    // set loopback
     obj->set_baud_rate(baud, stop_bits, parity, word_len);
     word_len += 5;
     int freq_divisor = obj->get_divisor();
@@ -68,7 +68,7 @@ void setup(UartDriver *obj, int baud, int stop_bits, int parity, int word_len) {
             break;
     }
     std::cout << "UART_REG_LCR = " << std::hex << obj->io_read(UART_REG_LCR) << std::endl;
-    std::cout << "************ " << result << " ************" << std::endl;
+    std::cout << "***** " << result << " *****" << std::endl;
 }
 
 
@@ -82,7 +82,7 @@ int test_single_char(UartDriver *dut, char ch) {
         return 1;
     }
     rcv = dut->recv_ch();
-    std::cout << "Rx: " << rcv << std::endl;
+    std::cout << "Rx: (0x" << std::hex << (int) rcv << ") " << rcv << std::endl;
     if (rcv != ch) {
         std::cout << std::endl << "[uart_tb.cpp] ERROR: recieved char is incorrect" << std::endl;
         return 1;
@@ -107,13 +107,14 @@ int test_send_data(UartDriver *dut, uint8_t *arr, int expected_len, int word_len
 
     print_header("Send data bytes (fifo mode is on)");
     dut->send(arr, expected_len);
+    dut->poll_tx_finished();
     dut->recv(&buffer[0]);
     std::cout << "Rx str: " << buffer << std::endl;
     
-    while (bdata = *ptr++) {
-        temp = *arr++;
+    while (temp = *arr++) {
+        bdata = *ptr++;
         if (bdata != (temp & mask)) {
-            std::cout << std::endl << "[uart_tb.cpp] ERROR: recieved incorrect data: 0x" << std::hex << (int) temp << ", but buffer holds " << std::hex << (int) bdata << std::endl;
+            std::cout << std::endl << "[uart_tb.cpp] ERROR: recieved incorrect data: 0x" << std::hex << (int) bdata << ", but sent 0x" << std::hex << (int) temp << std::endl;
             return 1;
         } else std::cout << std::hex << (int) temp << " ";
         if (expected_len) expected_len--;
@@ -141,6 +142,7 @@ int test_send_string_truncated(UartDriver *dut, const char *arr, const char *exp
 
     print_header("Send a long string (fifo is on, truncating)");
     dut->send_str(arr);
+    dut->poll_tx_finished();
     dut->recv(&buffer[0]);
     while(*ptr) result += (char) *ptr++;
     std::cout << "Rx str: " << result << std::endl;
@@ -187,7 +189,7 @@ int test_single_byte(UartDriver *dut, char ch, char exp = '\0') {
 
 int test_chars_override(UartDriver *dut) {
     char ch;
-    std::cout << "************ Overriding chars (fifo is off) ************" << std::endl;
+    std::cout << "***** Overriding chars (fifo is off) *****" << std::endl;
     std::cout << "Sending 1st char" << std::endl;
     dut->send_ch('A');
     dut->poll_rx();
@@ -225,7 +227,7 @@ int main (int argc, char **argv, char **env) {
     #else
         UartDriver* dut = new UartDriver;
     #endif
-    uint8_t data_8bit[16] = {0xF0, 0xE1, 0xD2, 0xC3, 0xB4, 0xA5, 0xB6, 0xC7, 0xD8, 0xE9, 0xFA, 0xEB, 0xDC, 0xCD, 0xBE, 0xAF};
+    uint8_t data_8bit[FIFO_DEPTH] = {0xF0, 0xE1, 0xD2, 0xC3, 0xB4, 0xA5, 0xB6, 0xC7, 0xD8, 0xE9, 0xFA, 0xEB, 0xDC, 0xCD, 0xBE, 0xAF};
     /*
     uint8_t data_7bit[16] = {0x7F, 0x6E, 0x5D, 0x4C, 0x4B, 0x4A, 0x40, 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78};
     uint8_t data_6bit[16] = {0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x30, 0x32, 0x35, 0x3A, 0x3B, 0x3E, 0x3F};
@@ -260,16 +262,16 @@ int main (int argc, char **argv, char **env) {
     for (int stop_bits = 0; stop_bits < 2; stop_bits++) {
         for (int par_bit = 0; par_bit < 5; par_bit++) {
             setup(dut, 115200, 1, 3, 3);
-            if (test_send_data(dut, data_8bit, 16, 3)) goto finish;
+            if (test_send_data(dut, data_8bit, FIFO_DEPTH, 3)) goto finish;
 
             setup(dut, 115200, 1, 3, 2);
-            if (test_send_data(dut, data_8bit, 16, 2)) goto finish;
+            if (test_send_data(dut, data_8bit, FIFO_DEPTH, 2)) goto finish;
 
             setup(dut, 115200, 1, 3, 1);
-            if (test_send_data(dut, data_8bit, 16, 1)) goto finish;
+            if (test_send_data(dut, data_8bit, FIFO_DEPTH, 1)) goto finish;
 
             setup(dut, 115200, 1, 3, 0);
-            if (test_send_data(dut, data_8bit, 16, 0)) goto finish;
+            if (test_send_data(dut, data_8bit, FIFO_DEPTH, 0)) goto finish;
         }
     }
 
