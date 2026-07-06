@@ -1,5 +1,3 @@
-`include "uvm_macros.svh"
-import uvm_pkg::*;
 import risc_pkg::*;
 
 
@@ -13,6 +11,7 @@ class transaction extends uvm_sequence_item;
     rand bit [mem_config::ADDR_WIDTH-1:0] addr;
     rand bit [WIDTH-1:0] wr_data;
     bit [WIDTH-1:0] rd_data;
+    bit req;
 
     `uvm_object_utils_begin (transaction)
         `uvm_field_int (wen, UVM_DEFAULT)

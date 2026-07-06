@@ -1,10 +1,6 @@
 /*
     Coverage Collector class
 */
-`include "uvm_macros.svh"
-import uvm_pkg::*;
-
-
 class coverage extends uvm_subscriber #(transaction);
     `uvm_component_utils(coverage)
 
@@ -48,10 +44,10 @@ class coverage extends uvm_subscriber #(transaction);
         pull_push_empty: cross cp_push, cp_pull, cp_empty;
     endgroup
 
-    function new(string name,uvm_component parent);
+    function new(string name, uvm_component parent);
         super.new(name,parent);
         cg = new();
-    endfunction: new
+    endfunction
 
     function void write(transaction tr);
         req = tr;

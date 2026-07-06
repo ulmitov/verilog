@@ -1,13 +1,13 @@
 interface fifo_interface (
     input logic clk
 );
-    logic [fifo_config::DATA_WIDTH-1:0] din;
-    logic [fifo_config::DATA_WIDTH-1:0] dout;
     logic push;
     logic pull;
     logic empty;
     logic full;
     logic res;
+    logic [fifo_config::DATA_WIDTH-1:0] din;
+    logic [fifo_config::DATA_WIDTH-1:0] dout;
     logic [fifo_config::ADDR_WIDTH:0] counter;
 
     clocking cb_drv @(posedge clk);
@@ -39,8 +39,8 @@ interface fifo_interface (
         input counter;
     endclocking
 
-    modport DRIVER_MP(clocking cb_drv, input clk);
-    modport MONITOR_MP(clocking cb_mon, input clk);
+    modport DRIVER_MP(clocking cb_drv);
+    modport MONITOR_MP(clocking cb_mon);
 
     /* ASSERTIONS */
     static int THRESH_FULL = fifo_config::FIFO_DEPTH;
@@ -60,53 +60,81 @@ interface fifo_interface (
         $strobe("%t STROBE COUNT=%0d", $time, count);
     end
 
-    assert_counter: assert property (
+    property unfull_on_res;
+        @(negedge res) disable iff (res) ~full;
+    endproperty
+
+    property counter_check;
+        @(posedge clk) disable iff (res) count == counter;
+    endproperty
+
+    property empty_on_res;
+        @(negedge res) disable iff (res) empty;
+    endproperty
+
+    property empty_full;
+        @(posedge clk) disable iff (res) ~(empty & full);
+    endproperty
+
+    property empty_to_high;
         @(posedge clk) disable iff (res)
-            count == counter
-    ) else log("assert_counter");
+            (count == THRESH_NONE) |-> empty;
+    endproperty
 
-    assert_empty_on_res: assert property (
-        @(negedge res) disable iff (res) empty
-    ) else log("assert_empty_on_res");
-
-    assert_unfull_on_res: assert property (
-        @(negedge res) disable iff (res) ~full
-    ) else log("assert_unfull_on_res");
-
-    assert_empty_full: assert property (
+    property empty_to_low;
         @(posedge clk) disable iff (res)
-            ~(empty & full)
-    ) else log("assert_empty_full");
+            (count > THRESH_NONE) |-> ~empty;
+    endproperty
 
-    assert_empty_to_high: assert property (
+    property empty_stable;
         @(posedge clk) disable iff (res)
-            (count == THRESH_NONE) |-> empty
-    ) else log("assert_empty_to_high");
+            (empty & pull & ~push) |=> $stable(empty);
+    endproperty
 
-    assert_empty_to_low: assert property (
+    property full_to_high;
         @(posedge clk) disable iff (res)
-            (count > THRESH_NONE) |-> ~empty
-    ) else log("assert_empty_to_low");
+            (count >= THRESH_FULL) |-> full;
+    endproperty
 
-    assert_empty_stable: assert property (
+    property full_to_low;
         @(posedge clk) disable iff (res)
-            (empty & pull & ~push) |=> $stable(empty)
-    ) else log("assert_empty_stable");
+            (full & push & ~pull) |=> $stable(full);
+    endproperty
 
-    assert_full_to_high: assert property (
+    property full_stable;
         @(posedge clk) disable iff (res)
-            (count >= THRESH_FULL) |-> full
-    ) else log("assert_full_to_high");
+            (full & push & ~pull) |=> $stable(full);
+    endproperty
 
-    assert_full_to_low: assert property (
-        @(posedge clk) disable iff (res)
-            (count < THRESH_FULL) |-> ~full
-    ) else log("assert_full_to_low");
+    assert_counter: assert property (counter_check)
+    else log("assert_counter");
 
-    assert_full_stable: assert property (
-        @(posedge clk) disable iff (res)
-            (full & push & ~pull) |=> $stable(full)
-    ) else log("assert_full_stable");
+    assert_empty_on_res: assert property (empty_on_res)
+    else log("assert_empty_on_res");
+
+    assert_unfull_on_res: assert property (unfull_on_res)
+    else log("assert_unfull_on_res");
+
+    assert_empty_full: assert property (empty_full)
+    else log("assert_empty_full");
+
+    assert_empty_to_high: assert property (empty_to_high)
+    else log("assert_empty_to_high");
+
+    assert_empty_to_low: assert property (empty_to_low)
+    else log("assert_empty_to_low");
+
+    assert_empty_stable: assert property (empty_stable)
+    else log("assert_empty_stable");
+
+    assert_full_to_high: assert property (full_to_high)
+    else log("assert_full_to_high");
+
+    assert_full_to_low: assert property (full_to_low)
+    else log("assert_full_to_low");
+
+    assert_full_stable: assert property (full_stable)
+    else log("assert_full_stable");
 
     function void log(string name);
         $error("[AssertionFailed] %s: count=%0d empty=%0b, full=%0b", name, $sampled(counter), $sampled(empty), $sampled(full));

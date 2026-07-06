@@ -1,7 +1,3 @@
-`include "uvm_macros.svh"
-import uvm_pkg::*;
-
-
 class fifo_config extends uvm_object;
     // DUT params: compile time constant
     parameter ADDR_WIDTH    = 3;
@@ -31,9 +27,5 @@ class fifo_config extends uvm_object;
     
     function new(string name = "fifo_config");
         super.new(name);
-    endfunction
-
-    virtual function void end_of_elaboration();
-        print();
     endfunction
 endclass

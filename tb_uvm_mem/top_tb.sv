@@ -1,3 +1,5 @@
+`include "uvm_macros.svh"
+import uvm_pkg::*;
 `include "mem_config.sv"
 `include "mem_interface.sv"
 `include "transaction.sv"
@@ -12,14 +14,13 @@
 `include "environment.sv"
 `include "test_base.sv"
 `include "tests.sv"
-`include "uvm_macros.svh"
-import uvm_pkg::*;
+
 
 
 module top_tb;
-    bit wclk = 0;
     int i;
     string str;
+    bit wclk = 0;
     uvm_event ev_init, ev_dump;
 
     mem_interface mif(.clk(wclk));

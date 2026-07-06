@@ -1,17 +1,13 @@
-`include "uvm_macros.svh"
-import uvm_pkg::*;
-
-
 class monitor extends uvm_monitor;
     `uvm_component_utils(monitor)
 
-    uvm_analysis_port #(transaction) mon_port;
-    virtual fifo_interface vif;
     transaction req;
+    virtual fifo_interface vif;
+    uvm_analysis_port #(transaction) mon_port;
 
     function new(string name, uvm_component parent);
         super.new(name, parent);
-        mon_port = new("mon_port", this);
+        mon_port = new("MON_PORT", this);
     endfunction
 
     virtual function void build_phase(uvm_phase phase);
@@ -22,10 +18,10 @@ class monitor extends uvm_monitor;
 
     virtual task run_phase(uvm_phase phase);
         super.run_phase(phase);
-        req = transaction::type_id::create("req");
         forever begin
             wait(!vif.DRIVER_MP.cb_mon.res);
             @(vif.MONITOR_MP.cb_mon);
+            req = transaction::type_id::create("req");
             req.pull    = vif.MONITOR_MP.cb_mon.pull;
             req.push    = vif.MONITOR_MP.cb_mon.push;
             req.din     = vif.MONITOR_MP.cb_mon.din;

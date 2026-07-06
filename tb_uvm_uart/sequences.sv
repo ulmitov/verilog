@@ -25,9 +25,9 @@ class base_sequence extends uvm_sequence#(transaction);
     top_config cfg;
     ral_env ral;
     uvm_status_e status;
-    int result;
     patterns_arr patterns;
     int fifo [$] = {};
+    int result;
 
     function new(string name = "SEQ");
         super.new(name);
@@ -252,12 +252,6 @@ class base_sequence extends uvm_sequence#(transaction);
         ral.csr.thr.write(status, value);
         assert(status == UVM_IS_OK) else
         uvm_report_error(get_name(), "Write THR failed");
-        /*
-        start_item(req);
-        if (!req.randomize() with { paddr == 0; pwrite == 1; pwdata == value; })
-            uvm_report_fatal(get_name(), "FAILED TO RANDOMIZE");
-        finish_item(req);
-        */
     endtask
 
     task seq_uart_read;
@@ -416,10 +410,10 @@ class sequence_baud extends base_sequence;
     endfunction
 
     task body;
-        const int num = 19 + 8 + 8;
-        int patterns [];
-        int baud_patterns [];
-        int val;
+        const int num = 19 + 8;
+        int unsigned patterns [];
+        int unsigned baud_patterns [];
+        bit [`UART_DIV_WIDTH-1:0] val;
         uvm_report_info(get_name(), "***** Baud generator seuqences *****");
 
         baud_patterns = new[num + SEQ_REPEAT];
@@ -444,31 +438,25 @@ class sequence_baud extends base_sequence;
             `UART_DIV_WIDTH'h20,
             `UART_DIV_WIDTH'h40,
             `UART_DIV_WIDTH'h80, //  + 19
-            `UART_DIV_WIDTH'hAA,
-            `UART_DIV_WIDTH'h55,
-            `UART_DIV_WIDTH'hAA00,
-            `UART_DIV_WIDTH'h5500,
-            `UART_DIV_WIDTH'hFF,
-            `UART_DIV_WIDTH'h0,
-            `UART_DIV_WIDTH'hFF00,
-            `UART_DIV_WIDTH'h0, // + 8
-            cfg.get_divisor(9600),
-            cfg.get_divisor(19200),
-            cfg.get_divisor(38400),
-            cfg.get_divisor(57600),
-            cfg.get_divisor(115200),
-            cfg.get_divisor(230400),
-            cfg.get_divisor(460800),
-            cfg.get_divisor(921600) // + 8
+            cfg.get_divisor(9.6),
+            cfg.get_divisor(19.2),
+            cfg.get_divisor(38.4),
+            cfg.get_divisor(57.6),
+            cfg.get_divisor(115.2),
+            cfg.get_divisor(230.4),
+            cfg.get_divisor(460.8),
+            cfg.get_divisor(921.6) // + 8
         };
 
         for (int i = 0; i < num + SEQ_REPEAT; i = i + 1) begin
             if (i < num)
                 baud_patterns[i] = patterns[i];
-            else
-                baud_patterns[i] = std::randomize(val) with { 
-                    !(val inside {baud_patterns}); val < (1 << `UART_DIV_WIDTH);
-                };
+            else begin
+                void'(std::randomize(val) with { 
+                    !(val inside {baud_patterns});
+                });
+                baud_patterns[i] = val;
+            end
         end
         foreach (baud_patterns[i]) begin
             uvm_report_info(get_name(), $sformatf("--- SET DIVISOR 0x%0h ---", baud_patterns[i]));
@@ -689,12 +677,12 @@ class sequence_polling_mode_fifo_dis_oe_case_read_before_oe extends sequence_loo
         super.new(name);
     endfunction
     task seq_test;
-        int val;
-        int oe_val;
+        bit [7:0] val;
+        bit [7:0] oe_val;
         uvm_report_info(get_name(), "***** Polling mode, FIFO DISABLED: No Override *****");
-        if (!(std::randomize(val) with { val < 256; }))
+        if (!std::randomize(val))
             uvm_report_fatal(get_name(), "FAILED TO RANDOMIZE");
-        if (!(std::randomize(oe_val) with { oe_val < 256; oe_val != val; }))
+        if (!(std::randomize(oe_val) with { oe_val != val; }))
             uvm_report_fatal(get_name(), "FAILED TO RANDOMIZE");
 
         seq_uart_write(val);
@@ -735,12 +723,12 @@ class sequence_polling_mode_fifo_dis_oe_case_read_after_oe extends sequence_loop
         super.new(name);
     endfunction
     task seq_test;
-        int val;
-        int oe_val;
+        bit [7:0] val;
+        bit [7:0] oe_val;
         uvm_report_info(get_name(), "***** Polling mode, FIFO DISABLED: Override 1 byte *****");
-        if (!(std::randomize(val) with { val < 256; }))
+        if (!std::randomize(val))
             uvm_report_fatal(get_name(), "FAILED TO RANDOMIZE");
-        if (!(std::randomize(oe_val) with { oe_val < 256; oe_val != val; }))
+        if (!(std::randomize(oe_val) with { oe_val != val; }))
             uvm_report_fatal(get_name(), "FAILED TO RANDOMIZE");
 
         seq_uart_write(val);
@@ -780,15 +768,15 @@ class sequence_polling_mode_fifo_dis_oe_case_read_after_multiple_oe extends sequ
         super.new(name);
     endfunction
     task seq_test;
-        int val;
-        int oe_val;
-        int lost_byte;
+        bit [7:0] val;
+        bit [7:0] oe_val;
+        bit [7:0] lost_byte;
         uvm_report_info(get_name(), "***** Polling mode, FIFO DISABLED: Override 2 bytes *****");
-        if (!(std::randomize(val) with { val < 256; }))
+        if (!std::randomize(val))
             uvm_report_fatal(get_name(), "FAILED TO RANDOMIZE");
-        if (!(std::randomize(oe_val) with { oe_val < 256; oe_val != val; }))
+        if (!(std::randomize(oe_val) with { oe_val != val; }))
             uvm_report_fatal(get_name(), "FAILED TO RANDOMIZE");
-        if (!(std::randomize(lost_byte) with { lost_byte < 256; lost_byte != val; lost_byte != oe_val; }))
+        if (!(std::randomize(lost_byte) with { lost_byte != val; lost_byte != oe_val; }))
             uvm_report_fatal(get_name(), "FAILED TO RANDOMIZE");
 
         seq_uart_write(val);

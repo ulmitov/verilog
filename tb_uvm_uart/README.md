@@ -1,3 +1,15 @@
+
+# UVM design structure
+
+- RAL model to handle CSR verifications
+- Two agents for APB interface and external Pins interface
+- Additional sequencer to drive pins stimulus
+- Single scoarboard checks samples from APB and from external Pins
+- Sequence library runs all tests
+
+![uvm_uart_dv.png](./uvm_uart_dv.png)
+
+
 # Test Plan (High level)
 - Common actions: reset in the end of each test and verify default CSR values and PIN outputs
 - Strategy: All write and read tests should be done for all modes of WordLen, StopBits, Parity
@@ -26,14 +38,5 @@ TODO:
 - Fifo enabled, interrupts enabled:
   - Trigger all interrupts
 - Glitched Rx bits test
+- Connect external uart module
 
-
-# Design
-UVM structure:
-- RAL model to handle CSR verifications
-- Two agents for APB interface and external Pins interface
-- Additional sequencer to drive pins stimulus
-- Single scoarboard checks samples from APB and from external Pins
-- Sequence library runs all tests
-
-![uvm_uart_dv.png](./uvm_uart_dv.png)

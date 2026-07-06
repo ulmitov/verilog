@@ -1,14 +1,10 @@
-`include "uvm_macros.svh"
-import uvm_pkg::*;
-
-
 class scoreboard extends uvm_scoreboard;
     `uvm_component_utils(scoreboard)
     parameter int WIDTH = mem_config::DATA_WIDTH;
     parameter int DEPTH = mem_config::DEPTH;
 
-    uvm_tlm_analysis_fifo #(transaction) scb_fifo;
     transaction req;
+    uvm_tlm_analysis_fifo #(transaction) scb_fifo;
 
     bit [WIDTH-1:0] mem_ref [0:DEPTH];
     bit [WIDTH-1:0] tx_dout;
@@ -20,7 +16,7 @@ class scoreboard extends uvm_scoreboard;
 
     virtual function void build_phase(uvm_phase phase);
         super.build_phase(phase);
-        scb_fifo = new("scb_fifo", this);
+        scb_fifo = new("SCP_FIFO", this);
     endfunction
 
     function void flush();
@@ -42,9 +38,9 @@ class scoreboard extends uvm_scoreboard;
                     mem_ref[i] = 0;
             end
             */
-            if (!req.wen && !req.ren) continue;
+            if ((!req.wen && !req.ren) | !req.req) continue;
             count++;
-            uvm_report_info("SCB_SEQ", $sformatf("[#%0d] %s", count, req.convert2string()));
+            uvm_report_info("SCB_SEQ", $sformatf("[#%0d] %s", count, req.convert2string()), UVM_HIGH);
             check_req();
         end
     endtask

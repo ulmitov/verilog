@@ -4,7 +4,6 @@
 **Full run log** can be viewed in last deploy run: https://github.com/ulmitov/verilog/actions
 
 
-
 # Contents:
 
 Each folder has a Readme
@@ -15,18 +14,19 @@ Each folder has a Readme
 
  - ![SystemVerilog testbench for ALU](./tb_sv_alu)
 
- - ![UVM testbench for Memory module](./tb_uvm_mem)
-
- - ![UVM testbench for FIFO](./tb_uvm_fifo)
-
  - ![modules:](./modules) different verilog modules and their testbenches
 
  - ![UART 16550 module](./UART) according to 16550 spec
+
+ - ![UART UVM testbench](./tb_uvm_uart)
 
  - ![UART C driver](./UART/driver)
  
  - ![UART Cpp testbench](./UART/testbench)
 
+ - ![UVM testbench for Memory module](./tb_uvm_mem)
+
+ - ![UVM testbench for FIFO](./tb_uvm_fifo)
 
 
 # Run suites:

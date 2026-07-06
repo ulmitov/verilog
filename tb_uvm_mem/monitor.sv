@@ -1,5 +1,4 @@
-`include "uvm_macros.svh"
-import uvm_pkg::*;
+`define MIF vif.mp_mon.cb_mon
 
 
 class monitor extends uvm_monitor;
@@ -11,7 +10,7 @@ class monitor extends uvm_monitor;
 
     function new(string name, uvm_component parent);
         super.new(name, parent);
-        mon_port = new("mon_port", this);
+        mon_port = new("MON_PORT", this);
     endfunction
 
     virtual function void build_phase(uvm_phase phase);
@@ -21,14 +20,15 @@ class monitor extends uvm_monitor;
     endfunction
 
     virtual task run_phase(uvm_phase phase);
-        `define MIF vif.mp_mon.cb_mon
         super.run_phase(phase);
         forever begin
-            req = transaction::type_id::create("req");
             @(`MIF);
             if (`MIF.res) continue;
+            if (!`MIF.req) continue;
+            req = transaction::type_id::create("req");
             req.wen     = `MIF.wen;
             req.ren     = `MIF.ren;
+            req.req     = `MIF.req;
             req.addr    = `MIF.addr;
             req.blsize  = `MIF.blsize;
             req.wr_data = `MIF.wr_data;

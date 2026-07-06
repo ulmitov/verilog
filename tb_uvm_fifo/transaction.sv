@@ -1,9 +1,4 @@
-`include "uvm_macros.svh"
-import uvm_pkg::*;
-
-
 class transaction extends uvm_sequence_item;
-
     rand bit push;
     rand bit pull;
     rand bit [fifo_config::DATA_WIDTH-1:0] din;
@@ -20,7 +15,7 @@ class transaction extends uvm_sequence_item;
         `uvm_field_int (full, UVM_DEFAULT)
     `uvm_object_utils_end
 
-    function new(string name="fifo_seq_item");
+    function new(string name="seq_item");
         super.new(name);
     endfunction
 

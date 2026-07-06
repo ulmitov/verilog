@@ -60,8 +60,9 @@ class top_config extends uvm_object;
         return parity_val;
     endfunction
 
-    function get_divisor(int rate);
-        rate = rate * config_pkg::NUM_TICKS * ((WORD_LEN + STOP_BITS + PARITY_EN + 1) / 8);
-        get_divisor = 10**9 / (config_pkg::TCLK * 2 * rate);
+    function int get_divisor(real rate);
+        rate = rate * config_pkg::NUM_TICKS * (WORD_LEN + STOP_BITS + PARITY_EN + 1) / 8;
+        rate = rate * config_pkg::TCLK * 2;
+        get_divisor = 10**7 / rate;
     endfunction
 endclass

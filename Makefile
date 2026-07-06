@@ -15,13 +15,15 @@ RUNTIME_DBG := --prof-cfuncs -CFLAGS -DVL_DEBUG --stats --debug --runtime-debug
 VERILATOR_ARGS := 	-Wno-lint -Wno-TIMESCALEMOD -Wno-SELRANGE -Wno-UNOPTFLAT -Wno-SPLITVAR \
 					--coverage --pins-inout-enables \
 					--trace --timing -y modules -Imodules -j 1 --build --cc
+VERILATOR_UVM_NO_DPI := verilator $(ARG) $(VERILATOR_ARGS) --binary -I$(UVM_HOME) -DUVM_NO_DPI
+
 
 define get_coverage
 	pwd
 	ls *.dat || true; ls ./vcd *.dat || true;
 	verilator_coverage --write coverage_merged.dat $$(find ./vcd -type f -name "cov_*.dat" | xargs)
 	#grep -v -E "UVM/|testbench|verilated_std.sv|tb_sv_alu|tb_uvm_fifo|tb_uvm_mem" coverage_merged.dat > coverage_merged_notb.dat
-	grep -v -E "UVM/|verilated_std.sv" coverage_merged.dat > coverage_merged_notb.dat
+	grep -v -E "UVM/|verilated_std.sv|RISCV_SingleCycle/testbench" coverage_merged.dat > coverage_merged_notb.dat
 	verilator_coverage --write-info coverage_merged.info coverage_merged_notb.dat
 	# sed -i 's|../modules|modules|g' coverage_merged.info
 	# verilator_coverage --annotate-all obj_dir_merged merged_coverage.dat
@@ -140,9 +142,6 @@ mux_cmos:
 	$(call run_module,mux_cmos_tb,mux_cmos_tb.v,mux_cmos.v)
 endif
 
-apb:
-	$(call run_sim,apb_slave_tb,./AMBA/apb_slave.sv)
-
 
 # UART
 uart_src := $(foreach x,testbench/testbench.sv uart_top.sv uart.sv clock_divider.sv uart_tx.sv uart_rx.sv,UART/$(x))
@@ -163,13 +162,7 @@ uartcpp:
 	verilator $$args --top $$tb $$src $(uart_src) && ./obj_dir/V$$tb
 	mv coverage.dat vcd/cov_uartcpp.dat
 	# for debugging add: ARG='-CFLAGS "-g -DDEBUG_MODE"'
-uart-uvm:
-	$(RM_OBJDIR_CMD)
-	$(VERILATOR_UVM_NO_DPI) --top top -Itb_uvm_uart -IUART \
-	$(UVM_HOME)/uvm_pkg.sv modules/shift_reg.v modules/fifo.v UART/uart_apb.sv tb_uvm_uart/top.sv;
-	./obj_dir/Vtop +UVM_TESTNAME=test_regression
-	#+UVM_VERBOSITY=UVM_FULL
-	mv coverage.dat vcd/cov_$$(date +%s).dat
+
 
 # RISCV
 risc_src := risc_pkg.sv riscv.sv riscv_core.sv csr.sv clint.sv decode.sv register_file.sv branch_control.sv control.sv alu.sv sign_extender.sv data_handler.sv
@@ -186,6 +179,7 @@ risc_tb_bub:
 risc_tb_fib:
 	$(call run_risc,tb_asm_fib)
 
+
 # RISCV CPP testbench
 riscdv:
 	tb=riscv
@@ -194,30 +188,37 @@ riscdv:
 	verilator $$args --top $$tb $$src && ./obj_dir/V$$tb
 
 
-# SystemVerilog ALU TB
+# ALU SV-TB
 alu_src := RISCV_SingleCycle/risc_pkg.sv tb_sv_alu/top_tb.sv modules/mux.v modules/shift.v modules/adder.v RISCV_SingleCycle/alu.sv
 alu:
 	$(call run_verilator,top_tb,-DBEHAVIORAL=1 -DCONST_DELAYS_OFF -Itb_sv_alu $(alu_src))
 
 
-VERILATOR_UVM_NO_DPI := verilator $(ARG) $(VERILATOR_ARGS) --binary -I$(UVM_HOME) -DUVM_NO_DPI
-
-# FIFO UVM TB
+# FIFO UVM
 uvm-fifo:
 	$(RM_OBJDIR_CMD)
 	$(VERILATOR_UVM_NO_DPI) --top top_tb -Itb_uvm_fifo \
 	$(UVM_HOME)/uvm_pkg.sv modules/fifo.v tb_uvm_fifo/top_tb.sv;
-	./obj_dir/Vtop_tb +UVM_TESTNAME=test_regression
+	./obj_dir/Vtop_tb
 	mv coverage.dat vcd/cov_uvmfifo.dat
 	#+UVM_VERBOSITY=UVM_HIGH
 
 
-# Memory UVM TB
+# UART UVM
+uvm-uart:
+	$(RM_OBJDIR_CMD)
+	$(VERILATOR_UVM_NO_DPI) --top top -Itb_uvm_uart -IUART \
+	$(UVM_HOME)/uvm_pkg.sv modules/shift_reg.v modules/fifo.v UART/uart_apb.sv tb_uvm_uart/top.sv;
+	./obj_dir/Vtop
+	mv coverage.dat vcd/cov_$$(date +%s).dat
+
+
+# Memory UVM
 uvm-mem:
 	$(RM_OBJDIR_CMD)
 	$(VERILATOR_UVM_NO_DPI) --top top_tb -Itb_uvm_mem \
 	$(UVM_HOME)/uvm_pkg.sv RISCV_SingleCycle/risc_pkg.sv modules/memory.sv tb_uvm_mem/top_tb.sv;
-	./obj_dir/Vtop_tb +UVM_TESTNAME=test_regression
+	./obj_dir/Vtop_tb
 	mv coverage.dat vcd/cov_$$(date +%s).dat
 
 uvm-inst:

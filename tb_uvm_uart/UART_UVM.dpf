@@ -16,7 +16,7 @@ simulations:
   - name: Sim Vcd
     options: >-
       -image image -code-cov a -waves waves.vcd -dump-agg +acc+b -uvm 1.2
-      +UVM_NO_DPI +UVM_NO_RELNOTES +UVM_TESTNAME=test_write_read
+      +UVM_NO_DPI +UVM_NO_RELNOTES +UVM_TESTNAME=test_single
   - name: Sim Mxd
     options: >-
       -image image -code-cov a -waves waves.mxd -dump-agg +acc+b -uvm 1.2

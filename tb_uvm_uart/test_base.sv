@@ -37,10 +37,14 @@ class test_base #(type SEQ = base_sequence) extends uvm_test;
         if (env.agt_apb.drv.count == env.agt_apb.mon.count)
         //if (env.agt_apb.sqr.m_last_rsp_buffer.size() == env.agt_apb.mon.count)
             uvm_report_info(get_name(),
-                $sformatf("PASSED: MON got all %0d transactions sent by DRV", env.agt_apb.mon.count));
+                $sformatf("PASSED: MON got all %0d transactions sent by DRV",
+                env.agt_apb.mon.count)
+            );
         else
             uvm_report_error(get_name(),
-                $sformatf("FAILED: MON got %0d transactions but DRV sent %0d", env.agt_apb.mon.count, env.agt_apb.drv.count));
+                $sformatf("FAILED: MON got %0d transactions but DRV sent %0d",
+                env.agt_apb.mon.count, env.agt_apb.drv.count)
+            );
     endfunction
 endclass
 
@@ -64,17 +68,9 @@ endclass
 Not creating a class per each sequence
 as CI runs the regression suite anyway
 */
-class test_csr extends test_base#(sequence_csr);
-    `uvm_component_utils(test_csr)
-    function new(string name = "test_csr", uvm_component parent = null);
-        super.new(name, parent);
-    endfunction
-endclass
-
-
-class test_write_read extends test_base#(sequence_loopback_wr_rd);
-    `uvm_component_utils(test_write_read)
-    function new(string name = "test_write_read", uvm_component parent = null);
+class test_single extends test_base#(sequence_baud);
+    `uvm_component_utils(test_single)
+    function new(string name = "test_single", uvm_component parent = null);
         super.new(name, parent);
     endfunction
 endclass

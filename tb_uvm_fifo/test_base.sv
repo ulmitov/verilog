@@ -1,10 +1,6 @@
 /*
     Base class for all tests 
 */
-`include "uvm_macros.svh"
-import uvm_pkg::*;
-
-
 class test_base #(type REQ = base_sequence) extends uvm_test;
     `uvm_component_utils(test_base)
 
@@ -77,5 +73,46 @@ class test_base #(type REQ = base_sequence) extends uvm_test;
         uvm_report_info(get_name(), "::: FACTORY :::");
         factory = uvm_factory::get();
         factory.print();
+    endfunction
+endclass
+
+
+/*
+Regression suite runs all tests via sequence library
+*/
+class test_regression extends test_base#(seq_lib);
+    `uvm_component_utils(test_regression)
+    function new(string name = "test_regression", uvm_component parent = null);
+        super.new(name, parent);
+    endfunction
+    task start_sequences;
+        /*
+            Each test will start sequences here
+            then run_phase task will run this task
+        */
+        reset();
+        seq.sequence_count = 7;
+        seq.print();
+        seq.start(env.agt.sqr);
+        repeat(2) reset();
+        env.scb.flush();
+        seq.sequence_count = 2;
+        seq.start(env.agt.sqr);
+        seq.print();
+    endtask
+    task configure_phase(uvm_phase phase);
+        super.configure_phase(phase);
+   endtask
+endclass
+
+
+/*
+Not creating a class per each sequence
+as CI runs the regression suite anyway
+*/
+class test_single extends test_base#(sequence_push_pull_00);
+    `uvm_component_utils(test_single)
+    function new(string name = "test_single", uvm_component parent = null);
+        super.new(name, parent);
     endfunction
 endclass

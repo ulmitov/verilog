@@ -1,6 +1,3 @@
-
-`include "uvm_macros.svh"
-import uvm_pkg::*;
 `include "consts.vh"
 
 `ifndef DATA_WIDTH

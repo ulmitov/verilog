@@ -1,7 +1,3 @@
-`include "uvm_macros.svh"
-import uvm_pkg::*;
-
-
 class coverage extends uvm_subscriber #(transaction);
     `uvm_component_utils(coverage)
     transaction req;

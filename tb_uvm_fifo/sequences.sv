@@ -2,14 +2,17 @@
     Base class with all kinds of sequences
     Transaction sequences sent by Sequencer generator to driver
 */
-`include "uvm_macros.svh"
-import uvm_pkg::*;
+class sequencer extends uvm_sequencer#(transaction);
+    `uvm_component_utils(sequencer)
+    function new(string name, uvm_component parent);
+        super.new(name, parent);
+    endfunction
+endclass
 
 
 class base_sequence extends uvm_sequence#(transaction);
     `uvm_object_utils(base_sequence)
 
-    transaction req;
     int num_to_full;
     int default_repeats;
 
@@ -124,15 +127,16 @@ class seq_lib extends uvm_sequence_library #(transaction);
         max_random_count = 7;
         add_sequence(sequence_push_pull_00::get_type());
         add_sequence(sequence_push_pull_ff::get_type());
+        add_sequence(sequence_push_pull_FF_00::get_type());
         add_sequence(sequence_consecutives_while_empty::get_type());
         add_sequence(sequence_consecutives_while_full::get_type());
         add_sequence(sequence_parallel::get_type());
         add_sequence(sequence_rand::get_type());
         init_sequence_library();
     endfunction
-    `ifdef UVM_MAJOR_VERSION_1_2
     // Overriding, since for some reason uvm 1.2 passes max minus 1
     // so last index will never run! UVM 1.8 does not have this issue
+    `ifdef UVM_MAJOR_VERSION_1_2
     function int unsigned select_sequence(int unsigned max);
         static int unsigned counter = 0;
         select_sequence = counter;

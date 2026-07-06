@@ -1,10 +1,6 @@
 /*
     Tests Base class
 */
-`include "uvm_macros.svh"
-import uvm_pkg::*;
-
-
 class test_base #(type REQ = base_sequence) extends uvm_test;
     `uvm_component_utils(test_base)
 
@@ -28,7 +24,6 @@ class test_base #(type REQ = base_sequence) extends uvm_test;
         vif.req = 1'b1;
         reset();
         seq.start(env.agt.sqr);
-        seq.print();
     endtask
 
     virtual task reset;
@@ -74,6 +69,7 @@ class test_base #(type REQ = base_sequence) extends uvm_test;
         print();
         uvm_report_info(get_name(), "::: CONFIG :::");
         cfg.print();
+        seq.print();
         uvm_report_info(get_name(), $sformatf("DATA_WIDTH=%d", mem_config::DATA_WIDTH));
         uvm_report_info(get_name(), "::: FACTORY :::");
         factory = uvm_factory::get();

@@ -63,7 +63,7 @@ jobs:
         run: make uart SIM=v RM_OBJDIR=true 2>&1 | tee tb_uart.log
 
       - name: UART UVM testbench
-        run: make uart-uvm 2>&1 | tee uvm_uart.log
+        run: make uvm-uart 2>&1 | tee uvm_uart.log
 
       - name: Memory UVM testbench 64 bit
         run: make uvm-mem ARG=-DDATA_WIDTH=64 2>&1 | tee uvm_mem64.log

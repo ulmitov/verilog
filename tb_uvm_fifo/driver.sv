@@ -1,12 +1,7 @@
-`include "uvm_macros.svh"
-import uvm_pkg::*;
-
-
 class driver extends uvm_driver#(transaction);
     `uvm_component_utils(driver)
 
     virtual fifo_interface vif;
-    transaction req;
     int count;
 
     function new(string name, uvm_component parent);
@@ -38,11 +33,10 @@ class driver extends uvm_driver#(transaction);
         @(vif.DRIVER_MP.cb_drv);
         vif.DRIVER_MP.cb_drv.push <= req.push;
         vif.DRIVER_MP.cb_drv.pull <= req.pull;
-        vif.DRIVER_MP.cb_drv.din <= req.din;
+        vif.DRIVER_MP.cb_drv.din  <= req.din;
         if (req.push || req.pull) begin
             this.count++;
             uvm_report_info("DRV sent item", $sformatf("#%0d: %s", this.count, req.convert2string()));
         end
     endtask
 endclass
-

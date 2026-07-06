@@ -1,7 +1,9 @@
+`include "uvm_macros.svh"
+import uvm_pkg::*;
+
 `include "fifo_config.sv"
 `include "fifo_interface.sv"
 `include "transaction.sv"
-`include "sequencer.sv"
 `include "sequences.sv"
 `include "driver.sv"
 `include "monitor.sv"
@@ -12,14 +14,12 @@
 `include "scoreboard.sv"
 `include "environment.sv"
 `include "test_base.sv"
-`include "tests.sv"
-`include "uvm_macros.svh"
-import uvm_pkg::*;
+
 
 
 module top_tb;
-    bit clk = 0;
     bit res;
+    bit clk = 0;
 
     fifo_interface IF(.clk(clk));
 
@@ -39,10 +39,10 @@ module top_tb;
     );
 
     always  #(fifo_config::TCLK) clk = ~clk;
+    initial run_test("test_regression");
     initial begin
         uvm_config_db#(virtual fifo_interface)::set(null, "*", "vif", IF);
         $dumpfile("fifo_top_tb.vcd");
-        $dumpvars(0, top_tb);
+        $dumpvars(0);
     end
-    initial run_test("test_regression");
 endmodule

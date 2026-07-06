@@ -1,5 +1,3 @@
-`include "uvm_macros.svh"
-import uvm_pkg::*;
 `define DMP vif.mp_drv.cb_drv
 
 
@@ -7,7 +5,6 @@ class driver extends uvm_driver#(transaction);
     `uvm_component_utils(driver)
 
     virtual mem_interface vif;
-    transaction req;
     int count;
 
     function new(string name, uvm_component parent);
@@ -30,6 +27,7 @@ class driver extends uvm_driver#(transaction);
     endtask
 
     virtual task drive_task();
+        if (!`DMP.req) return;
         if (`DMP.res) begin
             `DMP.wen <= 0;
             `DMP.ren <= 0;
@@ -46,7 +44,7 @@ class driver extends uvm_driver#(transaction);
         `DMP.wr_data <= req.wr_data;
         if (req.wen | req.ren) begin
             count++;
-            uvm_report_info("DRV_SEQ", $sformatf("[#%0d] %s", count, req.convert2string()));
+            uvm_report_info("DRV_SEQ", $sformatf("[#%0d] %s", count, req.convert2string()), UVM_HIGH);
         end
     endtask
 endclass

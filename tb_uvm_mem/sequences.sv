@@ -165,9 +165,9 @@ class seq_lib extends uvm_sequence_library #(transaction);
         add_sequence(sequence_random::get_type());
         init_sequence_library();
     endfunction
-    `ifdef UVM_MAJOR_VERSION_1_2
     // Overriding, since for some reason uvm 1.2 passes max minus 1
     // so last index will never run! UVM 1.8 does not have this issue
+    `ifdef UVM_MAJOR_VERSION_1_2
     function int unsigned select_sequence(int unsigned max);
         static int unsigned counter = 0;
         select_sequence = counter;
@@ -250,6 +250,9 @@ class sequence_stress_pattern extends base_sequence;
         for (int i = bus_blocks; i < mem_config::DEPTH - bus_blocks; i = i + bus_blocks) begin
             seq_write(i, {(mem_config::DATA_WIDTH/2){2'b01}});
             seq_write(i, {(mem_config::DATA_WIDTH/2){2'b10}});
+            seq_read(i);
+            seq_write(i, {(mem_config::DATA_WIDTH/2){2'b10}});
+            seq_write(i, {(mem_config::DATA_WIDTH/2){2'b01}});
             seq_read(i);
         end
     endtask

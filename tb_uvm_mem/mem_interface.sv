@@ -12,8 +12,8 @@ interface mem_interface (input logic clk);
         default input #mem_config::SETUP_TIME output #mem_config::HOLD_TIME;
         output wen;
         output ren;
-        output blsize;
         output addr;
+        output blsize;
         output wr_data;
         input rd_data;
         input res;
@@ -26,12 +26,12 @@ interface mem_interface (input logic clk);
         input req;
         input wen;
         input ren;
-        input blsize;
         input addr;
+        input blsize;
         input wr_data;
         input rd_data;
     endclocking
 
-    modport mp_drv(clocking cb_drv, input clk, input req);
-    modport mp_mon(clocking cb_mon, input clk, input req);
+    modport mp_drv(clocking cb_drv);
+    modport mp_mon(clocking cb_mon);
 endinterface
