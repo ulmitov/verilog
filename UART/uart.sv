@@ -102,25 +102,17 @@ module uart #(
 
 
     // 3-stage synchronizer to prevent metastability and glitches shorter than system clock
-    // so clock divisor should be at least 3
-    // if divisor < 4 then not syncing
+    // if divisor < 4 then not syncing, so clock divisor should be at least 3
     assign rx_din = ~|divisor[`UART_DATA_WIDTH:2] ? rx_sin : rx_sync;
-    synchroniser #(.DATA_WIDTH(1), .STAGES(3)) synch_din (
-        .clk(clk),
-        .res(~res_n),
-        .din(rx_sin),
-        .dout(rx_sync)
-    );
-    /*
+
     logic [2:0] rx_sync_reg;
-    assign rx_din = rx_sync_reg[2];
+    assign rx_sync = (rx_sync_reg[0] & rx_sync_reg[1]) | (rx_sync_reg[1] & rx_sync_reg[2]) | (rx_sync_reg[0] & rx_sync_reg[2]);
     always_ff @(posedge clk or negedge res_n) begin
         if (~res_n)
             rx_sync_reg <= 3'b111;
         else
             rx_sync_reg <= {rx_sync_reg[1:0], rx_sin};
     end
-    */
 
 
     assign rx_sin = loopback ? tx_ext : rx_ext;

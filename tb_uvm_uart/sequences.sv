@@ -22,6 +22,7 @@ Base Sequence object
 class base_sequence extends uvm_sequence#(transaction);
     `uvm_object_utils(base_sequence)
 
+    uvm_event_pool ev_pool;
     top_config cfg;
     ral_env ral;
     uvm_status_e status;
@@ -32,6 +33,7 @@ class base_sequence extends uvm_sequence#(transaction);
     function new(string name = "SEQ");
         super.new(name);
         set_response_queue_error_report_disabled(1);
+        ev_pool = uvm_event_pool::get_global_pool();
         req = transaction::type_id::create();
         cfg = top_config::type_id::create("SEQ_CFG");
         uvm_config_db#(top_config)::set(null, "*", "cfg", cfg);
@@ -335,6 +337,16 @@ class base_sequence extends uvm_sequence#(transaction);
         uvm_report_error(get_name(), $sformatf("LSR is %0h but expected TE", res));
     endtask
 
+    task fill_fifo_randomly;
+        bit [7:0] val;
+        for (int i = 0; i < FIFO_DEPTH; i = i + 1) begin
+            val = $urandom_range(255);
+            seq_uart_write(val);
+            val = val & ((1 << cfg.WORD_LEN) - 1);
+            fifo.push_back(val);
+        end
+    endtask
+
     /* Body iterates over all settings, to be run by test sequences. 40 iterations in total. */
     virtual task body;
         int disabled_parity;
@@ -372,8 +384,8 @@ class seq_lib extends uvm_sequence_library #(transaction);
         super.new(name);
         selection_mode = UVM_SEQ_LIB_USER;
         min_random_count = 1;
-        max_random_count = 10;
-        sequence_count = 9;
+        max_random_count = 12;
+        sequence_count = 12;
 
         add_sequence(sequence_csr::get_type());
         add_sequence(sequence_baud::get_type());
@@ -383,8 +395,10 @@ class seq_lib extends uvm_sequence_library #(transaction);
         add_sequence(sequence_send_sin::get_type());
         add_sequence(sequence_send_sin_fifo_en::get_type());
         add_sequence(sequence_polling_mode_fifo_dis_oe_case_read_before_oe::get_type());
-        //add_sequence(sequence_polling_mode_fifo_dis_oe_case_read_after_oe::get_type());
+        add_sequence(sequence_polling_mode_fifo_dis_oe_case_read_after_oe::get_type());
         add_sequence(sequence_polling_mode_fifo_dis_oe_case_read_after_multiple_oe::get_type());
+        add_sequence(sequence_polling_mode_fifo_en_oe_case::get_type());
+        add_sequence(sequence_send_sin_fifo_dis_glitch::get_type());
 
         init_sequence_library();
     endfunction
@@ -612,15 +626,10 @@ class sequence_write_read_string extends sequence_loopback_wr_rd;
 
     task seq_test_read_after_write;
         int val;
-        for (int i = 0; i < FIFO_DEPTH; i = i + 1) begin
-            val = $urandom_range(255);
-            seq_uart_write(val);
-            val = val & ((1 << cfg.WORD_LEN) - 1);
-            fifo.push_back(val);
-        end
+        fill_fifo_randomly();
 
         for (int i = 0; i < FIFO_DEPTH; i = i + 1) begin
-            poll_lsr_dr(cfg.DIVISOR * `UART_TICKS_NUM, result);
+            poll_lsr_dr(cfg.get_ticks_per_bit(), result);
             if (i == FIFO_DEPTH - 1)
                 assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE)))
                 else uvm_report_error(get_name(), $sformatf("LSR is %0h but expected DR+TF+TE", result));
@@ -640,15 +649,9 @@ class sequence_write_read_string extends sequence_loopback_wr_rd;
 
     task seq_test_read_after_finish;
         int val;
-        for (int i = 0; i < FIFO_DEPTH; i = i + 1) begin
-            val = $urandom_range(255);
-            seq_uart_write(val);
-            val = val & ((1 << cfg.WORD_LEN) - 1);
-            fifo.push_back(val);
-        end
+        fill_fifo_randomly();
 
-        //poll_lsr_te(`UART_TICKS_NUM * cfg.DIVISOR, result);
-        poll_lsr_dr((cfg.get_ticks_per_word() * (FIFO_DEPTH + 1)), result);
+        poll_lsr_te((cfg.get_ticks_per_word() * (FIFO_DEPTH + 1)), result);
         assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE)))
         else uvm_report_error(get_name(), $sformatf("LSR is %0h but expected DR+TF+TE", result));
 
@@ -707,7 +710,7 @@ class sequence_polling_mode_fifo_dis_oe_case_read_before_oe extends sequence_loo
         seq_uart_read(val & ((1 << cfg.WORD_LEN) - 1), result);
 
         poll_lsr_dr(0, result);
-        assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF)| (1 << `UART_LSR_TE))) else
+        assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE))) else
         uvm_report_error(get_name(), $sformatf("LSR is %0h but expected DR+TF+TE", result));
         seq_uart_read(oe_val & ((1 << cfg.WORD_LEN) - 1), result);
     endtask
@@ -719,12 +722,18 @@ Write then read after OE was set
 */
 class sequence_polling_mode_fifo_dis_oe_case_read_after_oe extends sequence_loopback_wr_rd;
     `uvm_object_utils(sequence_polling_mode_fifo_dis_oe_case_read_after_oe)
+    uvm_event ev_scb;
+
     function new(string name = "SEQ");
         super.new(name);
+        ev_scb = ev_pool.get("EV_FLUSH_QUEUES");
+        ev_scb.reset();
     endfunction
+
     task seq_test;
         bit [7:0] val;
         bit [7:0] oe_val;
+
         uvm_report_info(get_name(), "***** Polling mode, FIFO DISABLED: Override 1 byte *****");
         if (!std::randomize(val))
             uvm_report_fatal(get_name(), "FAILED TO RANDOMIZE");
@@ -745,16 +754,22 @@ class sequence_polling_mode_fifo_dis_oe_case_read_after_oe extends sequence_loop
         uvm_report_error(get_name(), $sformatf("LSR is %0h but expected DR", result));
 
         poll_lsr_oe(0, result);
-        assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF)| (1 << `UART_LSR_TE) | (1 << `UART_LSR_OE)))
+        assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE) | (1 << `UART_LSR_OE)))
         else uvm_report_error(get_name(),
             $sformatf("LSR is %0h but expected DR+TF+TE+OE", result)
         );
+
         seq_get_iir(result);    // check no interrupt
         // in this case scoreboard recieves all bytes, then sees OE, and should remove all bytes except top one
-        seq_uart_read(val & ((1 << cfg.WORD_LEN) - 1), result);
+        val = val & ((1 << cfg.WORD_LEN) - 1);
+        seq_uart_read(val, result);
+
         seq_get_lsr(result);
-        assert(result == ((1 << `UART_LSR_TF)| (1 << `UART_LSR_TE))) else
+        assert(result == ((1 << `UART_LSR_TF) | (1 << `UART_LSR_TE))) else
         uvm_report_error(get_name(), $sformatf("LSR is %0h but expected TF+TE", result));
+
+        // clear scb queue as last byte was lost
+        ev_scb.trigger();
     endtask
 endclass
 
@@ -816,11 +831,84 @@ class sequence_polling_mode_fifo_dis_oe_case_read_after_multiple_oe extends sequ
 
         // no more bytes
         seq_get_lsr(result);
-        assert(result == ((1 << `UART_LSR_TF)| (1 << `UART_LSR_TE))) else
+        assert(result == ((1 << `UART_LSR_TF) | (1 << `UART_LSR_TE))) else
         uvm_report_error(get_name(), $sformatf("LSR is %0h but expected TF+TE", result));
     endtask
 endclass
 
+
+class sequence_polling_mode_fifo_en_oe_case extends sequence_loopback_wr_rd;
+    `uvm_object_utils(sequence_polling_mode_fifo_en_oe_case)
+    uvm_event ev_scb;
+
+    function new(string name = "SEQ");
+        super.new(name);
+        ev_scb = ev_pool.get("EV_FLUSH_QUEUES");
+        ev_scb.reset();
+    endfunction
+
+    task pre_start;
+        super.pre_start();
+        seq_set_fcr(1 << `UART_FCR_FIFOEN);
+        uvm_report_info(get_name(), "--- FIFO ENBALED ---");
+        uvm_report_info(get_name(), "***** Polling mode, FIFO ENABLED: Override 1 byte *****");
+    endtask
+
+    task seq_test;
+        bit [7:0] val;
+
+        fill_fifo_randomly();
+
+        poll_lsr_te(cfg.get_ticks_per_word() * FIFO_DEPTH, result);
+        assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE))) else
+        uvm_report_error(get_name(),
+            $sformatf("LSR is %0h but expected DR+TF+TE", result)
+        );
+
+        val = $urandom_range(255);
+        seq_uart_write(val);
+        seq_get_iir(result);    // check no interrupt
+        
+        poll_lsr_oe(0, result);
+        assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE) | (1 << `UART_LSR_OE)))
+        else uvm_report_error(get_name(),
+            $sformatf("LSR is %0h but expected DR+TF+TE+OE", result)
+        );
+
+        seq_get_lsr(result);
+        assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE))) else
+        uvm_report_error(get_name(), $sformatf("LSR is %0h but expected DR+TF+TE", result));
+
+        val = $urandom_range(255);
+        seq_uart_write(val);
+        seq_get_iir(result);    // check no interrupt
+
+        poll_lsr_oe(0, result);
+        assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE) | (1 << `UART_LSR_OE)))
+        else uvm_report_error(get_name(),
+            $sformatf("LSR is %0h but expected DR+TF+TE+OE", result)
+        );
+
+        seq_get_lsr(result);
+        assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE))) else
+        uvm_report_error(get_name(), $sformatf("LSR is %0h but expected DR+TF+TE", result));
+
+        for (int i = 0; i < FIFO_DEPTH; i = i + 1) begin
+            poll_lsr_dr(0, result);
+            assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE)))
+            else uvm_report_error(get_name(), $sformatf("LSR is %0h but expected DR+TF+TE", result));
+            val = fifo.pop_front();
+            seq_uart_read(val, result);
+        end
+
+        seq_get_lsr(result);
+        assert(result == ((1 << `UART_LSR_TF) | (1 << `UART_LSR_TE))) else
+        uvm_report_error(get_name(), $sformatf("LSR is %0h but expected TF+TE", result));
+
+        // clear scb queue as last byte was lost
+        ev_scb.trigger();
+    endtask
+endclass
 
 
 class sequence_external extends uvm_sequence #(pin_sample);
@@ -831,6 +919,8 @@ class sequence_external extends uvm_sequence #(pin_sample);
     rand bit parity_bit_valid;
     rand bit idle;
     rand int value;
+    int max_glitch_rate = 0;// glitches percantage per byte (out of 100% sys clock ticks)
+    int max_glitch_len = 0; // glitch clocks duration
 
     function new(string name = "SEQ_EXT");
         super.new(name);
@@ -842,10 +932,74 @@ class sequence_external extends uvm_sequence #(pin_sample);
             uvm_report_fatal(get_name(), "cfg is not in db");
     endtask
 
+    task send_sin(input bit din);
+        start_item(req);
+        req.sin = din;
+        // this if can be used in each state to force rx_clock
+        //if (i == 0) req.rclk = 1; else
+        //if (i % (cfg.DIVISOR / 2) == 0) req.rclk = ~req.rclk;
+        finish_item(req);
+    endtask
+
+    task send_bit(input bit din, input int clk_num = 0);
+        int glithes_arr [$];
+        int unsigned val;
+        int max_glitches = 0;
+        int TICK_DELTA = `UART_TICKS_NUM > 8 ? 2 : 1;
+
+        TICK_DELTA = TICK_DELTA * cfg.DIVISOR;
+        if (!clk_num) clk_num = cfg.get_ticks_per_bit();
+
+        if (max_glitch_rate) begin
+            max_glitches = clk_num * max_glitch_rate / 100;
+
+            for (int i = 0; i < max_glitches; i = i + 1) begin
+                if (max_glitch_len < 2) begin
+                    if (!std::randomize(val) with {
+                        val > 0;
+                        val < clk_num;
+                        !(val inside {glithes_arr});
+                        !(val % (max_glitch_len + 2));    // ensure no consecutive glitches
+                    }) begin
+                        uvm_report_warning(get_name(), "Looks like no more space for glitches");
+                        continue;
+                    end
+                end else begin
+                    // IF GLITCH DURATION LASTS LONGER THAN 1 SYS CLOCK THEN NO GLITCHES AROUND THE MIDDLE (FOR NOW) !
+                    if (!std::randomize(val) with {
+                        val > 0;
+                        val < clk_num;
+                        !(val inside {glithes_arr});
+                        !(val % (max_glitch_len + 2));
+                        val > ((clk_num / 2) + TICK_DELTA) || val < ((clk_num / 2) - TICK_DELTA);
+                    }) begin
+                        uvm_report_warning(get_name(), "Looks like no more space for glitches?");
+                        continue;
+                    end
+                end
+
+                uvm_report_info(get_name(),
+                    $sformatf("Glitch #%0d on clock %0d", i, val), UVM_FULL
+                );
+                for (int j = 0; j < max_glitch_len; j = j + 1)
+                    glithes_arr.push_back(val + j);
+            end
+        end
+
+        for (int i = 0; i < clk_num; i = i + 1) begin
+            if (max_glitch_rate && (i inside {glithes_arr}))
+                send_sin(~din);
+            else
+                send_sin(din);
+        end
+    endtask
+
     task body;
-        int clk_num = `UART_TICKS_NUM * cfg.DIVISOR;
-        int val = value;
+        int val;
+        int clocks_per_bit = cfg.get_ticks_per_bit();
+
         value = value & ((1 << cfg.WORD_LEN) - 1);
+        val = value;
 
         uvm_report_info(get_name(),
             $sformatf("*** SEND via SIN [%2h] :: DIV[%0d] :: WSL[%0d] :: SB[%0d] :: PE[%0d] :: EP[%0d] ***",
@@ -858,30 +1012,14 @@ class sequence_external extends uvm_sequence #(pin_sample);
             uvm_report_info(get_name(), $sformatf("*** SEND INVALID PARITY BIT ***"));
 
         // IDLE state
-        if (idle) begin
-            for (int i = 0; i < clk_num; i = i + 1) begin
-                start_item(req);
-                req.sin = 1;
-                //if (i == 0) req.rclk = 1; else
-                //if (i % (cfg.DIVISOR / 2) == 0) req.rclk = ~req.rclk; // this if can be used in each state
-                finish_item(req);
-            end
-        end
+        if (idle) send_bit(1);
 
         // START state
-        for (int i = 0; i < clk_num; i = i + 1) begin
-            start_item(req);
-            req.sin = 0;
-            finish_item(req);
-        end
+        send_bit(0);
 
         // DATA state
-        for (int b = 0; b < cfg.WORD_LEN; b = b + 1) begin
-            for (int i = 0; i < clk_num; i = i + 1) begin
-                start_item(req);
-                req.sin = val & 1;
-                finish_item(req);
-            end
+        for (int i = 0; i < cfg.WORD_LEN; i = i + 1) begin
+            send_bit(val & 1);
             val = val >> 1;
         end
 
@@ -889,33 +1027,21 @@ class sequence_external extends uvm_sequence #(pin_sample);
         if (cfg.PARITY_EN) begin
             val = cfg.get_parity_bit(value);
             val = parity_bit_valid ? val : ~val;
-            for (int i = 0; i < clk_num; i = i + 1) begin
-                start_item(req);
-                req.sin = val;
-                finish_item(req);
-            end
+            send_bit(val);
         end
 
         // STOP state
-        for (int i = 0; i < clk_num - 1; i = i + 1) begin
-            start_item(req);
-            req.sin = stop_bit_valid;
-            finish_item(req);
-        end
+        send_bit(stop_bit_valid, clocks_per_bit - 1);
         if (cfg.STOP_BITS == 2) begin
-            if (cfg.WORD_LEN == 5) clk_num = clk_num / 2;
-            for (int i = 0; i < clk_num - 1; i = i + 1) begin
-                start_item(req);
-                req.sin = 1;    // second bit must be 1 so that our rx fsm stays synced for test purpose
+            if (cfg.WORD_LEN == 5)
+                send_bit(1, clocks_per_bit / 2);
+            else
+                send_bit(1);
+                // second bit must be 1 so that our rx fsm stays synced for test purpose
                 // TODO: add test to send 2 zero stop bits and see rx fsm returns to idle after that.
                 // But maybe it is still a bug and rx fsm should wait for both bits before switching to next state?
-                finish_item(req);
-            end
         end
-        // lastly, send 1 in case parent sequence delays next send
-        start_item(req);
-        req.sin = 1;
-        finish_item(req);
+        send_sin(1);    // lastly send 1, in case parent sequence delays next send
     endtask
 endclass
 
@@ -936,10 +1062,15 @@ class sequence_send_sin extends base_sequence;
         if (!uvm_config_db#(sequencer_pins)::get(null, "", "sqr_pin", sqr_pin))
             uvm_report_fatal(get_name(), "sqr_pin is not in db");
         if (sqr_pin == null) uvm_report_fatal(get_name(), "PIN sequencer is null");
-        seq_set_divisor($urandom_range(32, 2) & 'hFFFE);    // setting even divisor!
+        seq_set_divisor($urandom_range(32, 2) & 'hFFFE);    // even divisor
     endtask
 
     virtual task seq_test;
+        send_valid_byte();
+        send_invalid_byte();
+    endtask
+
+    task send_valid_byte;
         int value;
         /*
         seq_ext.value = value;
@@ -952,41 +1083,40 @@ class sequence_send_sin extends base_sequence;
             uvm_report_fatal(get_name(), "FAILED TO RANDOMIZE");
         seq_ext.start(sqr_pin);
 
-        poll_lsr_dr(cfg.DIVISOR * `UART_TICKS_NUM, result);
-        assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE)))
-        else uvm_report_error(get_name(), $sformatf("LSR is %0h but expected DR+TF+TE", result));
+        poll_lsr_dr(cfg.get_ticks_per_bit(), result);
+        assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE))) else
+        uvm_report_error(get_name(), $sformatf("LSR is %0h but expected DR+TF+TE", result));
 
         value = seq_ext.value & ((1 << cfg.WORD_LEN) - 1);
         seq_uart_read(value, result);
 
         seq_get_lsr(result);
-        assert(result == ((1 << `UART_LSR_TF)| (1 << `UART_LSR_TE)))
-        else uvm_report_error(get_name(), $sformatf("LSR is %0h but expected TF+TE", result));
+        assert(result == ((1 << `UART_LSR_TF) | (1 << `UART_LSR_TE))) else
+        uvm_report_error(get_name(), $sformatf("LSR is %0h but expected TF+TE", result));
+    endtask
 
-        // next tx is invalid
-        if (cfg.PARITY_EN) begin
-            if (!(seq_ext.randomize() with { parity_bit_valid == 0; idle == 0; }))
-                uvm_report_fatal(get_name(), "FAILED TO RANDOMIZE");
-        end else begin
-            if (!(seq_ext.randomize() with { stop_bit_valid == 0; idle == 0; }))
-                uvm_report_fatal(get_name(), "FAILED TO RANDOMIZE");
-        end
+    task send_invalid_byte;
+        int value;
+        if (cfg.PARITY_EN)
+            void'(seq_ext.randomize() with { parity_bit_valid == 0; idle == 0; });
+        else
+            void'(seq_ext.randomize() with { stop_bit_valid == 0; idle == 0; });
         seq_ext.start(sqr_pin);
 
-        poll_lsr_dr(cfg.DIVISOR * `UART_TICKS_NUM, result);
+        poll_lsr_dr(cfg.get_ticks_per_bit(), result);
         value = (1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE);
         if (cfg.PARITY_EN)
             value = value | (1 << `UART_LSR_PE);
         if (!seq_ext.stop_bit_valid)
             value = value | (1 << `UART_LSR_FE);
-        assert(result == value)
-        else uvm_report_error(get_name(), $sformatf("LSR is %0h but expected %0h", result, value));
+        assert(result == value) else
+        uvm_report_error(get_name(), $sformatf("LSR is %0h but expected %0h", result, value));
 
         value = seq_ext.value & ((1 << cfg.WORD_LEN) - 1);
         seq_uart_read(value, result);
         seq_get_lsr(result);
-        assert(result == ((1 << `UART_LSR_TF)| (1 << `UART_LSR_TE)))
-        else uvm_report_error(get_name(), $sformatf("LSR is %0h but expected TF+TE", result));
+        assert(result == ((1 << `UART_LSR_TF) | (1 << `UART_LSR_TE))) else
+        uvm_report_error(get_name(), $sformatf("LSR is %0h but expected TF+TE", result));
     endtask
 endclass
 
@@ -1004,10 +1134,12 @@ class sequence_send_sin_fifo_en extends sequence_send_sin;
     endtask
 
     task seq_test;
-        int value;
-        int lsr;
+        send_data();
+        get_data();
+    endtask
 
-        // send data:
+    task send_data;
+        int value;
         for (int i = 0; i < FIFO_DEPTH / 2; i = i + 1) begin
             // send valid:
             if (!(seq_ext.randomize() with { stop_bit_valid == 1; parity_bit_valid == 1; idle == 1; }))
@@ -1029,8 +1161,11 @@ class sequence_send_sin_fifo_en extends sequence_send_sin;
             if (cfg.PARITY_EN && !seq_ext.parity_bit_valid)  value = value | 'h100;
             fifo.push_back(value);
         end
+    endtask
 
-        // get data:
+    task get_data;
+        int value;
+        int lsr;
         for (int i = 0; i < FIFO_DEPTH / 2; i = i + 1) begin
             // expected first value to be valid:
             poll_lsr_dr(0, result);
@@ -1055,9 +1190,38 @@ class sequence_send_sin_fifo_en extends sequence_send_sin;
         end
 
         seq_get_lsr(result);
-        lsr = (1 << `UART_LSR_TF)| (1 << `UART_LSR_TE);
+        lsr = (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE);
         assert(result == lsr) else uvm_report_error(get_name(),
             $sformatf("LSR is %0h but expected TF+TE", result)
         );
+    endtask
+endclass
+
+
+/* Glitch test */
+class sequence_send_sin_fifo_dis_glitch extends sequence_send_sin;
+    `uvm_object_utils(sequence_send_sin_fifo_dis_glitch)
+    uvm_event ev_scb;
+
+    function new(string name = "SEQ");
+        super.new(name);
+        ev_scb = ev_pool.get("EV_SKIP_CHECKS");
+        ev_scb.reset();
+    endfunction
+
+    task pre_start;
+        super.pre_start();
+        seq_ext.max_glitch_len = 1; // for now not supporting glitches longer than one clock !!
+        seq_ext.max_glitch_rate = 10;   // 10% glitchness !!
+        ev_scb.trigger();
+    endtask
+
+    task post_start;
+        ev_scb.reset();
+    endtask
+
+    task seq_test;
+        seq_set_divisor($urandom_range(cfg.get_divisor(921.6), 4) & 'hFFFE);    // even divisor, bigger than 4
+        send_valid_byte();
     endtask
 endclass

@@ -39,19 +39,12 @@ module uart_apb #(parameter APB_DATA_WIDTH = 32) (
             assign wdata = pwdata;
     endgenerate
 
-    assign #1 pready = psel & penable;
-    assign data_bus = pwrite & psel ? wdata : 'bZ;
-    assign prdata = {{(APB_DATA_WIDTH - `UART_DATA_WIDTH){1'b0}}, data_bus};
-
     // invalid range. wr and rd will still work which is ok by spec
     assign pslverr = (pready & paddr > `REGS_ADDR_END) ? 1'b1 : 1'b0;
-
-    // read when penable is low, so when penable is high output is already stable
-    // read will make a pull from fifo, so reading on pready,
-    // as data was stable already on penable 0, then on penable 1 will pull
-    assign rd = ~pwrite & pready; //psel & ~penable;
-
-    // write when penable is high, when input data is stable
+    assign pready = psel & penable;
+    assign data_bus = pwrite & psel ? wdata : 'bZ;
+    assign prdata = {{(APB_DATA_WIDTH - `UART_DATA_WIDTH){1'b0}}, data_bus};
+    assign rd = ~pwrite & pready;
     assign wr = pwrite & pready;
 
     uart_top uart_apb (

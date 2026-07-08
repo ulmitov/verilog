@@ -1,6 +1,8 @@
 class scoreboard extends uvm_scoreboard;
     `uvm_component_utils(scoreboard)
 
+    uvm_event_pool ev_pool;
+    uvm_event ev_seq;
     top_config cfg;
     transaction req;
     pin_sample pins;
@@ -31,11 +33,11 @@ class scoreboard extends uvm_scoreboard;
 
     function void build_phase(uvm_phase ph);
         super.build_phase(ph);
+        ev_pool = uvm_event_pool::get_global_pool();
         scb_fifo = new("APB_Q", this);
         pin_fifo = new("PIN_Q", this);
-        cfg = top_config::type_id::create("SCB_CFG");
-        //if (!uvm_config_db#(top_config)::get(null, "", "cfg", cfg))
-        //    uvm_report_fatal(get_name(), "cfg is not in db");
+        if (!uvm_config_db#(top_config)::get(null, "", "cfg", cfg))
+            uvm_report_fatal(get_name(), "CFG is not in db");
         flush();
     endfunction
 
@@ -63,13 +65,21 @@ class scoreboard extends uvm_scoreboard;
 
     task run_phase(uvm_phase ph);
         forever begin
+            // check sequence request to flush queues:
+            ev_seq = ev_pool.get("EV_FLUSH_QUEUES");
+            if (ev_seq.is_on()) begin
+                uvm_report_info(get_name(), "EV_FLUSH_QUEUES");
+                tx_mem.delete();
+                rx_mem.delete();
+                ev_seq.reset();
+            end
+
             check_apb();    // non blocking
             check_pins();   // blocking
         end
     endtask
 
     task check_apb;
-        int value;
         if (scb_fifo.try_peek(req)) begin
             scb_fifo.get(req);
             if (~req.presetn) begin
@@ -83,8 +93,8 @@ class scoreboard extends uvm_scoreboard;
             case(req.paddr)
                 `UART_REG_MCR: cfg.LOOPBACK = req.pwdata[`UART_MCR_LOOP];
                 `UART_REG_FCR: fifo_en = req.pwdata[`UART_FCR_FIFOEN];
-                `UART_REG_DLL: if (dlab_en) cfg.DIVISOR[`UART_DATA_WIDTH-1:0] = req.pwdata; //cfg.DIVISOR = (cfg.DIVISOR & 'hFFFF_FF00) | req.pwdata;
-                `UART_REG_DLM: if (dlab_en) cfg.DIVISOR[`UART_DIV_WIDTH-1:`UART_DATA_WIDTH] = req.pwdata; //cfg.DIVISOR = (cfg.DIVISOR & 'hFFFF_00FF) | (req.pwdata << DWIDTH);
+                `UART_REG_DLL: if (dlab_en) cfg.DIVISOR[`UART_DATA_WIDTH-1:0] = req.pwdata;
+                `UART_REG_DLM: if (dlab_en) cfg.DIVISOR[`UART_DIV_WIDTH-1:`UART_DATA_WIDTH] = req.pwdata;
                 `UART_REG_LCR: begin
                     dlab_en = req.pwdata[`UART_LCR_DL];
                     cfg.WORD_LEN = req.pwdata[`UART_LCR_WLS +: 2] + 5;
@@ -102,7 +112,6 @@ class scoreboard extends uvm_scoreboard;
         end else begin
             if (req.paddr == `UART_REG_LSR && req.prdata[`UART_LSR_OE])
                 overrun = 1;
-            //if (req.paddr == `UART_REG_LSR && !req.prdata[`UART_LSR_DR])
         end
 
         uvm_report_info(get_name(), req.convert2string(), UVM_HIGH);
@@ -110,34 +119,41 @@ class scoreboard extends uvm_scoreboard;
         if (dlab_en)            return;
         if (req.paddr)          return;
         count++;
-        
 
-        // WRITE
-        if (req.pwrite) begin
-            value = req.pwdata & ((1 << cfg.WORD_LEN) - 1);
-            if (!fifo_en) begin
-                // if overrun means did not read yet, so previous tx can be removed
-                if (overrun) begin
+        ev_seq = ev_pool.get("EV_SKIP_CHECKS");
+        if (ev_seq.is_on()) return;
+
+        if (req.pwrite)
+            write();
+        else
+            read();
+    endtask
+
+    function void write;
+        int value = req.pwdata & ((1 << cfg.WORD_LEN) - 1);
+
+        if (!fifo_en) begin
+            // if overrun means did not read yet, so previous tx can be removed
+            if (overrun) begin
+                uvm_report_warning(get_name(),
+                    $sformatf("Rx fifo popped back %0h", rx_mem.pop_back())
+                );
+                if (cfg.LOOPBACK)
                     uvm_report_warning(get_name(),
-                        $sformatf("Rx fifo popped back %0h", rx_mem.pop_back())
+                        $sformatf("Tx fifo popped back %0h", tx_mem.pop_back())
                     );
-                    if (cfg.LOOPBACK)
-                        uvm_report_warning(get_name(),
-                            $sformatf("Tx fifo popped back %0h", tx_mem.pop_back())
-                        );
-                end
-                tx_mem.push_back(value);
-                uvm_report_info(get_name(), $sformatf("*** THR PUSH %0h ***", value));
             end
-            else if (fifo_en && tx_mem.size() < FIFO_DEPTH) begin
-                tx_mem.push_back(value);
-                uvm_report_info(get_name(), $sformatf("*** THR PUSH %0h ***", value));
-            end else
-                uvm_report_error(get_name(), $sformatf("TRIED TO WRITE WHEN TX QUEUE IS FULL"));
-            return;
+            tx_mem.push_back(value);
+            uvm_report_info(get_name(), $sformatf("*** THR PUSH %0h ***", value));
         end
+        else if (fifo_en && tx_mem.size() < FIFO_DEPTH) begin
+            tx_mem.push_back(value);
+            uvm_report_info(get_name(), $sformatf("*** THR PUSH %0h ***", value));
+        end else
+            uvm_report_warning(get_name(), $sformatf("TRIED TO WRITE WHEN TX QUEUE IS FULL"));
+    endfunction
 
-        // READ
+    function void read;
         if (!rx_mem.size()) begin
             uvm_report_warning(get_name(), $sformatf("TRIED TO READ WHEN RX QUEUE IS EMPTY"));
             assert(req.prdata == 0) else uvm_report_error(get_name(),
@@ -162,7 +178,8 @@ class scoreboard extends uvm_scoreboard;
             );
         end
 
-        if (overrun) begin
+        if (!fifo_en && overrun) begin
+            // pop out all bytes except the first one
             while (rx_mem.size() > 1)
                 uvm_report_warning(get_name(),
                     $sformatf("Rx fifo overrun pop front %0h", rx_mem.pop_front())
@@ -175,12 +192,15 @@ class scoreboard extends uvm_scoreboard;
             end
             overrun = 0;
         end
-    endtask
+    endfunction
 
     task check_pins;
         pin_fifo.get(pins);
         uvm_report_info(get_name(), pins.convert2string(), UVM_FULL);
         check_baudout();
+
+        ev_seq = ev_pool.get("EV_SKIP_CHECKS");
+        if (ev_seq.is_on()) return;
         count_samples++;
 
         case(rx_state)
@@ -260,8 +280,8 @@ class scoreboard extends uvm_scoreboard;
         if (prev_sout & get_input()) begin
             // still idle or stop state lasts too long
             prev_sout = get_input();
-            assert(count_samples <= phase_len())
-            else uvm_report_error(get_name(), 
+            assert(count_samples <= cfg.get_ticks_per_bit()) else
+            uvm_report_error(get_name(), 
                 $sformatf("IDLE state exceeded count_samples %0d", count_samples)
             );
             return;
@@ -273,11 +293,11 @@ class scoreboard extends uvm_scoreboard;
             count_samples = 0;
         end
 
-        if (count_samples == phase_len()) begin
+        if (count_samples == cfg.get_ticks_per_bit()) begin
             set_rx_state(DATA);
             rbr = 0;
         end else
-        if (cfg.LOOPBACK && count_samples > 1 && count_samples <= (cfg.DIVISOR * (NUM_TICKS - 1)))   // skipping edges
+        if (cfg.LOOPBACK && count_samples > 1 && count_samples <= (cfg.DIVISOR * (NUM_TICKS - 1)))   // skip edges
             assert(get_input() == 0) else
             uvm_report_error(get_name(), "START state: sample is not 0");
         else
@@ -287,13 +307,13 @@ class scoreboard extends uvm_scoreboard;
     endfunction
 
     function void check_state_data;
-        if (count_samples == (phase_len() / 2)) begin
+        if (count_samples == (cfg.get_ticks_per_bit() / 2)) begin
             rbr = rbr | (get_input() << tx_bit_count);
             uvm_report_info(get_name(),
                 $sformatf("Current RBR=%0h, rx_bit=%0d", rbr, get_input()), UVM_HIGH
             );
         end
-        if (count_samples == phase_len()) begin
+        if (count_samples == cfg.get_ticks_per_bit()) begin
             count_samples = 0;
             tx_bit_count++;
             //uvm_report_info(get_name(), pins.convert2string());
@@ -308,12 +328,12 @@ class scoreboard extends uvm_scoreboard;
 
         // verify it is constant
         if (count_samples >= cfg.DIVISOR && count_samples <= (cfg.DIVISOR * (NUM_TICKS - 1)))  // skipping edges
-            assert(prev_sout == get_input())
-            else uvm_report_error(get_name(),
-                $sformatf("PARITY state: sample is not %0d", prev_sout)
+            assert(prev_sout == get_input()) else
+            uvm_report_error(get_name(),
+                $sformatf("PARITY state: sample is not stable %0d", prev_sout)
             );
 
-        if (count_samples == phase_len()) begin
+        if (count_samples == cfg.get_ticks_per_bit()) begin
             parity_bit = prev_sout;
             set_rx_state(STOP);
         end
@@ -342,7 +362,7 @@ class scoreboard extends uvm_scoreboard;
 
         // check stop bit is constant value:
         if (rx_state == STOP_HALF) begin
-            if (count_samples < (cfg.DIVISOR * NUM_TICKS / 2))
+            if (count_samples < (cfg.get_ticks_per_bit() / 2))
                 assert_stop_steady(prev_sout);
         end
         if (rx_state == STOP2) begin
@@ -355,10 +375,10 @@ class scoreboard extends uvm_scoreboard;
         end
 
         // switch to next state:
-        if (rx_state == STOP_HALF && count_samples == cfg.DIVISOR * (NUM_TICKS / 2))
+        if (rx_state == STOP_HALF && count_samples == (cfg.get_ticks_per_bit() / 2))
             set_rx_state(IDLE);
         else
-        if (count_samples == phase_len()) begin
+        if (count_samples == cfg.get_ticks_per_bit()) begin
             if (rx_state == STOP && cfg.STOP_BITS == 2)
                 set_rx_state(cfg.WORD_LEN == 5 ? STOP_HALF : STOP2);
             else
@@ -385,7 +405,7 @@ class scoreboard extends uvm_scoreboard;
         end
 
         // if not BREAK state then check stop bit is 1
-        if (count_samples == ((phase_len() / 2) - 1)) begin  // suites for all stop bits
+        if (count_samples == ((cfg.get_ticks_per_bit() / 2) - 1)) begin  // suites for all stop bits
             assert(get_input() == 1) else if (cfg.LOOPBACK)
                 uvm_report_error(get_name(), "STOP state: sample is not 1");
             else
@@ -405,10 +425,6 @@ class scoreboard extends uvm_scoreboard;
                 $sformatf("parity bit is not %0d", parity_val)
             );
         end
-    endfunction
-
-    function int phase_len;
-        return cfg.DIVISOR * NUM_TICKS;
     endfunction
 
     function int state_on;

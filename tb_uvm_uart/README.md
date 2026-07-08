@@ -31,12 +31,18 @@
   - Data Override cases
   - Recieve invalid parity bits
   - Recieve invalid stop bits
+- Glitched Rx bits test
+
 
 TODO:
 - Fifo disabled, interrupts enabled:
   - Trigger all interrupts
 - Fifo enabled, interrupts enabled:
   - Trigger all interrupts
-- Glitched Rx bits test
 - Connect external uart module
+
+
+# Glitch test
+Test result for Rx operation with 10% glitchness SUCCESSFUL
+![uvm_glitch_test.png](./uvm_glitch_test.png)
 

@@ -1,8 +1,8 @@
 # UART module
 Implementation of UART16550 according to PC16550D spec (or other TI UARTs like TL16C550)
-Including a simple C++ driver which is being used in a Verilator testbench.
+Including a simple ![C driver](./driver/uart_driver.cpp) which is validated in ![Verilator testbench](./testbench/uart_tb.cpp)
 
-- Glitch suppressing and majority voting features
+- Glitch suppressing and majority voting feature
 - Rx-Tx FIFOs
 - N = 5 to 8 data bits
 - M = 1, 1.5 and 2 stop bits
@@ -17,8 +17,6 @@ Spec references:
 
 
 ## Block diagram:
-The modem features are not implemented for now.
-
 ![arch.png](./doc/arch.png)
 
 
@@ -33,23 +31,9 @@ set divisor to: 100 / (16 * 9600 * (8+3+1/8)) which is a rounded 434.
 ![clock_div.png](./doc/clock_div.png)
 
 
-
-## Run C++ driver testbench:
-```
-make uartcpp
-```
-
-## Run Verilog testbenches:
-```
-make uart       # run all of the below
-
-# specific tests:
-make baud_tb
-make uart_rx_tb
-make uart_tx_tb
-make uart_tb
-make uart_top_tb
-```
+# Glitch resistivity
+Test result for Rx operation with 10% glitchness SUCCESSFUL
+![uvm_glitch_test.png](../tb_uvm_uart/uvm_glitch_test.png)
 
 
 ## Simulation results:
@@ -61,3 +45,20 @@ make uart_top_tb
 uart_tb.vcd: see the input values in the tx_din signal versus the outputs in rx_out signal each tick of rx_done signal:
 ![uart_tb](./doc/uart_tb_2stopbits.png)
 
+
+## Run C driver validation:
+```
+make uartcpp
+```
+
+## Run testbenches:
+```
+make uart       # run all of the below
+
+# specific tests:
+make baud_tb
+make uart_rx_tb
+make uart_tx_tb
+make uart_tb
+make uart_top_tb
+```

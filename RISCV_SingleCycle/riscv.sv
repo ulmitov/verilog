@@ -35,9 +35,12 @@ module riscv #(
     logic rf_wr_en;
     logic dmem_zero_ex;
     op_enum_dmem_size dmem_size;
+
+    `ifdef CLINT_EX_IRQ
     logic irq_sw_pending;
     logic irq_ex_pending;
     logic irq_timer_pending;
+    `endif
 
     // TODO: address decoder
     assign mem_rd_data = (dmem_addr >= DMEM_BASE_ADDRESS && dmem_addr < DMEM_BASE_ADDRESS + MEM_DEPTH) ? dmem_rd_data : dbus_rd_data;

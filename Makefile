@@ -209,7 +209,7 @@ uvm-uart:
 	$(RM_OBJDIR_CMD)
 	$(VERILATOR_UVM_NO_DPI) --top top -Itb_uvm_uart -IUART \
 	$(UVM_HOME)/uvm_pkg.sv modules/shift_reg.v modules/fifo.v UART/uart_apb.sv tb_uvm_uart/top.sv;
-	./obj_dir/Vtop
+	./obj_dir/Vtop #+UVM_TESTNAME=test_single
 	mv coverage.dat vcd/cov_$$(date +%s).dat
 
 

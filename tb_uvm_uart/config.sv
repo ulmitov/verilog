@@ -44,9 +44,13 @@ class top_config extends uvm_object;
         //DIVISOR = 1;
     endfunction
 
+    function int get_ticks_per_bit;
+        return config_pkg::NUM_TICKS * DIVISOR;
+    endfunction
+
     function int get_ticks_per_word;
         real sb = STOP_BITS == 2 && WORD_LEN == 5 ? 1.5 : STOP_BITS;
-        get_ticks_per_word = DIVISOR * config_pkg::NUM_TICKS * (WORD_LEN + sb + PARITY_EN + 1);
+        get_ticks_per_word = get_ticks_per_bit() * (WORD_LEN + sb + PARITY_EN + 1);
     endfunction
 
     function bit get_parity_bit(int value);
@@ -61,7 +65,8 @@ class top_config extends uvm_object;
     endfunction
 
     function int get_divisor(real rate);
-        rate = rate * config_pkg::NUM_TICKS * (WORD_LEN + STOP_BITS + PARITY_EN + 1) / 8;
+        real sb = STOP_BITS == 2 && WORD_LEN == 5 ? 1.5 : STOP_BITS;
+        rate = rate * config_pkg::NUM_TICKS * (WORD_LEN + sb + PARITY_EN + 1) / 8;
         rate = rate * config_pkg::TCLK * 2;
         get_divisor = 10**7 / rate;
     endfunction

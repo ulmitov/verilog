@@ -27,7 +27,7 @@ simulations:
       -image image -code-cov a -uvm 1.2 +UVM_NO_RELNOTES +UVM_NO_DPI
       +UVM_VERBOSITY=UVM_FULL
 
-      +UVM_REPORT_DISABLE_FILE_LINE +UVM_TESTNAME=test_lib
+      +UVM_REPORT_DISABLE_FILE_LINE +UVM_TESTNAME=test_regression
   - name: Elab+Sim MXD 2020
     options: >-
       -top work.top -code-cov a -dump-agg +acc+b -waves waves.mxd -uvm 1.2

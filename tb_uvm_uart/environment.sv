@@ -1,10 +1,10 @@
 class environment extends uvm_env;
     `uvm_component_utils(environment)
 
-    top_config cfg;
     agent_apb agt_apb;
     agent_pin agt_pin;
     scoreboard scb;
+    top_config cfg;
     ral_env ral;
 
     function new(string name = "ENV", uvm_component parent = null);
@@ -13,13 +13,13 @@ class environment extends uvm_env;
 
     function void build_phase(uvm_phase ph);
         super.build_phase(ph);
-        uvm_report_info(get_name(), "BUILD ENV");
-        cfg = top_config::type_id::create();
         agt_apb = agent_apb::type_id::create("AGT_APB", this);
         agt_pin = agent_pin::type_id::create("AGT_PIN", this);
+        cfg = top_config::type_id::create();
         scb = scoreboard::type_id::create("SCB", this);
         ral = ral_env::type_id::create("RAL", this);
         uvm_config_db#(ral_env)::set(null, "*", "ral", ral);
+        uvm_config_db#(top_config)::set(null, "*", "cfg", cfg);
     endfunction
 
     function void connect_phase(uvm_phase ph);
