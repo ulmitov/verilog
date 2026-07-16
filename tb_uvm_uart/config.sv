@@ -21,12 +21,14 @@ endpackage
 class top_config extends uvm_object;
     `uvm_object_utils(top_config)
 
-    int LOOPBACK;
+    bit LOOPBACK;
     int WORD_LEN;
     int STOP_BITS;
-    int PARITY_EN;
-    int EVEN_PARITY;
-    int STICK_PARITY;
+    bit PARITY_EN;
+    bit EVEN_PARITY;
+    bit STICK_PARITY;
+    bit FIFO_EN;
+    bit DLAB_EN;
     logic [`UART_DIV_WIDTH-1:0] DIVISOR = 'bX;
 
     function new(string name="CFG");
@@ -41,7 +43,8 @@ class top_config extends uvm_object;
         EVEN_PARITY = 0;
         STICK_PARITY = 0;
         LOOPBACK = 0;
-        //DIVISOR = 1;
+        FIFO_EN = 0;
+        DLAB_EN = 0;
     endfunction
 
     function int get_ticks_per_bit;

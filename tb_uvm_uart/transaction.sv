@@ -25,10 +25,6 @@ class transaction extends uvm_sequence_item;
         string tpl = "presetn[%0d]  psel[%0d]  penable[%0d]  pready[%0d]  pwrite[%0d]  pslverr[%0d]  paddr[%0x]  pwdata[%0x]  prdata[%0x]\n";
         return $sformatf(tpl, presetn, psel, penable, pready, pwrite, pslverr, paddr, pwdata, prdata);
     endfunction
-    task display(input string name = "");
-        if (name == "") name = get_name();
-        $display("%0t [%s] %s", $time, name, convert2string());
-    endtask
 endclass
 
 
@@ -50,8 +46,4 @@ class pin_sample extends uvm_sequence_item;
         string tpl = "res_n[%0d] rclk[%0d]  sin[%0d]  sout[%0d]  baudout[%0d]  intr[%0d]\n";
         return $sformatf(tpl, res_n, rclk, sin, sout, baudout, intr);
     endfunction
-    task display(input string name = "");
-        if (name == "") name = get_name();
-        $display("%0t [%s] %s", $time, name, convert2string());
-    endtask
 endclass

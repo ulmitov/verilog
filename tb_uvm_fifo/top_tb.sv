@@ -41,8 +41,8 @@ module top_tb;
     always  #(fifo_config::TCLK) clk = ~clk;
     initial run_test("test_regression");
     initial begin
+        //$dumpfile("fifo_top_tb.vcd");
+        //$dumpvars(0);
         uvm_config_db#(virtual fifo_interface)::set(null, "*", "vif", IF);
-        $dumpfile("fifo_top_tb.vcd");
-        $dumpvars(0);
     end
 endmodule

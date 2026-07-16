@@ -50,8 +50,8 @@ module top;
     assign vif_pin.rclk = vif_pin.baudout;
     initial run_test("test_regression");
     initial begin
-        $dumpfile("vcd/top_uart_uvm.vcd");
-        $dumpvars();
+        //$dumpfile("vcd/top_uart_uvm.vcd");
+        //$dumpvars();
         uvm_config_db#(virtual interface_apb)::set(null, "*", "vif_apb", vif_apb);
         uvm_config_db#(virtual interface_pin)::set(null, "*", "vif_pin", vif_pin);
     end

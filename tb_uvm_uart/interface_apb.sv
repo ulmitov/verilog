@@ -15,7 +15,7 @@ interface interface_apb (input logic pclk);
 
 
     clocking cb_drv @(posedge pclk);
-        default input #SETUP_TIME output #HOLDTIME;
+        //default input #SETUP_TIME output #HOLDTIME;
         input pready;
         input pslverr;
         input prdata;
@@ -28,7 +28,7 @@ interface interface_apb (input logic pclk);
     endclocking
 
     clocking cb_mon @(posedge pclk);
-        default input #SETUP_TIME;
+        //default input #SETUP_TIME;
         input presetn;
         input prdata;
         input paddr;

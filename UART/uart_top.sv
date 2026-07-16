@@ -41,6 +41,7 @@ module uart_top (
     logic lsr_rd;
     logic thr_wr;
     logic rbr_rd;
+    logic iir_rd;
     logic rx_ready;
     logic rx_full;
     logic tx_empty;
@@ -50,6 +51,10 @@ module uart_top (
     logic addr_zero;
     logic rx_done;
     logic loopback;
+    logic post_lsr_rd;
+    logic rx_available;
+    logic lsr_elsi;
+    logic lsr_temt;
 
 
     uart #(
@@ -85,83 +90,77 @@ module uart_top (
 
 
     assign loopback     = mcr[`UART_MCR_LOOP];
-    assign divisor      = {dlm, dll};
     assign fifo_en      = fcr[`UART_FCR_FIFOEN];
     assign dlab         = lcr[`UART_LCR_DL];
     assign intr         = ~iir[`UART_IIR_IPEND];
-    assign addr_zero    = ~|addr;
+    assign divisor      = {dlm, dll};
     assign wen          = cs & wr;
     assign ren          = cs & rd;
+    assign baud_load    = wen & dlab;
+    assign addr_zero    = ~|addr;
     assign thr_wr       = wen & ~dlab & addr_zero;
     assign rbr_rd       = ren & ~dlab & addr_zero;
-    //assign rd_uart      = rbr_rd;
     assign data_bus     = ~ddis ? data_out : {`UART_DATA_WIDTH{1'bZ}};
     assign data_in      = ddis ? data_bus : {`UART_DATA_WIDTH{1'bZ}};
-    assign baud_load    = wen & dlab;   // When either of the divisor latches is loaded, a 16-bit baud counter is also loaded to prevent long counts on initial load.
+    assign lsr_rd       = ren & addr == `UART_REG_LSR;
+    assign iir_rd       = ren & addr == `UART_REG_IIR;
+    assign rx_available = rx_done | (fifo_en & rd_uart & ~rx_empty);
+    assign lsr_temt     = tx_empty & tsr_empty;
+    assign lsr_elsi     = lsr[`UART_LSR_OE] | lsr[`UART_LSR_PE] | lsr[`UART_LSR_FE] | lsr[`UART_LSR_BI];
+
+
+    always_ff @(negedge clk) begin
+        if (lsr_rd)
+            post_lsr_rd <= 1;
+        else
+            post_lsr_rd <= 0;
+    end
 
     // set rx_done one tick after data was pushed to fifo
     always_ff @(posedge clk) rx_done <= rx_ready;
     always_ff @(posedge clk) rd_uart <= rbr_rd;
 
     // LSR error flags
-    always_ff @(posedge clk or posedge res) begin
+    always_ff @(negedge clk) begin
         if (res)
             lsr[`UART_LSR_BI] <= 1'b0;
         else
             lsr[`UART_LSR_BI] <= 1'b0;  //TODO
     end
 
-    always_ff @(posedge clk or posedge res) begin
-        if (res)
-            lsr[`UART_LSR_DR] <= 1'b0;
-        else
+    always_ff @(negedge clk) begin
         if (fifo_en)
             lsr[`UART_LSR_DR] <= ~rx_empty;
         else
+        if (res | rbr_rd)
+            lsr[`UART_LSR_DR] <= 1'b0;
+        else
         if (rx_done)
             lsr[`UART_LSR_DR] <= 1'b1;
-        else
-        if (rbr_rd)
-            lsr[`UART_LSR_DR] <= 1'b0;
     end
-
 
     // rd_data is set on the next clock after rd_uart
-    always_ff @(posedge clk or posedge res) begin
-        if (res)
-            lsr[`UART_LSR_PE] <= 1'b0;
-        else
-        if (rx_done | (fifo_en & rd_uart))
+    always_ff @(negedge clk) begin
+        if (rx_available)
             lsr[`UART_LSR_PE] <= rd_data[8];
         else
-        if (lsr_rd | rx_empty)
+        if (res | post_lsr_rd)
             lsr[`UART_LSR_PE] <= 1'b0;
     end
 
-    always_ff @(posedge clk or posedge res) begin
-        if (res)
-            lsr[`UART_LSR_FE] <= 1'b0;
-        else
-        if (lsr_rd | rx_empty)
-            lsr[`UART_LSR_FE] <= 1'b0;
-        else
-        if (rx_done | (fifo_en & rd_uart))
+    always_ff @(negedge clk) begin
+        if (rx_available)
             lsr[`UART_LSR_FE] <= rd_data[9];
+        else
+        if (res | post_lsr_rd)
+            lsr[`UART_LSR_FE] <= 1'b0;
     end
 
-    // When OE is set, it indicates that before the character in the RBR was read,
-    // it was overwritten by the next character transferred into the register.
-    always_ff @(posedge clk or posedge res) begin
-        if (res)
-            lsr[`UART_LSR_OE] <= 1'b0;
-        else
-        if (fifo_en & rx_full & rx_ready)
+    always_ff @(negedge clk) begin
+        if (rx_full & rx_ready)
             lsr[`UART_LSR_OE] <= 1'b1;
         else
-        if (~fifo_en & lsr[`UART_LSR_DR] & rx_done)
-            lsr[`UART_LSR_OE] <= 1'b1;
-        else
-        if (lsr_rd)
+        if (res | post_lsr_rd)
             lsr[`UART_LSR_OE] <= 1'b0;
     end
 
@@ -169,16 +168,13 @@ module uart_top (
         In the 16450 Mode this is a 0. In the FIFO mode LSR7 is set if at least one parity error
         framing error or break indication in the FIFO.
         LSR7 is cleared when the CPU reads the LSR, if there are no subsequent errors in the FIFO. */
-    always_ff @(posedge clk or posedge res) begin
-        if (res)
-            lsr[`UART_LSR_EI] <= 1'b0;
-        else
+    always_ff @(negedge clk) begin
         if (~fifo_en)
             lsr[`UART_LSR_EI] <= 1'b0;
         //else if (rx_done | rd_uart)   // TODO: or BI. Add a counter of fifo errors.
         //    lsr[`UART_LSR_EI] <= rd_data[8] | rd_data[9];
         else
-        if (lsr_rd | rx_empty)
+        if (res | post_lsr_rd)
             lsr[`UART_LSR_EI] <= 1'b0;
     end
 
@@ -188,35 +184,21 @@ module uart_top (
         THRE is cleared concurrent with the loading of the THR by the CPU.
         In the FIFO mode, THRE is set when the transmit FIFO is empty;
         it is cleared when at least one byte is written to the transmit FIFO. */
-    always_ff @(posedge clk or posedge res) begin
+    always_ff @(negedge clk) begin
         if (res)
             lsr[`UART_LSR_TF] <= 1'b1;
         else
-        if (fifo_en)
             lsr[`UART_LSR_TF] <= tx_empty;
-        else
-        if (tx_ready)
-            lsr[`UART_LSR_TF] <= 1'b1;
-        else
-        if (thr_wr)
-            lsr[`UART_LSR_TF] <= 1'b0;
     end
 
     /*  TEMT is set when both THR + TSR are empty!
         When either THR or TSR contains data character, TEMT is cleared.
         In the FIFO mode, TEMT is set when the transmitter FIFO and shift register are both empty.*/
-    always_ff @(posedge clk or posedge res) begin
+    always_ff @(negedge clk) begin
         if (res)
             lsr[`UART_LSR_TE] <= 1'b1;
         else
-        if (fifo_en)
-            lsr[`UART_LSR_TE] <= tx_empty & tsr_empty;
-        else
-        if (thr_wr)
-            lsr[`UART_LSR_TE] <= 1'b0;
-        else
-        if (tx_empty & tsr_empty)
-            lsr[`UART_LSR_TE] <= 1'b1;
+            lsr[`UART_LSR_TE] <= lsr_temt;
     end
 
     // Receiver data available interrupt
@@ -232,16 +214,15 @@ module uart_top (
         endcase
     end
     */
-    assign lsr_rd = ren & addr == `UART_REG_LSR;
 
     // Read regs
     always_latch begin
         if (ren) begin
             case (addr)
+                `UART_REG_MCR: data_out = mcr;
                 `UART_REG_LCR: data_out = lcr;
                 `UART_REG_LSR: data_out = lsr;
                 `UART_REG_IIR: data_out = iir;
-                `UART_REG_MCR: data_out = mcr;
                 `UART_REG_IER: begin
                     if (dlab)
                         data_out = dlm;
@@ -276,8 +257,8 @@ module uart_top (
         if (wen) begin
             case (addr)
                 `UART_REG_IER: ier <= (data_in & 'h0F);
-                `UART_REG_LCR: lcr <= data_in;
                 `UART_REG_FCR: fcr <= data_in;
+                `UART_REG_LCR: lcr <= data_in;
                 `UART_REG_MCR: mcr <= (data_in & 'h3F);
             endcase
         end else begin
@@ -286,32 +267,74 @@ module uart_top (
             fcr[`UART_FCR_RXCLR] <= 1'b0;
         end
     end
-
+    /*
+    // Set and clear ETBEI
+    logic tx_empty_edge;
+    logic tx_empty_set;
+    
+    logic etbei_pend;
+    assign tx_empty_edge = tx_empty & ~tx_empty_set;
+    always_ff @(posedge clk) tx_empty_set <= tx_empty;
     always_ff @(posedge clk) begin
-        iir[`UART_IIR_UNUSED +: 2] <= 2'b0;
-        iir[`UART_IIR_FIFOEN +: 2] <= {fifo_en, fifo_en};
+        if (iir[`UART_IIR_INTID +: 3] == `UART_IIR_THRE)
+            etbei_pend <= 1;
+        else
+            etbei_pend <= 0;
+    end
+    always_ff @(negedge clk) begin
+        if (tx_empty_edge)
+            etbei_val <= 1'b1;
+        else if ((iir_rd & etbei_pend) | res)
+            etbei_val <= 1'b0;
+    end
 
-        // Set Interrups Priorities  // TODO: receiver character time-out UART_IIR_TI
-        if (ier[`UART_IER_ELSI] & (lsr[`UART_LSR_OE] | lsr[`UART_LSR_PE] | lsr[`UART_LSR_FE] | lsr[`UART_LSR_BI])) begin
+
+    // This design looks very good and looks like works alright:
+    always_latch begin
+        if (~ier[`UART_IER_ETBEI])
+            clear_etbei = 0;
+        else if (~iir[`UART_IIR_IPEND] & iir[`UART_IIR_INTID +: 3] != `UART_IIR_THRE)
+            clear_etbei = 0;
+        else if (iir_rd & iir[`UART_IIR_INTID +: 3] == `UART_IIR_THRE)
+            clear_etbei = 1;
+    end
+    */
+    logic etbei_val;
+    logic clear_etbei;
+    assign clear_etbei = 0;
+    assign etbei_val = tx_empty;
+    // TODO: receiver character time-out UART_IIR_TI
+    always_ff @(posedge clk) begin
+        // Set Interrups Priorities
+        if (ier[`UART_IER_ELSI] & lsr_elsi & ~post_lsr_rd) begin
             iir[`UART_IIR_INTID +: 3] <= `UART_IIR_RLS;
             iir[`UART_IIR_IPEND] <= 1'b0;
+            //clear_etbei <= 0;
         end else
-        if(ier[`UART_IER_ERBFI] & lsr[`UART_LSR_DR]) begin
+        if (ier[`UART_IER_ERBFI] & lsr[`UART_LSR_DR]) begin
             iir[`UART_IIR_INTID +: 3] <= `UART_IIR_RDA;
             iir[`UART_IIR_IPEND] <= 1'b0;
+            //clear_etbei <= 0;
         end else
-        if(ier[`UART_IER_ETBEI] & lsr[`UART_LSR_TF]) begin
-            iir[`UART_IIR_INTID +: 3] <= `UART_IIR_THRE;
-            iir[`UART_IIR_IPEND] <= 1'b0;
+        if (ier[`UART_IER_ETBEI] & etbei_val & ~clear_etbei) begin
+                iir[`UART_IIR_INTID +: 3] <= `UART_IIR_THRE;
+                iir[`UART_IIR_IPEND] <= 1'b0;
+                //if (iir_rd) clear_etbei <= 1;
         end else
+        /*
         if (ier[`UART_IER_EDSSI] & 1'b0) begin
             iir[`UART_IIR_INTID +: 3] <= `UART_IIR_MS;
             iir[`UART_IIR_IPEND] <= 1'b0;
         end else
+        */
         begin
             iir[`UART_IIR_INTID +: 3] <= 3'b0;
             iir[`UART_IIR_IPEND] <= 1'b1;
         end
+        //if (~ier[`UART_IER_ETBEI]) clear_etbei <= 0;
+        // other bits:
+        iir[`UART_IIR_FIFOEN +: 2] <= {fifo_en, fifo_en};
+        iir[`UART_IIR_UNUSED +: 2] <= 2'b0;
     end
 
     // Divisor latches

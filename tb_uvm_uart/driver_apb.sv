@@ -1,22 +1,21 @@
-`define DCB vif_apb.mp_drv.cb_drv
+`define DCB vif.mp_drv.cb_drv
+`define APB_SKIP_SETUP
 
 
 class driver_apb extends uvm_driver#(transaction);
     `uvm_component_utils(driver_apb)
-
-    virtual interface_apb vif_apb;
-    longint count;
+    virtual interface_apb vif;
+    longint count = 0;
 
     function new(string name, uvm_component parent);
         super.new(name, parent);
-        count = 0;
     endfunction
 
     function void build_phase(uvm_phase ph);
         super.build_phase(ph);
         req = transaction::type_id::create("REQ");
         rsp = transaction::type_id::create("RSP");
-        if (!uvm_config_db#(virtual interface_apb)::get(this, "", "vif_apb", vif_apb))
+        if (!uvm_config_db#(virtual interface_apb)::get(this, "", "vif_apb", vif))
             uvm_report_fatal(get_name(), "vif_apb is not in db");
     endfunction
 
@@ -42,23 +41,35 @@ class driver_apb extends uvm_driver#(transaction);
     endtask
 
     task drive();
-        // SETUP PHASE
         uvm_report_info(get_name(), req.convert2string(), UVM_FULL);
         `DCB.psel   <= req.psel;
         `DCB.paddr  <= req.paddr;
         `DCB.pwrite <= req.pwrite;
         `DCB.pwdata <= req.pwdata;
         `DCB.presetn <= req.presetn;
-        `DCB.penable <= 1'b0;
-        repeat(req.delay_cycles) @(`DCB);       // injecting cycles delay via sequence
+        if (req.delay_cycles | ~req.presetn | ~req.psel)
+            `DCB.penable <= 1'b0;
+
+        // forcing delay via sequences
+        repeat(req.delay_cycles) @(`DCB);
         if (~req.presetn | ~req.psel) @(`DCB) return;
         count++;
+
+        // APB inserts additional clock phase which makes testing too much tolerant
+        `ifdef APB_SKIP_SETUP
+            `DCB.penable <= 1'b1;
+            @(`DCB) `DCB.penable <= 1'b0;
+            return;
+        `endif
+
+        // SETUP PHASE
+        `DCB.penable <= 1'b0;
 
         // ACCESS PHASE
         @(`DCB) `DCB.penable <= 1'b1;
         while (`DCB.pready !== 1'b1) @(`DCB);
+
         // IDLE PHASE
         `DCB.penable <= 1'b0;
-        //`DCB.psel <= 1'b0;
     endtask
 endclass

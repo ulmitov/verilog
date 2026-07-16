@@ -46,8 +46,8 @@ module top_tb;
     always  #(mem_config::T_CLK) wclk = ~wclk;
     initial run_test("test_regression");
     initial begin
-        $dumpfile("top_tb_mem.vcd");
-        $dumpvars(0, top_tb);
+        //$dumpfile("top_tb_mem.vcd");
+        //$dumpvars(0);
         uvm_config_db #(virtual mem_interface)::set(null, "*", "vif", mif);
         // Wait for memory init task event
         ev_init = uvm_event_pool::get_global_pool().get("EV_INIT");

@@ -54,10 +54,10 @@ module uart_apb #(parameter APB_DATA_WIDTH = 32) (
         .wr(wr),
         .rd(rd),
         .addr(paddr),
+        .ddis(pwrite),
         .data_bus(data_bus),
         .rclk(rclk),
         .sin(sin),
-        .ddis(pwrite),
     // outputs:
         .sout(sout),
         .baudout(baudout),

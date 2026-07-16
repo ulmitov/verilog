@@ -29,6 +29,7 @@ class base_sequence extends uvm_sequence#(transaction);
     patterns_arr patterns;
     int fifo [$] = {};
     int result;
+    bit check_interrupts = 0;
 
     function new(string name = "SEQ");
         super.new(name);
@@ -43,10 +44,15 @@ class base_sequence extends uvm_sequence#(transaction);
         if (!uvm_config_db#(ral_env)::get(null, "", "ral", ral))
             uvm_report_fatal(get_name(), "RAL object is not in DB");
         seq_reset();    // reset before each test and check registers after reset
+        seq_read_regs();
+    endtask
+
+    virtual task post_start;
+        seq_read_regs();
     endtask
 
     task seq_reset;
-        uvm_report_info(get_name(), "--- RESET START ---");
+        uvm_report_info(get_name(), "--- RESET START ---", UVM_HIGH);
         repeat(2) begin
             start_item(req);
             req.presetn = 1'b0;
@@ -58,7 +64,6 @@ class base_sequence extends uvm_sequence#(transaction);
         finish_item(req);
         cfg.init();
         ral.csr.reset();
-        seq_read_regs();
     endtask
 
     task seq_set_dlab(input int en);
@@ -121,10 +126,14 @@ class base_sequence extends uvm_sequence#(transaction);
     endtask
 
     task seq_set_fcr(input int value);
+        int val;
         ral.csr.fcr.write(status, value);
-        //value = value & ((1 << DWIDTH) - 1);
         assert(status == UVM_IS_OK) else
         uvm_report_fatal(get_name(), "FCR write failed");
+        // update IIR
+        val = value & (1 << `UART_FCR_FIFOEN) ? 3 << `UART_IIR_FIFOEN : 0;
+        if (!ral.csr.iir.predict(val))
+            uvm_report_error(get_name(), "PREDICT IIR FAILED");
     endtask
 
     task seq_set_dll(input int value);
@@ -146,7 +155,7 @@ class base_sequence extends uvm_sequence#(transaction);
         uvm_report_error(get_name(), "Read DLL failed");
         assert(result == ral.csr.dll.get_mirrored_value()) else
         uvm_report_error(get_name(),
-            $sformatf("Result %0h is not %0h", result, ral.csr.dll.get_mirrored_value())
+            $sformatf("DLL Result %0h is not %0h", result, ral.csr.dll.get_mirrored_value())
         );
         // the status and second bus2reg come from do_bus_write and do_bus_read   !!!
         ral.set_default_map();
@@ -164,38 +173,38 @@ class base_sequence extends uvm_sequence#(transaction);
         uvm_report_error(get_name(), "Read DLH failed");
         assert(result == ral.csr.dlh.get_mirrored_value()) else
         uvm_report_error(get_name(),
-            $sformatf("Result %0h is not %0h", result, ral.csr.dlh.get_mirrored_value())
+            $sformatf("DLH Result %0h is not %0h", result, ral.csr.dlh.get_mirrored_value())
         );
         ral.set_default_map();
     endtask
 
     task seq_set_ier(input int value, output int res);
+        uvm_report_info(get_name(), $sformatf("--- IER set to %0h ---", value));
         ral.csr.ier.write(status, value);
-        value = value & ((1 << DWIDTH) - 1);
         assert(status == UVM_IS_OK) else
         uvm_report_error(get_name(), "Write IER failed");
 
         ral.csr.ier.read(status, res);
         assert(status == UVM_IS_OK) else
         uvm_report_error(get_name(), "Read IER failed");
-        assert(res == ral.csr.ier.get_mirrored_value())
-        else uvm_report_error(get_name(),
-            $sformatf("Result %0h is not %0h", res, ral.csr.ier.get_mirrored_value())
+
+        assert(res == ral.csr.ier.get_mirrored_value()) else
+        uvm_report_error(get_name(),
+            $sformatf("IER Result %0h is not %0h", res, ral.csr.ier.get_mirrored_value())
         );
     endtask
 
     task seq_set_lcr(input int value, output int res);
         ral.csr.lcr.write(status, value);
-        //value = value & ((1 << DWIDTH) - 1);
         assert(status == UVM_IS_OK) else
         uvm_report_error(get_name(), "Write LCR failed");
 
         ral.csr.lcr.read(status, res);
         assert(status == UVM_IS_OK) else
         uvm_report_error(get_name(), "Read LCR failed");
-        assert(res == ral.csr.lcr.get_mirrored_value())
-        else uvm_report_error(get_name(),
-            $sformatf("Result %0h is not %0h", res, ral.csr.lcr.get_mirrored_value())
+        assert(res == ral.csr.lcr.get_mirrored_value()) else
+        uvm_report_error(get_name(),
+            $sformatf("LCR Result %0h is not %0h", res, ral.csr.lcr.get_mirrored_value())
         );
     endtask
 
@@ -208,9 +217,9 @@ class base_sequence extends uvm_sequence#(transaction);
         ral.csr.mcr.read(status, res);
         assert(status == UVM_IS_OK) else
         uvm_report_error(get_name(), "Read MCR failed");
-        assert(res == ral.csr.mcr.get_mirrored_value())
-        else uvm_report_error(get_name(),
-            $sformatf("Result %0h is not %0h", res, ral.csr.mcr.get_mirrored_value())
+        assert(res == ral.csr.mcr.get_mirrored_value()) else
+        uvm_report_error(get_name(),
+            $sformatf("MCR Result %0h is not %0h", res, ral.csr.mcr.get_mirrored_value())
         );
     endtask
 
@@ -220,32 +229,81 @@ class base_sequence extends uvm_sequence#(transaction);
         uvm_report_error(get_name(), "Read LSR failed");
     endtask
 
-    task seq_get_iir(output integer value);
+    task seq_get_iir(
+        output int value,
+        input bit elsi = 0,
+        input bit erbfi = 0,
+        input int etbei = 0
+    );
+        bit etbei_set = 0;
+        int ier = ral.csr.ier.get_mirrored_value();
+        int val = ral.csr.iir.get_mirrored_value();
+        int other_bits = val & (3 << `UART_IIR_FIFOEN) | (1 << `UART_IIR_IPEND);    // ipend 1 if etbei is cleared
+
         ral.csr.iir.read(status, value);
         assert(status == UVM_IS_OK) else
         uvm_report_error(get_name(), "Read IIR failed");
-        assert(value == ral.csr.iir.get_mirrored_value()) else
-        uvm_report_error(get_name(),
-            $sformatf("Result %0h is not %0h", value, ral.csr.iir.get_mirrored_value())
+
+        if (ier) begin
+            if (elsi && (ier & (1 << `UART_IER_ELSI)))
+                val = (other_bits & ~(1 << `UART_IIR_IPEND)) | `UART_IIR_RLS << `UART_IIR_INTID;
+            else
+            if (erbfi && (ier & (1 << `UART_IER_ERBFI)))
+                val = (other_bits & ~(1 << `UART_IIR_IPEND)) | `UART_IIR_RDA << `UART_IIR_INTID;
+            else
+            if (etbei == 1 && (ier & (1 << `UART_IER_ETBEI))) begin
+                val = (other_bits & ~(1 << `UART_IIR_IPEND)) | `UART_IIR_THRE << `UART_IIR_INTID;
+                etbei_set = 1;
+            // all places where x is set should be probably 0 if etbei clearing is implemented
+            // for now treat as dont care, later remove and uncomment the last line
+            end else if (etbei == 2 && (ier & (1 << `UART_IER_ETBEI))) begin
+                if ((value & ((1 << `UART_IIR_IPEND))) == 0)
+                    val = ((other_bits & ~(1 << `UART_IIR_IPEND))) | (`UART_IIR_THRE << `UART_IIR_INTID);
+            end else    // no interrupt expected
+                val = other_bits;
+            if (!ral.csr.iir.predict(val)) uvm_report_error(get_name(), "IIR PREDICT FAILED");
+        end
+        assert(value == ral.csr.iir.get_mirrored_value())
+        uvm_report_info(get_name(), $sformatf("IIR Result %0h is OK", value), UVM_HIGH);
+        else uvm_report_error(get_name(),
+            $sformatf("IIR value %0h is not as mirrored %0h", value, ral.csr.iir.get_mirrored_value())
         );
+        //if (etbei_set) void'(ral.csr.iir.predict(other_bits));  // ETBEI is cleared after IIR read
     endtask
 
     task seq_read_regs;
+        // LCR
         ral.csr.lcr.read(status, result);
         assert(status == UVM_IS_OK) else
         uvm_report_error(get_name(), "Read LCR failed");
         assert(result == ral.csr.lcr.get_mirrored_value()) else
         uvm_report_error(get_name(),
-            $sformatf("Result %0h is not %0h", result, ral.csr.lcr.get_mirrored_value())
+            $sformatf("LCR Result %0h is not %0h", result, ral.csr.lcr.get_mirrored_value())
         );
-
+        // LSR
         seq_get_lsr(result);
         assert(result == ral.csr.lsr.get_mirrored_value()) else
         uvm_report_error(get_name(),
-            $sformatf("Result %0h is not %0h", result, ral.csr.lsr.get_mirrored_value())
+            $sformatf("LSR Result %0h is not %0h", result, ral.csr.lsr.get_mirrored_value())
         );
-        seq_set_ier('hFF, result);
-        seq_get_iir(result);
+        // IER
+        ral.csr.ier.read(status, result);
+        assert(status == UVM_IS_OK) else
+        uvm_report_error(get_name(), "Read IER failed");
+        assert(result == ral.csr.ier.get_mirrored_value()) else
+        uvm_report_error(get_name(),
+            $sformatf("IER Result %0h is not %0h", result, ral.csr.ier.get_mirrored_value())
+        );
+        // IIR
+        seq_get_iir(result, .etbei(2));
+        // MCR
+        ral.csr.mcr.read(status, result);
+        assert(status == UVM_IS_OK) else
+        uvm_report_error(get_name(), "Read MCR failed");
+        assert(result == ral.csr.mcr.get_mirrored_value()) else
+        uvm_report_error(get_name(),
+            $sformatf("MCR Result %0h is not %0h", result, ral.csr.mcr.get_mirrored_value())
+        );
     endtask
 
     task seq_uart_write(input int value);
@@ -263,9 +321,11 @@ class base_sequence extends uvm_sequence#(transaction);
         assert(status == UVM_IS_OK) else
         uvm_report_error(get_name(), "Read RBR failed");
 
-        if (!$isunknown(expected_val))
+        if (!$isunknown(expected_val)) begin
+            expected_val = expected_val & ((1 << cfg.WORD_LEN) - 1);
             assert(res == expected_val) else
             uvm_report_error(get_name(), $sformatf("RBR value %0h is not %0h", res, expected_val));
+        end
     endtask
 
     task seq_wait_clk_ticks(input int wait_ticks);
@@ -280,12 +340,10 @@ class base_sequence extends uvm_sequence#(transaction);
     endtask
 
     task poll_lsr_tf;
-        input int wait_ticks;
         output int res;
-        if (!wait_ticks) wait_ticks = cfg.DIVISOR;
-        uvm_report_info(get_name(), "Polling TF...", UVM_HIGH);
         repeat(`UART_TICKS_NUM * 12) begin   // 12 bits await
-            if (wait_ticks) seq_wait_clk_ticks(wait_ticks);
+            uvm_report_info(get_name(), "Polling TF...", UVM_HIGH);
+            seq_wait_clk_ticks(cfg.DIVISOR);
             seq_get_lsr(res);
             if (res & (1 << `UART_LSR_TF)) break;
         end
@@ -295,12 +353,12 @@ class base_sequence extends uvm_sequence#(transaction);
         );
     endtask
 
-    task poll_lsr_dr;
-        input int wait_ticks;
-        output int res;
-        if (!wait_ticks) wait_ticks = cfg.DIVISOR;  // width of baud tick
-        uvm_report_info(get_name(), "Polling DR...", UVM_HIGH);
+    task poll_lsr_dr(
+        output int res,
+        input int wait_ticks = cfg.DIVISOR
+    );
         repeat(`UART_TICKS_NUM * 12) begin          // 12 bits await
+            uvm_report_info(get_name(), "Polling DR...", UVM_HIGH);
             if (wait_ticks) seq_wait_clk_ticks(wait_ticks);
             seq_get_lsr(res);
             if (res & (1 << `UART_LSR_DR)) break;
@@ -310,12 +368,10 @@ class base_sequence extends uvm_sequence#(transaction);
     endtask
 
     task poll_lsr_oe;
-        input int wait_ticks;
         output int res;
-        if (!wait_ticks) wait_ticks = cfg.DIVISOR;  // width of baud tick
-        uvm_report_info(get_name(), "Polling OE...", UVM_HIGH);
         repeat(`UART_TICKS_NUM * 12) begin          // 12 bits await
-            if (wait_ticks) seq_wait_clk_ticks(wait_ticks);
+            uvm_report_info(get_name(), "Polling OE...", UVM_HIGH);
+            seq_wait_clk_ticks(cfg.DIVISOR);// width of baud tick
             seq_get_lsr(res);
             if (res & (1 << `UART_LSR_OE)) break;
         end
@@ -323,18 +379,63 @@ class base_sequence extends uvm_sequence#(transaction);
         uvm_report_error(get_name(), $sformatf("LSR is %0h but expected OE", res));
     endtask
 
-    task poll_lsr_te;
-        input int wait_ticks;
-        output int res;
-        if (!wait_ticks) wait_ticks = cfg.DIVISOR;
-        uvm_report_info(get_name(), "Polling TE...", UVM_HIGH);
+    task poll_lsr_te(
+        output int res,
+        input int wait_ticks = cfg.DIVISOR
+    );
         repeat(`UART_TICKS_NUM * 12) begin          // 12 bits await
+            uvm_report_info(get_name(), "Polling TE...", UVM_HIGH);
             if (wait_ticks) seq_wait_clk_ticks(wait_ticks);
             seq_get_lsr(res);
             if (res & (1 << `UART_LSR_TE)) break;
         end
         assert(res & (1 << `UART_LSR_TE)) else
         uvm_report_error(get_name(), $sformatf("LSR is %0h but expected TE", res));
+    endtask
+
+    task wait_for_irq(
+        output int res,
+        input bit elsi = 0,
+        input bit erbfi = 0,
+        input bit etbei = 0,
+        input int wait_ticks = cfg.DIVISOR   // width of baud tick
+    );
+        int val = 0;
+        int ier = ral.csr.ier.get_mirrored_value();
+        if (!ier) return;
+        if (elsi && (ier & (1 << `UART_IER_ELSI)))
+            val = `UART_IIR_RLS;
+        else if (erbfi && (ier & (1 << `UART_IER_ERBFI)))
+            val = `UART_IIR_RDA;
+        else if (etbei && (ier & (1 << `UART_IER_ETBEI)))
+            val = `UART_IIR_THRE;
+        else begin
+            uvm_report_warning(get_name(),
+                $sformatf("Not waiting for IRQ due to irrelevant IER setting %0h", ral.csr.ier.get_mirrored_value()),
+                UVM_HIGH
+            );
+            return;
+        end
+
+        uvm_report_info(get_name(), $sformatf("Waiting for IRQ %3b", val));
+        repeat(`UART_TICKS_NUM * 12) begin          // 12 bits await
+            if (wait_ticks) seq_wait_clk_ticks(wait_ticks);
+            ral.csr.iir.read(status, res);
+            assert(status == UVM_IS_OK) else
+            uvm_report_error(get_name(), "Read IIR failed");
+            if (!(res & (1 << `UART_IIR_IPEND)) && (((res >> `UART_IIR_INTID) & 'h7) == val))
+                break;
+        end
+
+        assert(!(res & (1 << `UART_IIR_IPEND))) else
+        uvm_report_error(get_name(), $sformatf("IIR is %0h but expected IPEND to be set", res));
+
+        assert(((res >> `UART_IIR_INTID) & 'h7) == val)
+            uvm_report_info(get_name(), "IRQ recieved", UVM_HIGH);
+        else
+            uvm_report_error(get_name(),
+                $sformatf("IIR is 0x%0h but expected interrupt type %3b", res, val)
+            );
     endtask
 
     task fill_fifo_randomly;
@@ -347,8 +448,8 @@ class base_sequence extends uvm_sequence#(transaction);
         end
     endtask
 
-    /* Body iterates over all settings, to be run by test sequences. 40 iterations in total. */
-    virtual task body;
+    /* Sub Body iterates over all settings, to be run by test sequences. 40 iterations in total. */
+    task sub_body;
         int disabled_parity;
 
         //for (int wl = 1; wl < 2; wl = wl + 1) begin
@@ -365,6 +466,10 @@ class base_sequence extends uvm_sequence#(transaction);
                     if (!(pb & 1) && ((pb >> 1) != disabled_parity))
                         continue;
                     seq_set_parity(pb);
+                    uvm_report_info(get_name(),
+                        $sformatf("--- WL[%0d] SB[%0d] PEN[%0d] EP[%0d] SP[%0d] ---",
+                        cfg.WORD_LEN, cfg.STOP_BITS, cfg.PARITY_EN, cfg.EVEN_PARITY, cfg.STICK_PARITY)
+                    );
                     seq_test();
                 end
             end
@@ -373,6 +478,34 @@ class base_sequence extends uvm_sequence#(transaction);
 
     virtual task seq_test;
         uvm_report_info(get_name(), "Test logic to be implemented here");
+    endtask
+
+    /* 7 iterations with sub_body (300 iterations total) */
+    virtual task body;
+        //seq_set_ier(0, result);
+        //sub_body();
+        if (!check_interrupts) return;
+
+        seq_set_ier(1 << `UART_IER_ETBEI, result);
+        sub_body();
+
+        seq_set_ier(1 << `UART_IER_ERBFI, result);
+        sub_body();
+
+        seq_set_ier(1 << `UART_IER_ELSI, result);
+        sub_body();
+
+        seq_set_ier((1 << `UART_IER_ERBFI) | (1 << `UART_IER_ETBEI), result);
+        sub_body();
+
+        seq_set_ier((1 << `UART_IER_ERBFI) | (1 << `UART_IER_ELSI), result);
+        sub_body();
+
+        seq_set_ier((1 << `UART_IER_ETBEI) | (1 << `UART_IER_ELSI), result);
+        sub_body();
+
+        seq_set_ier((1 << `UART_IER_ERBFI) | (1 << `UART_IER_ETBEI) | (1 << `UART_IER_EDSSI) | (1 << `UART_IER_ELSI), result);
+        sub_body();
     endtask
 endclass
 
@@ -384,19 +517,26 @@ class seq_lib extends uvm_sequence_library #(transaction);
         super.new(name);
         selection_mode = UVM_SEQ_LIB_USER;
         min_random_count = 1;
-        max_random_count = 12;
-        sequence_count = 12;
+        max_random_count = 20;
+        sequence_count = 14;
 
         add_sequence(sequence_csr::get_type());
         add_sequence(sequence_baud::get_type());
-        add_sequence(sequence_loopback_wr_rd::get_type());
-        add_sequence(sequence_write_read_byte_fifo::get_type());
-        add_sequence(sequence_write_read_string::get_type());
+
+        add_sequence(sequence_loopback::get_type());
+        add_sequence(sequence_loopback_fifo::get_type());
+
+        add_sequence(sequence_write_string_read_each_dr::get_type());
+        add_sequence(sequence_write_string_read_after_te::get_type());
+
         add_sequence(sequence_send_sin::get_type());
         add_sequence(sequence_send_sin_fifo_en::get_type());
+        add_sequence(sequence_send_sin_fifo_en_consecutive_errors::get_type());
+
         add_sequence(sequence_polling_mode_fifo_dis_oe_case_read_before_oe::get_type());
         add_sequence(sequence_polling_mode_fifo_dis_oe_case_read_after_oe::get_type());
         add_sequence(sequence_polling_mode_fifo_dis_oe_case_read_after_multiple_oe::get_type());
+
         add_sequence(sequence_polling_mode_fifo_en_oe_case::get_type());
         add_sequence(sequence_send_sin_fifo_dis_glitch::get_type());
 
@@ -428,7 +568,7 @@ class sequence_baud extends base_sequence;
         int unsigned patterns [];
         int unsigned baud_patterns [];
         bit [`UART_DIV_WIDTH-1:0] val;
-        uvm_report_info(get_name(), "***** Baud generator seuqences *****");
+        uvm_report_info(get_name(), "--- Baud generator seuqences ---");
 
         baud_patterns = new[num + SEQ_REPEAT];
         patterns = new[num];
@@ -496,9 +636,9 @@ class sequence_csr extends base_sequence;
         assert(status == UVM_IS_OK) else
         uvm_report_error(get_name(), "Write LSR failed");
         seq_get_lsr(result);
-        assert(result == ral.csr.lsr.get_mirrored_value())
-        else uvm_report_error(get_name(),
-            $sformatf("Result %0h is not %0h", result, ral.csr.lsr.get_mirrored_value())
+        assert(result == ral.csr.lsr.get_mirrored_value()) else
+        uvm_report_error(get_name(),
+            $sformatf("LSR Result %0h is not %0h", result, ral.csr.lsr.get_mirrored_value())
         );
     endtask
 
@@ -511,6 +651,7 @@ class sequence_csr extends base_sequence;
 
         patterns = get_patterns();
         foreach (patterns[i]) seq_set_ier(patterns[i], result);
+        seq_set_ier(0, result);
 
         patterns = get_patterns();
         foreach (patterns[i]) seq_set_mcr(patterns[i], result);
@@ -521,7 +662,7 @@ class sequence_csr extends base_sequence;
     endtask
 
     task body;
-        uvm_report_info(get_name(), "***** Write read CSR seuqences *****");
+        uvm_report_info(get_name(), "--- Write read CSR seuqences ---");
         // Dlab is on
         seq_set_dlab(1);
         patterns = get_patterns();
@@ -539,10 +680,10 @@ endclass
 
 
 /*
-No fifo, no interrupts, write+read byte by byte in loopback mode
+No fifo, write+read byte by byte in loopback mode
 */
-class sequence_loopback_wr_rd extends base_sequence;
-    `uvm_object_utils(sequence_loopback_wr_rd)
+class sequence_loopback extends base_sequence;
+    `uvm_object_utils(sequence_loopback)
     function new(string name = "SEQ");
         super.new(name);
     endfunction
@@ -558,6 +699,12 @@ class sequence_loopback_wr_rd extends base_sequence;
         foreach (patterns[i]) seq_write_read(patterns[i]);
     endtask
 
+    task seq_write_read(input int value);
+        seq_uart_write(value);
+        poll_lsr();
+        seq_uart_read(value, result);
+    endtask
+
     task poll_lsr;
         // after write TF should be 0.
         // then after up to 16 baud ticks goes to 1.
@@ -565,38 +712,30 @@ class sequence_loopback_wr_rd extends base_sequence;
         seq_get_lsr(result);
         assert(result == 0) else
         uvm_report_error(get_name(), $sformatf("LSR is %0h but expected 0", result));
+        seq_get_iir(result);
 
-        poll_lsr_tf(0, result);
-        poll_lsr_te(0, result);
+        poll_lsr_tf(result);
+        seq_get_iir(result, .etbei(1));
+        seq_get_iir(result, .etbei(2));
+
+        poll_lsr_te(result);
         assert(result & ((1 << `UART_LSR_TF) | (1 << `UART_LSR_TE))) else
         uvm_report_error(get_name(), $sformatf("LSR is %0h but expected TE", result));
+        seq_get_iir(result, .etbei(1));
 
-        poll_lsr_dr(0, result);
+        poll_lsr_dr(result);
         assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE))) else
         uvm_report_error(get_name(), $sformatf("LSR is %0h but expected DR+TF+TE", result));
-    endtask
-
-    task seq_write_read(input int value);
-        uvm_report_info(get_name(), "-------------------------------------------");
-        uvm_report_info(get_name(),
-            $sformatf("--- WRITE READ %0h: WL=%0d SB=%0d PEN=%0d EP=%0d SP=%0d ---",
-            value, cfg.WORD_LEN, cfg.STOP_BITS, cfg.PARITY_EN, cfg.EVEN_PARITY, cfg.STICK_PARITY)
-        );
-        seq_uart_write(value);
-        poll_lsr();
-        seq_get_iir(result);    // check no interrupt
-        value = value & ((1 << cfg.WORD_LEN) - 1);
-        seq_uart_read(value, result);
+        seq_get_iir(result, .etbei(2), .erbfi(1));
     endtask
 endclass
 
 
-class sequence_write_read_byte_fifo extends sequence_loopback_wr_rd;
-    `uvm_object_utils(sequence_write_read_byte_fifo)
+class sequence_loopback_fifo extends sequence_loopback;
+    `uvm_object_utils(sequence_loopback_fifo)
     function new(string name = "SEQ");
         super.new(name);
     endfunction
-
     task pre_start;
         super.pre_start();
         seq_set_fcr(1 << `UART_FCR_FIFOEN);
@@ -605,68 +744,74 @@ class sequence_write_read_byte_fifo extends sequence_loopback_wr_rd;
 endclass
 
 
-class sequence_write_read_string extends sequence_loopback_wr_rd;
-    `uvm_object_utils(sequence_write_read_string)
+class sequence_write_string_read_each_dr extends sequence_loopback_fifo;
+    `uvm_object_utils(sequence_write_string_read_each_dr)
     function new(string name = "SEQ");
         super.new(name);
     endfunction
-
-    task pre_start;
-        super.pre_start();
-        seq_set_fcr(1 << `UART_FCR_FIFOEN);
-        uvm_report_info(get_name(), "--- FIFO ENBALED ---");
-    endtask
-
     task seq_test;
-        uvm_report_info(get_name(), "--- READ DATA AFTER TX FINISHED ---");
-        seq_test_read_after_finish();
-        uvm_report_info(get_name(), "--- READ EACH DATA_READY ---");
-        seq_test_read_after_write();
-    endtask
-
-    task seq_test_read_after_write;
         int val;
+        uvm_report_info(get_name(), "--- WRITE AND READ STRING EACH DATA_READY ---");
         fill_fifo_randomly();
+        seq_get_iir(result);
 
         for (int i = 0; i < FIFO_DEPTH; i = i + 1) begin
-            poll_lsr_dr(cfg.get_ticks_per_bit(), result);
-            if (i == FIFO_DEPTH - 1)
-                assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE)))
-                else uvm_report_error(get_name(), $sformatf("LSR is %0h but expected DR+TF+TE", result));
-            else
-                assert(result == (1 << `UART_LSR_DR))
-                else uvm_report_error(get_name(), $sformatf("LSR is %0h but expected DR", result));
+            poll_lsr_dr(result, cfg.get_ticks_per_bit());
 
-            seq_get_iir(result);    // check no interrupt
+            if (i == FIFO_DEPTH - 1) begin
+                assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE))) else
+                uvm_report_error(get_name(), $sformatf("LSR is %0h but expected DR+TF+TE", result));
+                seq_get_iir(result, .etbei(1), .erbfi(1));
+            end else begin
+                assert(result == (1 << `UART_LSR_DR)) else
+                uvm_report_error(get_name(), $sformatf("LSR is %0h but expected DR", result));
+                seq_get_iir(result, .erbfi(1));
+            end
+
             val = fifo.pop_front();
             seq_uart_read(val, result);
         end
 
+        seq_get_iir(result, .etbei(1));
+        seq_get_iir(result, .etbei(2));
         seq_get_lsr(result);
-        assert(result == ((1 << `UART_LSR_TF) | (1 << `UART_LSR_TE)))
-        else uvm_report_error(get_name(), $sformatf("LSR is %0h but expected TF+TE", result));
+        assert(result == ((1 << `UART_LSR_TF) | (1 << `UART_LSR_TE))) else
+        uvm_report_error(get_name(), $sformatf("LSR is %0h but expected TF+TE", result));
     endtask
+endclass
 
-    task seq_test_read_after_finish;
+
+
+class sequence_write_string_read_after_te extends sequence_loopback_fifo;
+    `uvm_object_utils(sequence_write_string_read_after_te)
+    function new(string name = "SEQ");
+        super.new(name);
+    endfunction
+    task seq_test;
         int val;
+        uvm_report_info(get_name(), "--- READ STRING AFTER TX FINISHED ---");
         fill_fifo_randomly();
+        seq_get_iir(result);
 
-        poll_lsr_te((cfg.get_ticks_per_word() * (FIFO_DEPTH + 1)), result);
-        assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE)))
-        else uvm_report_error(get_name(), $sformatf("LSR is %0h but expected DR+TF+TE", result));
+        poll_lsr_te(result, cfg.get_ticks_per_word() * (FIFO_DEPTH + 1));
+        assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE))) else
+        uvm_report_error(get_name(), $sformatf("LSR is %0h but expected DR+TF+TE", result));
 
-        seq_get_iir(result);    // check no interrupt
+        seq_get_iir(result, .etbei(1), .erbfi(1));
 
         for (int i = 0; i < FIFO_DEPTH; i = i + 1) begin
-            poll_lsr_dr(0, result);
-            assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE)))
-            else uvm_report_error(get_name(), $sformatf("LSR is %0h but expected DR+TF+TE", result));
+            poll_lsr_dr(result);
+            assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE))) else
+            uvm_report_error(get_name(), $sformatf("LSR is %0h but expected DR+TF+TE", result));
+            seq_get_iir(result, .etbei(1), .erbfi(1));
             val = fifo.pop_front();
             seq_uart_read(val, result);
         end
         seq_get_lsr(result);
-        assert(result == ((1 << `UART_LSR_TF) | (1 << `UART_LSR_TE)))
-        else uvm_report_error(get_name(), $sformatf("LSR is %0h but expected TF+TE", result));
+        assert(result == ((1 << `UART_LSR_TF) | (1 << `UART_LSR_TE))) else
+        uvm_report_error(get_name(), $sformatf("LSR is %0h but expected TF+TE", result));
+        seq_get_iir(result, .etbei(1));
+        seq_get_iir(result, .etbei(2));
     endtask
 endclass
 
@@ -674,14 +819,16 @@ endclass
 /*
 Write then read before OE is set
 */
-class sequence_polling_mode_fifo_dis_oe_case_read_before_oe extends sequence_loopback_wr_rd;
+class sequence_polling_mode_fifo_dis_oe_case_read_before_oe extends sequence_loopback;
     `uvm_object_utils(sequence_polling_mode_fifo_dis_oe_case_read_before_oe)
     function new(string name = "SEQ");
         super.new(name);
+        check_interrupts = 1;
     endfunction
     task seq_test;
         bit [7:0] val;
         bit [7:0] oe_val;
+
         uvm_report_info(get_name(), "***** Polling mode, FIFO DISABLED: No Override *****");
         if (!std::randomize(val))
             uvm_report_fatal(get_name(), "FAILED TO RANDOMIZE");
@@ -689,30 +836,42 @@ class sequence_polling_mode_fifo_dis_oe_case_read_before_oe extends sequence_loo
             uvm_report_fatal(get_name(), "FAILED TO RANDOMIZE");
 
         seq_uart_write(val);
-        poll_lsr_tf(0, result);
+        poll_lsr_tf(result);
 
         seq_uart_write(oe_val);
+
+        seq_wait_clk_ticks(1);  // need one clock delay for iir to update
+        seq_get_iir(result);
+
         seq_get_lsr(result);
         assert(result == 0) else uvm_report_error(get_name(),
             $sformatf("LSR is %0h but expected NULL", result)
         );
 
-        poll_lsr_dr(0, result);
+        poll_lsr_dr(result);
         assert(result == ((1 << `UART_LSR_DR))) else
         uvm_report_error(get_name(), $sformatf("LSR is %0h but expected DR", result));
 
-        seq_get_iir(result);    // check no interrupt
+        seq_get_iir(result, .erbfi(1));
 
-        poll_lsr_te(0, result);
+        poll_lsr_te(result);
         assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE))) else
         uvm_report_error(get_name(), $sformatf("LSR is %0h but expected DR+TF+TE", result));
 
-        seq_uart_read(val & ((1 << cfg.WORD_LEN) - 1), result);
+        seq_get_iir(result, .etbei(1), .erbfi(1));
+        seq_uart_read(val, result);
 
-        poll_lsr_dr(0, result);
+        poll_lsr_dr(result);
         assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE))) else
         uvm_report_error(get_name(), $sformatf("LSR is %0h but expected DR+TF+TE", result));
-        seq_uart_read(oe_val & ((1 << cfg.WORD_LEN) - 1), result);
+        seq_get_iir(result, .etbei(1), .erbfi(1));
+        
+        seq_uart_read(oe_val, result);
+        seq_get_iir(result, .etbei(1));
+        seq_get_iir(result, .etbei(2));
+        seq_get_lsr(result);
+        assert(result == ((1 << `UART_LSR_TF) | (1 << `UART_LSR_TE))) else
+        uvm_report_error(get_name(), $sformatf("LSR is %0h but expected DR+TF+TE", result));
     endtask
 endclass
 
@@ -720,7 +879,7 @@ endclass
 /*
 Write then read after OE was set
 */
-class sequence_polling_mode_fifo_dis_oe_case_read_after_oe extends sequence_loopback_wr_rd;
+class sequence_polling_mode_fifo_dis_oe_case_read_after_oe extends sequence_loopback;
     `uvm_object_utils(sequence_polling_mode_fifo_dis_oe_case_read_after_oe)
     uvm_event ev_scb;
 
@@ -728,20 +887,21 @@ class sequence_polling_mode_fifo_dis_oe_case_read_after_oe extends sequence_loop
         super.new(name);
         ev_scb = ev_pool.get("EV_FLUSH_QUEUES");
         ev_scb.reset();
+        check_interrupts = 1;
     endfunction
 
     task seq_test;
         bit [7:0] val;
         bit [7:0] oe_val;
 
-        uvm_report_info(get_name(), "***** Polling mode, FIFO DISABLED: Override 1 byte *****");
+        uvm_report_info(get_name(), "*** Polling mode, FIFO DISABLED: Override 1 byte ***");
         if (!std::randomize(val))
             uvm_report_fatal(get_name(), "FAILED TO RANDOMIZE");
         if (!(std::randomize(oe_val) with { oe_val != val; }))
             uvm_report_fatal(get_name(), "FAILED TO RANDOMIZE");
 
         seq_uart_write(val);
-        poll_lsr_tf(0, result);
+        poll_lsr_tf(result);
 
         seq_uart_write(oe_val);
         seq_get_lsr(result);
@@ -749,27 +909,37 @@ class sequence_polling_mode_fifo_dis_oe_case_read_after_oe extends sequence_loop
             $sformatf("LSR is %0h but expected NULL", result)
         );
 
-        poll_lsr_dr(0, result);
-        assert(result == (1 << `UART_LSR_DR)) else
-        uvm_report_error(get_name(), $sformatf("LSR is %0h but expected DR", result));
+        if (ral.csr.ier.get_mirrored_value()) begin
+            wait_for_irq(result, .erbfi(1));
+            wait_for_irq(result, .elsi(1));
 
-        poll_lsr_oe(0, result);
-        assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE) | (1 << `UART_LSR_OE)))
-        else uvm_report_error(get_name(),
-            $sformatf("LSR is %0h but expected DR+TF+TE+OE", result)
-        );
+            poll_lsr_oe(result);
+            assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE) | (1 << `UART_LSR_OE)))
+            else uvm_report_error(get_name(),
+                $sformatf("LSR is %0h but expected DR+TF+TE+OE", result)
+            );
+            wait_for_irq(result, .erbfi(1));
+        end else begin
+            poll_lsr_dr(result);
+            assert(result == (1 << `UART_LSR_DR)) else
+            uvm_report_error(get_name(), $sformatf("LSR is %0h but expected DR", result));
 
-        seq_get_iir(result);    // check no interrupt
+            poll_lsr_oe(result);
+            assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE) | (1 << `UART_LSR_OE)))
+            else uvm_report_error(get_name(),
+                $sformatf("LSR is %0h but expected DR+TF+TE+OE", result)
+            );
+            seq_get_iir(result);
+        end
         // in this case scoreboard recieves all bytes, then sees OE, and should remove all bytes except top one
-        val = val & ((1 << cfg.WORD_LEN) - 1);
         seq_uart_read(val, result);
 
         seq_get_lsr(result);
         assert(result == ((1 << `UART_LSR_TF) | (1 << `UART_LSR_TE))) else
         uvm_report_error(get_name(), $sformatf("LSR is %0h but expected TF+TE", result));
-
-        // clear scb queue as last byte was lost
-        ev_scb.trigger();
+        seq_get_iir(result, .etbei(1));
+        seq_get_iir(result, .etbei(2));
+        ev_scb.trigger();   // clear scb queue as last byte was lost
     endtask
 endclass
 
@@ -777,7 +947,7 @@ endclass
 /*
 Write multiple then read after OE was set
 */
-class sequence_polling_mode_fifo_dis_oe_case_read_after_multiple_oe extends sequence_loopback_wr_rd;
+class sequence_polling_mode_fifo_dis_oe_case_read_after_multiple_oe extends sequence_loopback;
     `uvm_object_utils(sequence_polling_mode_fifo_dis_oe_case_read_after_multiple_oe)
     function new(string name = "SEQ");
         super.new(name);
@@ -786,6 +956,7 @@ class sequence_polling_mode_fifo_dis_oe_case_read_after_multiple_oe extends sequ
         bit [7:0] val;
         bit [7:0] oe_val;
         bit [7:0] lost_byte;
+
         uvm_report_info(get_name(), "***** Polling mode, FIFO DISABLED: Override 2 bytes *****");
         if (!std::randomize(val))
             uvm_report_fatal(get_name(), "FAILED TO RANDOMIZE");
@@ -795,39 +966,35 @@ class sequence_polling_mode_fifo_dis_oe_case_read_after_multiple_oe extends sequ
             uvm_report_fatal(get_name(), "FAILED TO RANDOMIZE");
 
         seq_uart_write(val);
-        poll_lsr_tf(0, result);
+        poll_lsr_tf(result);
 
         seq_uart_write(lost_byte);
-        poll_lsr_tf(0, result);
+        poll_lsr_tf(result);
 
         seq_uart_write(oe_val);
 
         // wait until lost byte received, OE should be 1 and tx is still sending
-        poll_lsr_oe(0, result);
+        poll_lsr_oe(result);
         assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_OE))) else
         uvm_report_error(get_name(),
             $sformatf("LSR is %0h but expected DR+OE", result)
         );
-        seq_get_iir(result);    // check no interrupt
+        seq_get_iir(result);
 
         // TE will raise in start of Tx third byte STOP state
-        poll_lsr_te(0, result);
+        poll_lsr_te(result);
         assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE))) else
-        uvm_report_error(get_name(),
-            $sformatf("LSR is %0h but expected DR+TF+TE", result)
-        );
+        uvm_report_error(get_name(), $sformatf("LSR is %0h but expected DR+TF+TE", result));
         
         // first byte is recieved anyway
         // in this case scoreboard recieves all bytes, then sees OE, and should remove all middle bytes
-        seq_uart_read(val & ((1 << cfg.WORD_LEN) - 1), result);
+        seq_uart_read(val, result);
 
         // third byte is still being sent and should be recieved
-        poll_lsr_dr(0, result);
+        poll_lsr_dr(result);
         assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE))) else
-        uvm_report_error(get_name(),
-            $sformatf("LSR is %0h but expected DR+TF+TE", result)
-        );
-        seq_uart_read(oe_val & ((1 << cfg.WORD_LEN) - 1), result);
+        uvm_report_error(get_name(), $sformatf("LSR is %0h but expected DR+TF+TE", result));
+        seq_uart_read(oe_val, result);
 
         // no more bytes
         seq_get_lsr(result);
@@ -837,7 +1004,7 @@ class sequence_polling_mode_fifo_dis_oe_case_read_after_multiple_oe extends sequ
 endclass
 
 
-class sequence_polling_mode_fifo_en_oe_case extends sequence_loopback_wr_rd;
+class sequence_polling_mode_fifo_en_oe_case extends sequence_loopback;
     `uvm_object_utils(sequence_polling_mode_fifo_en_oe_case)
     uvm_event ev_scb;
 
@@ -845,6 +1012,7 @@ class sequence_polling_mode_fifo_en_oe_case extends sequence_loopback_wr_rd;
         super.new(name);
         ev_scb = ev_pool.get("EV_FLUSH_QUEUES");
         ev_scb.reset();
+        check_interrupts = 1;
     endfunction
 
     task pre_start;
@@ -858,8 +1026,9 @@ class sequence_polling_mode_fifo_en_oe_case extends sequence_loopback_wr_rd;
         bit [7:0] val;
 
         fill_fifo_randomly();
+        seq_get_iir(result);
 
-        poll_lsr_te(cfg.get_ticks_per_word() * FIFO_DEPTH, result);
+        poll_lsr_te(result, cfg.get_ticks_per_word() * FIFO_DEPTH);
         assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE))) else
         uvm_report_error(get_name(),
             $sformatf("LSR is %0h but expected DR+TF+TE", result)
@@ -867,13 +1036,17 @@ class sequence_polling_mode_fifo_en_oe_case extends sequence_loopback_wr_rd;
 
         val = $urandom_range(255);
         seq_uart_write(val);
-        seq_get_iir(result);    // check no interrupt
-        
-        poll_lsr_oe(0, result);
+
+        seq_wait_clk_ticks(1);  // etbei will clear after one clock delay
+        seq_get_iir(result, .erbfi(1));
+        wait_for_irq(result, .elsi(1));
+
+        poll_lsr_oe(result);
         assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE) | (1 << `UART_LSR_OE)))
         else uvm_report_error(get_name(),
             $sformatf("LSR is %0h but expected DR+TF+TE+OE", result)
         );
+        seq_get_iir(result, .etbei(1), .erbfi(1));
 
         seq_get_lsr(result);
         assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE))) else
@@ -881,22 +1054,25 @@ class sequence_polling_mode_fifo_en_oe_case extends sequence_loopback_wr_rd;
 
         val = $urandom_range(255);
         seq_uart_write(val);
-        seq_get_iir(result);    // check no interrupt
+        seq_get_iir(result, .etbei(2), .erbfi(1));
+        wait_for_irq(result, .elsi(1));
 
-        poll_lsr_oe(0, result);
+        poll_lsr_oe(result);
         assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE) | (1 << `UART_LSR_OE)))
         else uvm_report_error(get_name(),
             $sformatf("LSR is %0h but expected DR+TF+TE+OE", result)
         );
+        seq_get_iir(result, .etbei(1), .erbfi(1));
 
         seq_get_lsr(result);
         assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE))) else
         uvm_report_error(get_name(), $sformatf("LSR is %0h but expected DR+TF+TE", result));
 
         for (int i = 0; i < FIFO_DEPTH; i = i + 1) begin
-            poll_lsr_dr(0, result);
-            assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE)))
-            else uvm_report_error(get_name(), $sformatf("LSR is %0h but expected DR+TF+TE", result));
+            seq_get_iir(result, .etbei(1), .erbfi(1));
+            poll_lsr_dr(result);
+            assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE))) else
+            uvm_report_error(get_name(), $sformatf("LSR is %0h but expected DR+TF+TE", result));
             val = fifo.pop_front();
             seq_uart_read(val, result);
         end
@@ -904,9 +1080,10 @@ class sequence_polling_mode_fifo_en_oe_case extends sequence_loopback_wr_rd;
         seq_get_lsr(result);
         assert(result == ((1 << `UART_LSR_TF) | (1 << `UART_LSR_TE))) else
         uvm_report_error(get_name(), $sformatf("LSR is %0h but expected TF+TE", result));
+        seq_get_iir(result, .etbei(1));
+        seq_get_iir(result, .etbei(2));
 
-        // clear scb queue as last byte was lost
-        ev_scb.trigger();
+        ev_scb.trigger();   // clear scb queue as last byte was lost
     endtask
 endclass
 
@@ -1071,28 +1248,27 @@ class sequence_send_sin extends base_sequence;
     endtask
 
     task send_valid_byte;
-        int value;
         /*
         seq_ext.value = value;
         seq_ext.stop_bit_valid = 1;
         seq_ext.parity_bit_valid = 1;
         seq_ext.idle = 1;
         */
-        // first tx is valid:
         if (!(seq_ext.randomize() with { stop_bit_valid == 1; parity_bit_valid == 1; idle == 1; }))
             uvm_report_fatal(get_name(), "FAILED TO RANDOMIZE");
         seq_ext.start(sqr_pin);
 
-        poll_lsr_dr(cfg.get_ticks_per_bit(), result);
+        poll_lsr_dr(result, cfg.get_ticks_per_bit());
         assert(result == ((1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE))) else
         uvm_report_error(get_name(), $sformatf("LSR is %0h but expected DR+TF+TE", result));
+        seq_get_iir(result);
 
-        value = seq_ext.value & ((1 << cfg.WORD_LEN) - 1);
-        seq_uart_read(value, result);
+        seq_uart_read(seq_ext.value, result);
 
         seq_get_lsr(result);
         assert(result == ((1 << `UART_LSR_TF) | (1 << `UART_LSR_TE))) else
         uvm_report_error(get_name(), $sformatf("LSR is %0h but expected TF+TE", result));
+        seq_get_iir(result);
     endtask
 
     task send_invalid_byte;
@@ -1103,20 +1279,22 @@ class sequence_send_sin extends base_sequence;
             void'(seq_ext.randomize() with { stop_bit_valid == 0; idle == 0; });
         seq_ext.start(sqr_pin);
 
-        poll_lsr_dr(cfg.get_ticks_per_bit(), result);
         value = (1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE);
         if (cfg.PARITY_EN)
             value = value | (1 << `UART_LSR_PE);
         if (!seq_ext.stop_bit_valid)
             value = value | (1 << `UART_LSR_FE);
+
+        poll_lsr_dr(result, cfg.get_ticks_per_bit());
         assert(result == value) else
         uvm_report_error(get_name(), $sformatf("LSR is %0h but expected %0h", result, value));
+        seq_get_iir(result);
 
-        value = seq_ext.value & ((1 << cfg.WORD_LEN) - 1);
-        seq_uart_read(value, result);
+        seq_uart_read(seq_ext.value, result);
         seq_get_lsr(result);
         assert(result == ((1 << `UART_LSR_TF) | (1 << `UART_LSR_TE))) else
         uvm_report_error(get_name(), $sformatf("LSR is %0h but expected TF+TE", result));
+        seq_get_iir(result);
     endtask
 endclass
 
@@ -1125,6 +1303,7 @@ class sequence_send_sin_fifo_en extends sequence_send_sin;
     `uvm_object_utils(sequence_send_sin_fifo_en)
     function new(string name = "SEQ");
         super.new(name);
+        check_interrupts = 1;
     endfunction
 
     task pre_start;
@@ -1157,7 +1336,7 @@ class sequence_send_sin_fifo_en extends sequence_send_sin;
             end
             seq_ext.start(sqr_pin);
             value = seq_ext.value;
-            if (!seq_ext.stop_bit_valid)    value = value | 'h200;
+            if (!seq_ext.stop_bit_valid) value = value | 'h200;
             if (cfg.PARITY_EN && !seq_ext.parity_bit_valid)  value = value | 'h100;
             fifo.push_back(value);
         end
@@ -1168,32 +1347,131 @@ class sequence_send_sin_fifo_en extends sequence_send_sin;
         int lsr;
         for (int i = 0; i < FIFO_DEPTH / 2; i = i + 1) begin
             // expected first value to be valid:
-            poll_lsr_dr(0, result);
+            poll_lsr_dr(result);
             lsr = (1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE);
             assert(result == lsr) else uvm_report_error(get_name(),
                 $sformatf("LSR is %0h but expected DR+TF+TE", result)
             );
+
+            seq_get_iir(result, .etbei(2), .erbfi(1));
 
             value = fifo.pop_front();
             seq_uart_read(value, result);
 
             // expect next value to be invalid:
             value = fifo.pop_front();
-            poll_lsr_dr(0, result);
-            lsr = (1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE);
-            if (value & 'h100) lsr = lsr | (1 << `UART_LSR_PE);
-            if (value & 'h200) lsr = lsr | (1 << `UART_LSR_FE);
-            assert(result == lsr) else uvm_report_error(get_name(),
-                $sformatf("LSR is %0h but expected %0h", result, lsr)
-            );
-            seq_uart_read(value & 'hFF, result);
+            wait_for_irq(result, .elsi(1));
+            if (i == ((FIFO_DEPTH / 2) - 1) && ral.csr.ier.get_mirrored_value()) begin
+                // in this case we can first fetch the last one then read LSR to check the bit was not cleared
+                seq_uart_read(value, result);
+                wait_for_irq(result, .elsi(1));
+                seq_get_lsr(result);
+                lsr = (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE);
+                if (value & 'h100) lsr = lsr | (1 << `UART_LSR_PE);
+                if (value & 'h200) lsr = lsr | (1 << `UART_LSR_FE);
+                assert(result == lsr) else uvm_report_error(get_name(),
+                    $sformatf("Last byte: LSR is %0h but expected %0h", result, lsr)
+                );
+            end else begin
+                seq_get_iir(result, .etbei(2), .erbfi(1), .elsi(1));
+                poll_lsr_dr(result);
+                lsr = (1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE);
+                if (value & 'h100) lsr = lsr | (1 << `UART_LSR_PE);
+                if (value & 'h200) lsr = lsr | (1 << `UART_LSR_FE);
+                assert(result == lsr) else uvm_report_error(get_name(),
+                    $sformatf("LSR is %0h but expected %0h", result, lsr)
+                );
+                seq_get_iir(result, .etbei(2), .erbfi(1));
+                seq_uart_read(value, result);
+            end
         end
 
+        if (ral.csr.ier.get_mirrored_value() != (1 << `UART_IER_ETBEI)) begin
+            //seq_wait_clk_ticks(1);  // for now need one clock delay
+            seq_get_iir(result, .etbei(1));
+        end
+
+        seq_get_iir(result, .etbei(2));
         seq_get_lsr(result);
-        lsr = (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE);
-        assert(result == lsr) else uvm_report_error(get_name(),
-            $sformatf("LSR is %0h but expected TF+TE", result)
-        );
+        assert(result == ((1 << `UART_LSR_TF) | (1 << `UART_LSR_TE))) else
+        uvm_report_error(get_name(), $sformatf("Rx end: LSR is %0h but expected TF+TE", result));
+    endtask
+endclass
+
+
+
+class sequence_send_sin_fifo_en_consecutive_errors extends sequence_send_sin;
+    `uvm_object_utils(sequence_send_sin_fifo_en_consecutive_errors)
+    function new(string name = "SEQ");
+        super.new(name);
+    endfunction
+
+    task pre_start;
+        super.pre_start();
+        seq_set_fcr(1 << `UART_FCR_FIFOEN);
+        uvm_report_info(get_name(), "--- FIFO ENBALED ---");
+    endtask
+
+    task seq_test;
+        if (cfg.STOP_BITS != 2) return;
+        send_data();
+        get_data();
+    endtask
+
+    task send_data;
+        int value;
+        for (int i = 0; i < FIFO_DEPTH; i = i + 1) begin
+            if (cfg.PARITY_EN) begin
+                if (!(seq_ext.randomize() with { parity_bit_valid == 0; stop_bit_valid == 1; idle == 0; }))
+                    uvm_report_fatal(get_name(), "FAILED TO RANDOMIZE");
+            end else begin
+                if (!(seq_ext.randomize() with { parity_bit_valid == 1; stop_bit_valid == 0; idle == 0; }))
+                    uvm_report_fatal(get_name(), "FAILED TO RANDOMIZE");
+            end
+            if (i == 0) seq_ext.idle = 1;
+            seq_ext.start(sqr_pin);
+            value = seq_ext.value;
+            if (!seq_ext.stop_bit_valid)    value = value | 'h200;
+            if (!seq_ext.parity_bit_valid)  value = value | 'h100;
+            fifo.push_back(value);
+        end
+    endtask
+
+    task get_data;
+        int value;
+        int lsr;
+        uvm_report_info(get_name(), "--- GET DATA START ---");
+        for (int i = 0; i < FIFO_DEPTH; i = i + 1) begin
+            value = fifo.pop_front();
+            if (i == (FIFO_DEPTH - 1) && ral.csr.ier.get_mirrored_value()) begin
+                // in this case we can first fetch the last one then read LSR to check the bit was not cleared
+                seq_uart_read(value, result);
+                poll_lsr_dr(result);
+                lsr = (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE);
+                if (value & 'h100) lsr = lsr | (1 << `UART_LSR_PE);
+                if (value & 'h200) lsr = lsr | (1 << `UART_LSR_FE);
+                assert(result == lsr) else uvm_report_error(get_name(),
+                    $sformatf("Last byte: LSR is %0h but expected %0h", result, lsr)
+                );
+            end else begin
+                if (i == 0)
+                    poll_lsr_tf(result);
+                else
+                    poll_lsr_dr(result);
+                lsr = (1 << `UART_LSR_DR) | (1 << `UART_LSR_TF) | (1 << `UART_LSR_TE);
+                if (value & 'h100) lsr = lsr | (1 << `UART_LSR_PE);
+                if (value & 'h200) lsr = lsr | (1 << `UART_LSR_FE);
+                assert(result == lsr) else uvm_report_error(get_name(),
+                    $sformatf("LSR is %0h but expected %0h", result, lsr)
+                );
+                seq_uart_read(value, result);
+            end
+        end
+
+        seq_get_iir(result, .etbei(1));
+        seq_get_lsr(result);
+        assert(result == ((1 << `UART_LSR_TF) | (1 << `UART_LSR_TE))) else
+        uvm_report_error(get_name(), $sformatf("Rx end: LSR is %0h but expected TF+TE", result));
     endtask
 endclass
 
@@ -1217,6 +1495,7 @@ class sequence_send_sin_fifo_dis_glitch extends sequence_send_sin;
     endtask
 
     task post_start;
+        super.post_start();
         ev_scb.reset();
     endtask
 

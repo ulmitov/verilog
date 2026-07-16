@@ -11,7 +11,7 @@ interface interface_pin (input logic pclk, input logic res_n);
     logic intr;
 
     clocking cb_drv @(posedge pclk);
-        default input #SETUP_TIME output #HOLDTIME;
+        //default input #SETUP_TIME output #HOLDTIME;
         input res_n;
         input sout;
         input baudout;
@@ -21,7 +21,7 @@ interface interface_pin (input logic pclk, input logic res_n);
     endclocking
 
     clocking cb_mon @(posedge pclk);
-        default input #SETUP_TIME;
+        //default input #SETUP_TIME;
         input res_n;
         input sout;
         input baudout;

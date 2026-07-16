@@ -3,16 +3,16 @@ class iir_reg extends base_reg;
 
     uvm_reg_field IPEND;
     uvm_reg_field INTID;
-    uvm_reg_field FIOEN;
+    uvm_reg_field FIFOEN;
 
     function new(string name = "IIR");
         super.new(name);
     endfunction
 
-    virtual function void build();
+    function void build();
         IPEND = uvm_reg_field::type_id::create("IPEND");
         INTID = uvm_reg_field::type_id::create("INTID");
-        FIOEN = uvm_reg_field::type_id::create("FIOEN");
+        FIFOEN = uvm_reg_field::type_id::create("FIFOEN");
 
         IPEND.configure(
             .parent(this), .size(1), .lsb_pos(`UART_IIR_IPEND),
@@ -24,7 +24,7 @@ class iir_reg extends base_reg;
             .access("RO"), .volatile(0), .reset(0),
             .has_reset(1), .is_rand(1), .individually_accessible(0)
         );
-        FIOEN.configure(
+        FIFOEN.configure(
             .parent(this), .size(2), .lsb_pos(`UART_IIR_FIFOEN),
             .access("RO"), .volatile(0), .reset(0),
             .has_reset(1), .is_rand(1), .individually_accessible(0)

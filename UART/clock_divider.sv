@@ -45,7 +45,7 @@ module clock_divider #(parameter DIV_WIDTH = 16) (
             default:  clk_out = 1'b1;
         endcase
     end
-
+    // When either of the divisor latches is loaded, a 16-bit baud counter is also loaded to prevent long counts on initial load.
     always_ff @(posedge clk_in or posedge res) begin
         if (res | cycle_full)
             counter <= 1;

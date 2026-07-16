@@ -2,12 +2,12 @@
 Implementation of UART16550 according to PC16550D spec (or other TI UARTs like TL16C550)
 Including a simple ![C driver](./driver/uart_driver.cpp) which is validated in ![Verilator testbench](./testbench/uart_tb.cpp)
 
-- Glitch suppressing and majority voting feature
-- Rx-Tx FIFOs
-- N = 5 to 8 data bits
-- M = 1, 1.5 and 2 stop bits
-- OSR = oversample rate 8, 16, 32
-- Some features are **TBD**: Modem, fifo threshold levels
+- Glitch suppressing and "majority voting" feature
+- Rx-Tx FIFOs, which also serve as RBR and THR in non fifo mode.
+- 5 to 8 data bits (N)
+- 1, 1.5 and 2 stop bits (M)
+- Oversample rate 8, 16, 32 (OSR)
+- **Unimplemnted**: all Modem functionality, RXFIFTL error, BI error, EI error, EDSSI interrupt, DMA support
 
 
 Spec references:

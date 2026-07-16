@@ -68,7 +68,7 @@ endclass
 Not creating a class per each sequence
 as CI runs the regression suite anyway
 */
-class test_single extends test_base#(sequence_baud);
+class test_single extends test_base#(sequence_send_sin_fifo_en);
     `uvm_component_utils(test_single)
     function new(string name = "test_single", uvm_component parent = null);
         super.new(name, parent);

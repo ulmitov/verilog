@@ -100,8 +100,7 @@ regression:
 	$(MAKE) -s adder half_adder fastadder mux decoder priority_enc mux_cmos mux_behavioral_tb
 	$(MAKE) -s sequence counters fifo memory shift_reg shift
 uart:
-	$(MAKE) -s uart_baud_tb uart_rx_tb uart_tx_tb uart_tb uart_top_tb
-	#uartcpp
+	$(MAKE) -s uart_baud_tb uart_rx_tb uart_tx_tb uart_tb uart_top_tb uartcpp
 risc_tb:
 	$(MAKE) -s risc_tb_arr risc_tb_bub risc_tb_fib
 
@@ -198,7 +197,7 @@ alu:
 uvm-fifo:
 	$(RM_OBJDIR_CMD)
 	$(VERILATOR_UVM_NO_DPI) --top top_tb -Itb_uvm_fifo \
-	$(UVM_HOME)/uvm_pkg.sv modules/fifo.v tb_uvm_fifo/top_tb.sv;
+	$(UVM_HOME)/uvm_pkg.sv modules/fifo.v tb_uvm_fifo/top_tb.sv && \
 	./obj_dir/Vtop_tb
 	mv coverage.dat vcd/cov_uvmfifo.dat
 	#+UVM_VERBOSITY=UVM_HIGH
@@ -208,7 +207,7 @@ uvm-fifo:
 uvm-uart:
 	$(RM_OBJDIR_CMD)
 	$(VERILATOR_UVM_NO_DPI) --top top -Itb_uvm_uart -IUART \
-	$(UVM_HOME)/uvm_pkg.sv modules/shift_reg.v modules/fifo.v UART/uart_apb.sv tb_uvm_uart/top.sv;
+	$(UVM_HOME)/uvm_pkg.sv modules/shift_reg.v modules/fifo.v UART/uart_apb.sv tb_uvm_uart/top.sv && \
 	./obj_dir/Vtop #+UVM_TESTNAME=test_single
 	mv coverage.dat vcd/cov_$$(date +%s).dat
 
@@ -217,13 +216,13 @@ uvm-uart:
 uvm-mem:
 	$(RM_OBJDIR_CMD)
 	$(VERILATOR_UVM_NO_DPI) --top top_tb -Itb_uvm_mem \
-	$(UVM_HOME)/uvm_pkg.sv RISCV_SingleCycle/risc_pkg.sv modules/memory.sv tb_uvm_mem/top_tb.sv;
+	$(UVM_HOME)/uvm_pkg.sv RISCV_SingleCycle/risc_pkg.sv modules/memory.sv tb_uvm_mem/top_tb.sv && \
 	./obj_dir/Vtop_tb
 	mv coverage.dat vcd/cov_$$(date +%s).dat
 
 uvm-inst:
 	$(RM_OBJDIR_CMD)
 	$(VERILATOR_UVM_NO_DPI) --top-module top_tb -Itb_uvm_mem -DENDIANESS=1 \
-	$(UVM_HOME)/uvm_pkg.sv RISCV_SingleCycle/risc_pkg.sv modules/memory.sv tb_uvm_mem/top_tb.sv;
+	$(UVM_HOME)/uvm_pkg.sv RISCV_SingleCycle/risc_pkg.sv modules/memory.sv tb_uvm_mem/top_tb.sv && \
 	./obj_dir/Vtop_tb +UVM_TESTNAME=test_boot_load
 	mv coverage.dat vcd/cov_$$(date +%s).dat

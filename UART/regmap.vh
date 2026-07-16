@@ -39,7 +39,7 @@ https://www.ti.com/lit/ds/symlink/tl16c550c.pdf
 `define UART_IER_ETBEI  1   // Enable Transmitter Holding Register Empty Interrupt (ETBEI)
 `define UART_IER_ELSI   2   // Enable Receiver Line Status Interrupt
 `define UART_IER_EDSSI  3   // Enable Modem Status Interrupt (EDSSI)    /* Unimplemented */
-`define UART_IER_UNUSED 7:4
+`define UART_IER_UNUSED 4   // 4 bits
 
 // Interrupt Identification (status) Register bits (IIR, ISR): R only
 `define UART_IIR_IPEND  0	    // Interrupt pending when 0
