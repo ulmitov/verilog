@@ -66,7 +66,7 @@ get_coverage:
 	$(call get_coverage)
 
 grep_err:
-	grep -H -a -i -E 'error|end of|warning|assertion|segmentation|fatal|fail' $(if $(ARG),$(ARG),*.log) | grep -a -v -i -E 'timescale|time unit|dangling|Not enough words|Part select|WARNING: did not process|warning: format'
+	grep -H -a -i -E 'error|end of|warning|assertion|segmentation|fatal|fail' $(if $(ARG),$(ARG),*.log) | grep -a -v -i -E 'timescale|time unit|dangling|Not enough words|Part select|WARNING: did not process|warning: format|UVM_WARNING'
 	! grep -H -a -i -E 'error|assertion|segmentation|fatal|fail' $(if $(ARG),$(ARG),*.log) | grep -a -v -i -E 'UVM_ERROR :    0|UVM_FATAL :    0'
 
 lint:

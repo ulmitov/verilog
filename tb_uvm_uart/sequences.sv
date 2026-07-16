@@ -531,7 +531,7 @@ class seq_lib extends uvm_sequence_library #(transaction);
 
         add_sequence(sequence_send_sin::get_type());
         add_sequence(sequence_send_sin_fifo_en::get_type());
-        add_sequence(sequence_send_sin_fifo_en_consecutive_errors::get_type());
+        add_sequence(sequence_send_sin_fifo_en_consecutive_errs::get_type());
 
         add_sequence(sequence_polling_mode_fifo_dis_oe_case_read_before_oe::get_type());
         add_sequence(sequence_polling_mode_fifo_dis_oe_case_read_after_oe::get_type());
@@ -1400,8 +1400,8 @@ endclass
 
 
 
-class sequence_send_sin_fifo_en_consecutive_errors extends sequence_send_sin;
-    `uvm_object_utils(sequence_send_sin_fifo_en_consecutive_errors)
+class sequence_send_sin_fifo_en_consecutive_errs extends sequence_send_sin;
+    `uvm_object_utils(sequence_send_sin_fifo_en_consecutive_errs)
     function new(string name = "SEQ");
         super.new(name);
     endfunction

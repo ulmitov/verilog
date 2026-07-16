@@ -1,4 +1,5 @@
 class transaction extends uvm_sequence_item;
+    `uvm_object_utils(transaction)
     rand bit push;
     rand bit pull;
     rand bit [fifo_config::DATA_WIDTH-1:0] din;
