@@ -12,7 +12,14 @@ parameter int IALIGN = 32;
 parameter int ILEN = 32;
 parameter int INST_BASE_ADDRESS = 'h0;
 parameter int DMEM_BASE_ADDRESS = 'h0;
-parameter int TRAP_BASE_ADDRESS = 'h1000;
+parameter int DMEM_DEPTH = 512;
+parameter int TRAP_BASE_ADDRESS = 'h3DC;
+
+`ifdef VERILATOR
+    parameter int INST_MEM_DEPTH = 2**12;      // 4kb, 1024 instructions
+`else
+    parameter int INST_MEM_DEPTH = 2**10;      // 1kb, 256 instructions
+`endif
 
 
 // RegFile rd data source select mux

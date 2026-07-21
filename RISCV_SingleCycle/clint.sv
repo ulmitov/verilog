@@ -1,11 +1,11 @@
 import risc_pkg::*;
 
 
-module clint #(parameter XLEN = 32) (
+module clint #(parameter XLEN = 32, parameter EX_IRQ = 1) (
     input logic clk,
     input logic res,
     input logic wr_en,
-    input logic [XLEN-1:0] irq_external,    // from peripherals
+    input logic [EX_IRQ-1:0] irq_external,    // from peripherals
     input logic [XLEN-1:0] data_in,
     input logic [31:0] data_addr,
 
@@ -46,14 +46,11 @@ module clint #(parameter XLEN = 32) (
             mtimecmp <= data_in;
     end
 
-    `ifndef CLINT_EX_IRQ
-        assign cnt = 1'b0;
-    `else
     generate
-        if (`CLINT_EX_IRQ <= 1)
+        if (EX_IRQ <= 1)
             assign cnt = 1'b0;
         else begin
-            counter_tff_sync #($clog2(`CLINT_EX_IRQ)) counter (
+            counter_tff_sync #($clog2(EX_IRQ)) counter (
                 .count_up(1'b1),
                 .clk(clk),
                 .res_n(~res),
@@ -62,5 +59,4 @@ module clint #(parameter XLEN = 32) (
             );
         end
     endgenerate
-    `endif
 endmodule

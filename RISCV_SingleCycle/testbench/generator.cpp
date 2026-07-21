@@ -305,6 +305,7 @@ void generate_itype_load_data(int bits_width, char unsigned_commands = 0) {
             // set base address to read outside of data memory
             // this address should be unique as it will be used by driver to drive rd data
             lui_base.rd = REGFILE_A1;
+            // (DATA_MEMORY_BASE_ADDR + DATA_MEMORY_DEPTH) >> 12
             lui_base.imm = 0xA0000 + rand() % 0x60000; // TODO: set random vals or stimulus?
             seq_lui(&lui_base);
 
@@ -340,12 +341,9 @@ void generate_itype_load_data(int bits_width, char unsigned_commands = 0) {
             // TODO: for external memory, add block size logic in load commands, then remove the data mask from here:
             // also apply stimulus here, need to verify high to low, etc...
             drv_req.rd_data = ref_req.rd_data;
-            drv_req.test_id = sqr->split_num;
             sprintf(drv_req.str, "%s\n%s\n%s\n%s\n",
                     lui_base.str, lui_data.str, addi.str, load.str);
-            drv_fifo.push(drv_req);
-            fprintf(logger->fptr, "GEN: pushed to driver transaction with addr %0lx, rd_data %0lx\n\n",
-                    drv_req.addr, drv_req.rd_data);
+            push_drv(&drv_req);
 
             // Verify data was loaded correctly into destination reg
             // Store data from destination reg to some random memory:
@@ -1465,5 +1463,607 @@ void generate_csr_read_write(int funct3) {
                 }
             }
         }
+    }
+}
+
+
+void generate_trap_ebreak() {
+    struct isa_utype jal;
+    struct isa_stype stype;
+    struct isa_stype stype_ret;
+    struct isa_itype addi;
+    struct isa_itype addi_ret;
+    struct isa_itype nop;
+    struct isa_itype ctype;
+    struct isa_itype sys_cmd;
+    int trap_addr;
+
+    for (int i = 0; i < 3; i++) {
+        // set rd = rs1 + imm
+        addi.rd = REGFILE_A0;
+        addi.rs1 = 0;
+        addi.imm = 100 + rand() % (((Vriscv_risc_pkg::INST_MEM_DEPTH / IALIGN) / WORD_LEN) * WORD_LEN);
+        /*if (addi.imm >= DATA_MEMORY_DEPTH) {
+            addi.imm = 100 + rand() % (DATA_MEMORY_DEPTH / IALIGN);
+        }*/
+        seq_addi(&addi);
+        printf("--- %s ---\n", addi.str);
+
+        if (i == 1) {
+            // set vectored mode
+            ctype.rd = 0;
+            ctype.rs1 = 1;
+            ctype.imm = Vriscv_risc_pkg::CSR_MTVEC;
+            set_csr(&ctype, Vriscv_risc_pkg::OP_FUNCT3_CSRRSI);
+            trap_addr = Vriscv_risc_pkg::TRAP_BASE_ADDRESS / IALIGN;
+        } else if (i > 1) {
+            // write random address to mtvec
+            ctype.rd = 0;
+            ctype.rs1 = addi.rd;
+            ctype.imm = Vriscv_risc_pkg::CSR_MTVEC;
+            set_csr(&ctype, Vriscv_risc_pkg::OP_FUNCT3_CSRRW);
+            trap_addr = addi.imm / IALIGN;
+        } else {
+            trap_addr = Vriscv_risc_pkg::TRAP_BASE_ADDRESS / IALIGN;
+        }
+
+        seq_ebreak(&sys_cmd);
+
+        addi_ret.rd = REGFILE_A0;
+        addi_ret.rs1 = 0;
+        addi_ret.imm = 1 + rand() & 0xFE;
+        seq_addi(&addi_ret);
+
+        // Stype: copy value from [rs2] into mem[[rs1]+imm]
+        stype_ret.rs1 = 0;
+        stype_ret.rs2 = addi_ret.rd;
+        stype_ret.imm = rand() & 0x7FF;
+        set_stype(&stype_ret, 8);
+
+        jal.rd = REGFILE_A0;
+        if (i) trap_addr--; // minus mtvec cmd
+        jal.imm = (trap_addr - 5 + 7 + 1) * IALIGN / 2;
+        seq_jal(&jal);
+
+        // fill up with nop. 5 (or 6) cmd from top, 7 in bottom
+        for (int n = 0; n < (trap_addr - 5); n++)
+            seq_addi(&nop);
+
+
+        // Stype: copy value from [rs2] into mem[[rs1]+imm]
+        stype.rs1 = 0;
+        stype.rs2 = addi.rd;
+        stype.imm = addi.imm;
+        set_stype(&stype, 8);
+
+        // Reference transaction
+        ref_req.wr = 1;
+        ref_req.addr = addi.imm;
+        ref_req.rd_data = 0;
+        ref_req.wr_data = addi.imm & 0xFF;
+        sprintf(ref_req.str, "%s; %s; %s", addi.str, sys_cmd.str, stype.str);
+        push_ref(&ref_req);
+
+
+        // Read mcause:
+        ctype.rd = addi.rd;
+        ctype.rs1 = 0;
+        ctype.imm = Vriscv_risc_pkg::CSR_MCAUSE;
+        set_csr(&ctype, Vriscv_risc_pkg::OP_FUNCT3_CSRRW);
+        // Stype: copy value from [rs2] into mem[[rs1]+imm]
+        stype.rs1 = 0;
+        stype.rs2 = addi.rd;
+        stype.imm = addi.imm;
+        set_stype(&stype, XLEN);
+        // Reference transaction
+        ref_req.wr = 1;
+        ref_req.addr = addi.imm;
+        ref_req.rd_data = 0;
+        ref_req.wr_data = 3;
+        sprintf(ref_req.str, "%s; %s", ctype.str, stype.str);
+        push_ref(&ref_req);
+
+
+        //Read mtinst
+        ctype.rd = addi.rd;
+        ctype.rs1 = 0;
+        ctype.imm = Vriscv_risc_pkg::CSR_MTINST;
+        set_csr(&ctype, Vriscv_risc_pkg::OP_FUNCT3_CSRRW);
+        // Stype: copy value from [rs2] into mem[[rs1]+imm]
+        stype.rs1 = 0;
+        stype.rs2 = addi.rd;
+        stype.imm = addi.imm;
+        set_stype(&stype, XLEN);
+        // Reference transaction
+        ref_req.wr = 1;
+        ref_req.addr = addi.imm;
+        ref_req.rd_data = 0;
+        ref_req.wr_data = sys_cmd.value & ((1UL << XLEN) - 1);
+        sprintf(ref_req.str, "%s; %s", ctype.str, stype.str);
+        push_ref(&ref_req);
+
+
+        // check that mret was done:
+        seq_mret(&sys_cmd);
+        stype.rs1 = 0;
+        stype.rs2 = REGFILE_A0;
+        stype.imm = rand();
+        set_stype(&stype, 8);
+        // Reference transaction
+        ref_req.wr = 1;
+        ref_req.addr = stype_ret.imm;
+        ref_req.rd_data = 0;
+        ref_req.wr_data = addi_ret.imm;
+        sprintf(ref_req.str, "%s; %s; %s", sys_cmd.str, stype_ret.str, jal.str);
+        push_ref(&ref_req);
+        sqr->split();
+    }
+}
+
+
+
+void generate_trap_illegal_cmd() {
+    struct isa_utype jal;
+    struct isa_stype stype;
+    struct isa_stype stype_ret;
+    struct isa_itype addi;
+    struct isa_itype addi_ret;
+    struct isa_itype nop;
+    struct isa_itype ctype;
+    struct isa_itype sys_cmd;
+    int trap_addr;
+
+    for (int i = 0; i < 3; i++) {
+        // set rd = rs1 + imm
+        addi.rd = REGFILE_A0;
+        addi.rs1 = 0;
+        addi.imm = 100 + rand() % (((Vriscv_risc_pkg::INST_MEM_DEPTH / IALIGN) / WORD_LEN) * WORD_LEN);
+        seq_addi(&addi);
+
+        if (i == 1) {
+            // set vectored mode
+            ctype.rd = 0;
+            ctype.rs1 = 1;
+            ctype.imm = Vriscv_risc_pkg::CSR_MTVEC;
+            set_csr(&ctype, Vriscv_risc_pkg::OP_FUNCT3_CSRRSI);
+            trap_addr = Vriscv_risc_pkg::TRAP_BASE_ADDRESS / IALIGN;
+        } else if (i > 1) {
+            // write random address to mtvec
+            ctype.rd = 0;
+            ctype.rs1 = addi.rd;
+            ctype.imm = Vriscv_risc_pkg::CSR_MTVEC;
+            set_csr(&ctype, Vriscv_risc_pkg::OP_FUNCT3_CSRRW);
+            trap_addr = addi.imm / IALIGN;
+        } else {
+            trap_addr = Vriscv_risc_pkg::TRAP_BASE_ADDRESS / IALIGN;
+        }
+
+        sys_cmd.value = 1; // illegal opcode
+        sqr->push_seq(sys_cmd.value);
+
+        addi_ret.rd = REGFILE_A0;
+        addi_ret.rs1 = 0;
+        addi_ret.imm = 1 + rand() & 0xFE;
+        seq_addi(&addi_ret);
+
+        // Stype: copy value from [rs2] into mem[[rs1]+imm]
+        stype_ret.rs1 = 0;
+        stype_ret.rs2 = addi_ret.rd;
+        stype_ret.imm = rand() & 0x7FF;
+        set_stype(&stype_ret, 8);
+
+        jal.rd = REGFILE_A0;
+        if (i) trap_addr--; // minus mtvec cmd
+        jal.imm = (trap_addr - 5 + 7 + 1) * IALIGN / 2;
+        seq_jal(&jal);
+
+        // fill up with nop. 5 (or 6) cmd from top, 7 in bottom
+        for (int n = 0; n < (trap_addr - 5); n++)
+            seq_addi(&nop);
+
+
+        // Stype: copy value from [rs2] into mem[[rs1]+imm]
+        stype.rs1 = 0;
+        stype.rs2 = addi.rd;
+        stype.imm = addi.imm;
+        set_stype(&stype, 8);
+
+        // Reference transaction
+        ref_req.wr = 1;
+        ref_req.addr = addi.imm;
+        ref_req.rd_data = 0;
+        ref_req.wr_data = addi.imm & 0xFF;
+        sprintf(ref_req.str, "%s; %s; %s", addi.str, sys_cmd.str, stype.str);
+        push_ref(&ref_req);
+
+
+        // Read mcause:
+        ctype.rd = addi.rd;
+        ctype.rs1 = 0;
+        ctype.imm = Vriscv_risc_pkg::CSR_MCAUSE;
+        set_csr(&ctype, Vriscv_risc_pkg::OP_FUNCT3_CSRRW);
+        // Stype: copy value from [rs2] into mem[[rs1]+imm]
+        stype.rs1 = 0;
+        stype.rs2 = addi.rd;
+        stype.imm = addi.imm;
+        set_stype(&stype, XLEN);
+        // Reference transaction
+        ref_req.wr = 1;
+        ref_req.addr = addi.imm;
+        ref_req.rd_data = 0;
+        ref_req.wr_data = 2;
+        sprintf(ref_req.str, "%s; %s", ctype.str, stype.str);
+        push_ref(&ref_req);
+
+
+        //Read mtinst
+        ctype.rd = addi.rd;
+        ctype.rs1 = 0;
+        ctype.imm = Vriscv_risc_pkg::CSR_MTINST;
+        set_csr(&ctype, Vriscv_risc_pkg::OP_FUNCT3_CSRRW);
+        // Stype: copy value from [rs2] into mem[[rs1]+imm]
+        stype.rs1 = 0;
+        stype.rs2 = addi.rd;
+        stype.imm = addi.imm;
+        set_stype(&stype, XLEN);
+        // Reference transaction
+        ref_req.wr = 1;
+        ref_req.addr = addi.imm;
+        ref_req.rd_data = 0;
+        ref_req.wr_data = sys_cmd.value & ((1UL << XLEN) - 1);
+        sprintf(ref_req.str, "%s; %s", ctype.str, stype.str);
+        push_ref(&ref_req);
+
+
+        // check that mret was done:
+        seq_mret(&sys_cmd);
+        stype.rs1 = 0;
+        stype.rs2 = REGFILE_A0;
+        stype.imm = rand();
+        set_stype(&stype, 8);
+        // Reference transaction
+        ref_req.wr = 1;
+        ref_req.addr = stype_ret.imm;
+        ref_req.rd_data = 0;
+        ref_req.wr_data = addi_ret.imm;
+        sprintf(ref_req.str, "%s; %s; %s", sys_cmd.str, stype_ret.str, jal.str);
+        push_ref(&ref_req);
+        sqr->split();
+    }
+}
+
+
+
+void sequence_enable_interrupts(int external, int sw, int timer) {
+    struct isa_itype addi;
+    struct isa_itype ctype;
+    if (external) {
+        // set rd = rs1 + imm
+        addi.rd = REGFILE_A0;
+        addi.rs1 = 0;
+        addi.imm = 0x7FF;
+        seq_addi(&addi);
+        addi.imm = 1;
+    }
+    if (sw) addi.imm += 0x8;
+    if (timer) addi.imm += 0x80;
+
+    addi.rd = REGFILE_A0;
+    addi.rs1 = REGFILE_A0;
+    seq_addi(&addi);
+
+    // enable external irq
+    ctype.rd = 0;
+    ctype.rs1 = addi.rd;
+    ctype.imm = Vriscv_risc_pkg::CSR_MIE;
+    set_csr(&ctype, Vriscv_risc_pkg::OP_FUNCT3_CSRRS);
+}
+
+
+void generate_trap_irq_external_disabled() {
+    struct isa_stype stype;
+    struct isa_itype addi;
+    struct isa_itype ctype;
+    struct isa_utype lui_base;
+    struct isa_itype load;
+
+    for (int i = 0; i < 2; i++) {
+        if (i) sequence_enable_interrupts(1, 0, 0);
+
+        // set base address to read outside of data memory
+        // this address should be unique as it will be used by driver to drive rd data
+        lui_base.rd = REGFILE_A1;
+        // (DATA_MEMORY_BASE_ADDR + DATA_MEMORY_DEPTH) >> 12
+        lui_base.imm = 0xA0000 + rand() % 0x60000; // TODO: set random vals or stimulus?
+        seq_lui(&lui_base);
+
+        // Load Itype: copy value from mem[[rs1]+imm] into reg[rd]
+        load.rd = REGFILE_A0;
+        load.rs1 = lui_base.rd;
+        load.imm = (rand() / WORD_LEN) * WORD_LEN;    // 4 bytes aligned
+        set_itype_load(&load, XLEN, 1);
+
+        // Reference transaction (load + drive reaction)
+        ref_req.wr = 0;
+        ref_req.wr_data = 0;
+        ref_req.addr = (lui_base.imm << 12) + sign_extend(load.imm);
+        ref_req.rd_data = rand() & load.datamask;
+        sprintf(ref_req.str, "%s; %s", lui_base.str, load.str);
+        push_ref(&ref_req, 1);
+
+        // driver to set rd_data with random data
+        drv_req.irq = 1;
+        drv_req.wr = 0;
+        drv_req.addr = ref_req.addr;
+        drv_req.rd_data = ref_req.rd_data;
+        sprintf(drv_req.str, "%s\n%s\n", lui_base.str, load.str);
+        push_drv(&drv_req);
+
+
+        // set rd = rs1 + imm
+        addi.rd = REGFILE_A0;
+        addi.rs1 = 0;
+        addi.imm = 100 + rand() % (((Vriscv_risc_pkg::INST_MEM_DEPTH / IALIGN) / WORD_LEN) * WORD_LEN);
+        seq_addi(&addi);
+
+        // Stype: copy value from [rs2] into mem[[rs1]+imm]
+        stype.rs1 = 0;
+        stype.rs2 = addi.rd;
+        stype.imm = addi.imm;
+        set_stype(&stype, 8);
+
+        // Reference transaction
+        ref_req.wr = 1;
+        ref_req.addr = addi.imm;
+        ref_req.rd_data = 0;
+        ref_req.wr_data = addi.imm & 0xFF;
+        sprintf(ref_req.str, "%s; %s", addi.str, stype.str);
+        push_ref(&ref_req);
+
+
+        // Read mcause:
+        ctype.rd = addi.rd;
+        ctype.rs1 = 0;
+        ctype.imm = Vriscv_risc_pkg::CSR_MCAUSE;
+        set_csr(&ctype, Vriscv_risc_pkg::OP_FUNCT3_CSRRW);
+        // Stype: copy value from [rs2] into mem[[rs1]+imm]
+        stype.rs1 = 0;
+        stype.rs2 = addi.rd;
+        stype.imm = addi.imm;
+        set_stype(&stype, XLEN);
+        // Reference transaction
+        ref_req.wr = 1;
+        ref_req.addr = addi.imm;
+        ref_req.rd_data = 0;
+        ref_req.wr_data = 0;
+        sprintf(ref_req.str, "%s; %s", ctype.str, stype.str);
+        push_ref(&ref_req);
+
+
+        // Back to irq = 0
+        // Load Itype: copy value from mem[[rs1]+imm] into reg[rd]
+        load.rd = REGFILE_A0;
+        load.rs1 = lui_base.rd;
+        load.imm = (rand() / WORD_LEN) * WORD_LEN;    // 4 bytes aligned
+        set_itype_load(&load, XLEN, 1);
+
+        // Reference transaction (load + drive reaction)
+        ref_req.wr = 0;
+        ref_req.wr_data = 0;
+        ref_req.addr = (lui_base.imm << 12) + sign_extend(load.imm);
+        ref_req.rd_data = rand() & load.datamask;
+        sprintf(ref_req.str, "%s; %s", lui_base.str, load.str);
+        push_ref(&ref_req, 1);
+
+        // driver to set rd_data with random data
+        drv_req.irq = 0;
+        drv_req.wr = 0;
+        drv_req.addr = ref_req.addr;
+        drv_req.rd_data = ref_req.rd_data;
+        sprintf(drv_req.str, "%s\n%s\n", lui_base.str, load.str);
+        push_drv(&drv_req);
+    }
+    sqr->split();
+}
+
+
+
+void generate_trap_irq_external_enabled() {
+    struct isa_utype jal;
+    struct isa_stype stype;
+    struct isa_stype stype_ret;
+    struct isa_itype addi;
+    struct isa_itype addi_ret;
+    struct isa_itype nop;
+    struct isa_itype ctype;
+    struct isa_itype sys_cmd;
+    struct isa_utype lui_base;
+    struct isa_itype load;
+    int trap_addr;
+
+    for (int i = 0; i < 3; i++) {
+        // set base address to read outside of data memory
+        // this address should be unique as it will be used by driver to drive rd data
+        lui_base.rd = REGFILE_A1;
+        // (DATA_MEMORY_BASE_ADDR + DATA_MEMORY_DEPTH) >> 12
+        lui_base.imm = 0xA0000 + rand() % 0x60000; // TODO: set random vals or stimulus?
+        seq_lui(&lui_base);
+
+        sequence_enable_interrupts(1, 0, 0);
+
+        // global enable irq
+        // set rd = rs1 + imm
+        addi.rd = REGFILE_A0;
+        addi.rs1 = 0;
+        addi.imm = 8;
+        seq_addi(&addi);
+        ctype.rd = 0;
+        ctype.rs1 = addi.rd;
+        ctype.imm = Vriscv_risc_pkg::CSR_MSTATUS;
+        set_csr(&ctype, Vriscv_risc_pkg::OP_FUNCT3_CSRRS);
+
+
+        // set rd = rs1 + imm
+        addi.rd = REGFILE_A0;
+        addi.rs1 = 0;
+        addi.imm = 100 + (rand() % (((Vriscv_risc_pkg::INST_MEM_DEPTH / IALIGN) / WORD_LEN)) * WORD_LEN);
+        if (!((i + 1) % 2)) addi.imm++; // set vectored mode
+        seq_addi(&addi);
+
+        if (i == 1) {
+            // set vectored mode
+            ctype.rd = 0;
+            ctype.rs1 = 1;
+            ctype.imm = Vriscv_risc_pkg::CSR_MTVEC;
+            set_csr(&ctype, Vriscv_risc_pkg::OP_FUNCT3_CSRRSI);
+            trap_addr = Vriscv_risc_pkg::TRAP_BASE_ADDRESS / IALIGN;
+        }
+        else if (i > 1) {
+            // write random address to mtvec
+            ctype.rd = 0;
+            ctype.rs1 = addi.rd;
+            ctype.imm = Vriscv_risc_pkg::CSR_MTVEC;
+            set_csr(&ctype, Vriscv_risc_pkg::OP_FUNCT3_CSRRW);
+            trap_addr = addi.imm / IALIGN;
+        } else {
+            trap_addr = Vriscv_risc_pkg::TRAP_BASE_ADDRESS / IALIGN;
+        }
+        if (!((i + 1) % 2)) trap_addr += 11;    // mcause value
+
+        // Load Itype: copy value from mem[[rs1]+imm] into reg[rd]
+        load.rd = REGFILE_A1 + 1;
+        load.rs1 = lui_base.rd;
+        load.imm = (rand() / WORD_LEN) * WORD_LEN;    // 4 bytes aligned
+        set_itype_load(&load, XLEN, 1);
+
+        // Reference transaction (load + drive reaction)
+        ref_req.wr = 0;
+        ref_req.wr_data = 0;
+        ref_req.addr = trap_addr * IALIGN;
+        ref_req.rd_data = rand() & load.datamask;
+        sprintf(ref_req.str, "%s; %s", lui_base.str, load.str);
+        push_ref(&ref_req, 1);
+
+        // driver to set rd_data with random data
+        drv_req.irq = 1;
+        drv_req.wr = 0;
+        drv_req.addr = (lui_base.imm << 12) + sign_extend(load.imm);
+        drv_req.rd_data = ref_req.rd_data;
+        sprintf(drv_req.str, "%s\n%s\n", lui_base.str, load.str);
+        push_drv(&drv_req);
+
+
+        addi_ret.rd = REGFILE_A0;
+        addi_ret.rs1 = 0;
+        addi_ret.imm = 1 + rand() & 0xFE;
+        seq_addi(&addi_ret);
+
+        // Stype: copy value from [rs2] into mem[[rs1]+imm]
+        stype_ret.rs1 = 0;
+        stype_ret.rs2 = addi_ret.rd;
+        stype_ret.imm = rand() & 0x7FF;
+        set_stype(&stype_ret, 8);
+
+        jal.rd = REGFILE_A0;
+        if (i) trap_addr--; // minus mtvec cmd
+        jal.imm = (trap_addr - 7 + 8 + 1) * IALIGN / 2;
+        seq_jal(&jal);
+
+        // fill up with nop. 7 cmd from top, 8 in bottom
+        for (int n = 0; n < (trap_addr - 7); n++)
+            seq_addi(&nop);
+
+
+        // Stype: copy value from [rs2] into mem[[rs1]+imm]
+        stype.rs1 = 0;
+        stype.rs2 = addi.rd;
+        stype.imm = addi.imm;
+        set_stype(&stype, 8);
+
+        // Reference transaction
+        ref_req.wr = 1;
+        ref_req.addr = addi.imm;
+        ref_req.rd_data = 0;
+        ref_req.wr_data = addi.imm & 0xFF;
+        sprintf(ref_req.str, "%s; %s; %s", addi.str, sys_cmd.str, stype.str);
+        push_ref(&ref_req);
+
+
+        // Read mcause:
+        ctype.rd = addi.rd;
+        ctype.rs1 = 0;
+        ctype.imm = Vriscv_risc_pkg::CSR_MCAUSE;
+        set_csr(&ctype, Vriscv_risc_pkg::OP_FUNCT3_CSRRW);
+        // Stype: copy value from [rs2] into mem[[rs1]+imm]
+        stype.rs1 = 0;
+        stype.rs2 = addi.rd;
+        stype.imm = addi.imm;
+        set_stype(&stype, XLEN);
+        // Reference transaction
+        ref_req.wr = 1;
+        ref_req.addr = addi.imm;
+        ref_req.rd_data = 0;
+        ref_req.wr_data = 0x8000000B;
+        sprintf(ref_req.str, "%s; %s", ctype.str, stype.str);
+        push_ref(&ref_req);
+
+
+        //Read mtinst
+        ctype.rd = addi.rd;
+        ctype.rs1 = 0;
+        ctype.imm = Vriscv_risc_pkg::CSR_MTINST;
+        set_csr(&ctype, Vriscv_risc_pkg::OP_FUNCT3_CSRRW);
+        // Stype: copy value from [rs2] into mem[[rs1]+imm]
+        stype.rs1 = 0;
+        stype.rs2 = addi.rd;
+        stype.imm = addi.imm;
+        set_stype(&stype, XLEN);
+        // Reference transaction
+        ref_req.wr = 1;
+        ref_req.addr = addi.imm;
+        ref_req.rd_data = 0;
+        ref_req.wr_data = load.value & ((1UL << XLEN) - 1);
+        sprintf(ref_req.str, "%s; %s", ctype.str, stype.str);
+        push_ref(&ref_req);
+
+
+        // Back to irq 0
+        // Load Itype: copy value from mem[[rs1]+imm] into reg[rd]
+        load.rd = REGFILE_A1 + 1;
+        load.rs1 = lui_base.rd;
+        load.imm = (rand() / WORD_LEN) * WORD_LEN;    // 4 bytes aligned
+        set_itype_load(&load, XLEN, 1);
+
+        // Reference transaction (load + drive reaction)
+        ref_req.wr = 0;
+        ref_req.wr_data = 0;
+        ref_req.addr = (lui_base.imm << 12) + sign_extend(load.imm);
+        ref_req.rd_data = rand() & load.datamask;
+        sprintf(ref_req.str, "%s; %s", lui_base.str, load.str);
+        push_ref(&ref_req, 1);
+
+        // driver to set rd_data with random data
+        drv_req.irq = 0;
+        drv_req.wr = 0;
+        drv_req.addr = ref_req.addr;
+        drv_req.rd_data = ref_req.rd_data;
+        sprintf(drv_req.str, "%s\n%s\n", lui_base.str, load.str);
+        push_drv(&drv_req);
+
+
+        // check that mret was done:
+        seq_mret(&sys_cmd);
+        stype.rs1 = 0;
+        stype.rs2 = REGFILE_A0;
+        stype.imm = rand();
+        set_stype(&stype, 8);
+        // Reference transaction
+        ref_req.wr = 1;
+        ref_req.addr = stype_ret.imm;
+        ref_req.rd_data = 0;
+        ref_req.wr_data = addi_ret.imm;
+        sprintf(ref_req.str, "%s; %s; %s", sys_cmd.str, stype_ret.str, jal.str);
+        push_ref(&ref_req);
+        sqr->split();
     }
 }

@@ -47,15 +47,13 @@ void run_test(Environment* env) {
     test_btype_jump_forward(env);
     test_btype_jump_backward(env);
 
-    if (XLEN ==32) test_zicsr(env);
+    if (XLEN == 32) test_zicsr(env);
+    test_traps(env);
 }
 
 
 void run_single(Environment* env) {
-    //test_itype_load_unsigned_addr_bits(env);
-    //test_itype_load_unsigned_data_bits(env);
-    //test_btype_jump_forward(env);
-    test_zicsr(env);
+    test_traps(env);
 }
 
 

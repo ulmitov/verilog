@@ -34,11 +34,11 @@ const int HOLD_TIME = 2;
 
 const int XLEN = Vriscv_risc_pkg::RISCV_XLEN;
 const int IALIGN = Vriscv_risc_pkg::IALIGN / 8;
-const int DATA_MEMORY_DEPTH = Vriscv___024root::riscv__DOT__MEM_DEPTH;
+const int DATA_MEMORY_DEPTH = Vriscv_risc_pkg::DMEM_DEPTH;
 const int DATA_MEMORY_BASE_ADDR = Vriscv_risc_pkg::DMEM_BASE_ADDRESS;
 const int DATA_MEMORY_LAST_ADDR = DATA_MEMORY_BASE_ADDR + DATA_MEMORY_DEPTH;
 const int DATA_MEMORY_ADDR_WIDTH = Vriscv___024root::riscv__DOT__data_mem__DOT__ADDR_WIDTH;
-const int INSTRUCTIONS_LIMIT = (Vriscv___024root::riscv__DOT__instruction_mem__DOT__DEPTH / IALIGN) - 20;
+const int INSTRUCTIONS_LIMIT = (Vriscv_risc_pkg::INST_MEM_DEPTH / IALIGN) - 20;
 const int MAX_REG = Vriscv___024root::riscv__DOT__reg_file__DOT__NUM;
 const int WORD_LEN = XLEN / 8;
 int RETURN_CODE = 0;
@@ -63,6 +63,7 @@ struct Transaction {
     long rd_data;
     int test_id;        // id of the test phase is set here
     char str[512];      // stores the instructions chain text
+    int irq = 0;
 };
 
 

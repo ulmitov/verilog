@@ -37,7 +37,7 @@ extern "C" {
 
 void push_ref(Transaction *req, char no_zero_cmd = 0) {
     req->test_id = sqr->split_num;
-    // masking fields according to XLEN since in transaction it is defined as long:
+    // masking fields according to XLEN since in transaction it is the long datatype:
     if (XLEN < 64) {
         req->wr_data &= (1UL << XLEN) - 1;
         req->rd_data &= (1UL << XLEN) - 1;
@@ -62,6 +62,24 @@ void push_ref(Transaction *req, char no_zero_cmd = 0) {
 }
 
 
+void push_drv(Transaction *req) {
+    req->test_id = sqr->split_num;
+    // masking fields according to XLEN since in transaction it is the long datatype:
+    if (XLEN < 64) {
+        req->wr_data &= (1UL << XLEN) - 1;
+        req->rd_data &= (1UL << XLEN) - 1;
+    }
+    // address can have its own width
+    if (DATA_MEMORY_ADDR_WIDTH < 64) {
+        req->addr &= (1UL << DATA_MEMORY_ADDR_WIDTH) - 1;
+    }
+
+    drv_fifo.push(*req);
+    fprintf(logger->fptr, "GEN: pushed to driver transaction with addr %0lx, rd_data %0lx\n\n",
+            req->addr, req->rd_data);
+}
+
+
 /*
 Fill up memory with data value being equal to address value (for test_itype_load_addr_bits)
 */
@@ -79,7 +97,7 @@ void seq_utype(const char *name, struct isa_utype *cmd) {
     cmd->imm &= 0xFFFFF;
     cmd->value = cmd->opcode | (cmd->rd << 7) | (cmd->imm << 12);
     sprintf(cmd->str, "%08x\t%s x%d, 0x%0x",
-        cmd->value, name, cmd->rd, cmd->imm);
+            cmd->value, name, cmd->rd, cmd->imm);
     sqr->push_seq(cmd->value);
 }
 void seq_lui(struct isa_utype *cmd) {
@@ -104,7 +122,7 @@ void seq_jal(struct isa_utype *cmd) {
     cmd->value = cmd->opcode | (cmd->rd << 7) | new_imm;
     cmd->imm = cmd->imm >> 1;
     sprintf(cmd->str, "%08x\tjal x%d, 0x%0x",
-        cmd->value, cmd->rd, cmd->imm);
+            cmd->value, cmd->rd, cmd->imm);
     sqr->push_seq(cmd->value);
 }
 
@@ -117,7 +135,7 @@ void seq_stype(const char *name, struct isa_stype *cmd) {
     cmd->value = cmd->opcode | ((cmd->imm & 0x1F) << 7) | (cmd->funct3 << 12);
     cmd->value += (cmd->rs1 << 15) | (cmd->rs2 << 20) | ((cmd->imm >> 5) << 25);
     sprintf(cmd->str, "%08x\t%s x%d, 0x%0x(x%d)",
-        cmd->value, name, cmd->rs2, cmd->imm, cmd->rs1);
+            cmd->value, name, cmd->rs2, cmd->imm, cmd->rs1);
     sqr->push_seq(cmd->value);
 }
 void seq_sb(struct isa_stype *cmd) {
@@ -191,20 +209,45 @@ void seq_itype(const char *name, struct isa_itype *cmd, char bit30 = 0) {
         sprintf(cmd->str, "%08x\t%s x%d, 0x%0x, x%d",
                 cmd->value, name, cmd->rd, cmd->imm, cmd->rs1);
     } else if (cmd->opcode == Vriscv_risc_pkg::OPCODE_SYSTEM && !cmd->funct3) {
-        sprintf(cmd->str, "%08x\t%s",
-                cmd->value, name);
+        sprintf(cmd->str, "%08x\t%s", cmd->value, name);
     } else {
         sprintf(cmd->str, "%08x\t%s x%d, x%d, 0x%0x",
                 cmd->value, name, cmd->rd, cmd->rs1, cmd->imm);
     }
     sqr->push_seq(cmd->value);
 }
+
 // JALR
 void seq_jalr(struct isa_itype *cmd) {
     cmd->opcode = Vriscv_risc_pkg::OPCODE_I_TYPE_JALR;
     cmd->funct3 = 0;
     seq_itype("jalr", cmd);
 }
+
+
+// SYSTEM
+void seq_ebreak(struct isa_itype *cmd) {
+    cmd->opcode = Vriscv_risc_pkg::OPCODE_SYSTEM;
+    cmd->rd = 0;
+    cmd->rs1 = 0;
+    cmd->imm = Vriscv_risc_pkg::IMM_EBREAK;
+    seq_itype("ebreak", cmd);
+}
+void seq_ecall(struct isa_itype *cmd) {
+    cmd->opcode = Vriscv_risc_pkg::OPCODE_SYSTEM;
+    cmd->rd = 0;
+    cmd->rs1 = 0;
+    cmd->imm = Vriscv_risc_pkg::IMM_ECALL;
+    seq_itype("ecall", cmd);
+}
+void seq_mret(struct isa_itype *cmd) {
+    cmd->opcode = Vriscv_risc_pkg::OPCODE_SYSTEM;
+    cmd->rd = 0;
+    cmd->rs1 = 0;
+    cmd->imm = Vriscv_risc_pkg::IMM_MRET;
+    seq_itype("mret", cmd);
+}
+
 
 // Load instructions
 void seq_lb(struct isa_itype *cmd) {
@@ -432,7 +475,7 @@ void seq_btype(const char *name, struct isa_btype *cmd) {
     cmd->value = cmd->opcode | (cmd->funct3 << 12) | (cmd->rs1 << 15) | (cmd->rs2 << 20) | new_imm;
     cmd->imm = cmd->imm >> 1;
     sprintf(cmd->str, "%08x\t%s x%d, x%d, 0x%0x",
-        cmd->value, name, cmd->rs1, cmd->rs2, cmd->imm);
+            cmd->value, name, cmd->rs1, cmd->rs2, cmd->imm);
     sqr->push_seq(cmd->value);
 }
 void seq_beq(struct isa_btype *cmd) {
@@ -501,7 +544,7 @@ void seq_rtype(const char *name, struct isa_rtype *cmd) {
     cmd->value = cmd->opcode | (cmd->rd << 7) | (cmd->funct3 << 12);
     cmd->value += (cmd->rs1 << 15) | (cmd->rs2 << 20) | (cmd->funct7 << 25);
     sprintf(cmd->str, "%08x\t%s x%d, x%d, x%d",
-        cmd->value, name, cmd->rd, cmd->rs1, cmd->rs2);
+            cmd->value, name, cmd->rd, cmd->rs1, cmd->rs2);
     sqr->push_seq(cmd->value);
 }
 void seq_add(struct isa_rtype *cmd) {

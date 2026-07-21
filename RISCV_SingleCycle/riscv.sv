@@ -4,7 +4,6 @@ import risc_pkg::*;
 
 module riscv #(
     parameter XLEN = RISCV_XLEN,
-    parameter MEM_DEPTH = 512,          // Data memory depth
     parameter MEM_FILE = ""             // Machine code to load on init
 ) (
     input logic clk,
@@ -35,15 +34,13 @@ module riscv #(
     logic rf_wr_en;
     logic dmem_zero_ex;
     op_enum_dmem_size dmem_size;
-
-    `ifdef CLINT_EX_IRQ
-    logic irq_sw_pending;
     logic irq_ex_pending;
+    logic irq_sw_pending;
     logic irq_timer_pending;
-    `endif
+
 
     // TODO: address decoder
-    assign mem_rd_data = (dmem_addr >= DMEM_BASE_ADDRESS && dmem_addr < DMEM_BASE_ADDRESS + MEM_DEPTH) ? dmem_rd_data : dbus_rd_data;
+    assign mem_rd_data = (dmem_addr >= DMEM_BASE_ADDRESS && dmem_addr < DMEM_BASE_ADDRESS + DMEM_DEPTH) ? dmem_rd_data : dbus_rd_data;
 
     riscv_core #(.XLEN(XLEN)) core (
         .clk(clk),
@@ -72,8 +69,12 @@ module riscv #(
     );
 
 
-    `ifdef CLINT_EX_IRQ
-        clint #(XLEN) clint_block (
+    `ifndef CLINT_EX_IRQ
+        assign irq_ex_pending = irq;
+        assign irq_sw_pending = 0;
+        assign irq_timer_pending = 0;
+    `else
+        clint #(XLEN, `CLINT_EX_IRQ) clint_block (
             .clk(clk),
             .res(~res_n),
             .irq_external(irq),
@@ -89,11 +90,7 @@ module riscv #(
 
 
     memory #(
-        `ifdef VERILATOR
-            .DEPTH(2**12),      // 4kb, 1024 instructions
-        `else
-            .DEPTH(2**10),      // 1kb, 256 instructions
-        `endif
+        .DEPTH(INST_MEM_DEPTH),
         .DATA_WIDTH(ILEN),
         .ADDR_WIDTH(32),
         .MEM_FILE(MEM_FILE),
@@ -126,14 +123,14 @@ module riscv #(
 
 
     memory #(
-        .DEPTH(MEM_DEPTH),
+        .DEPTH(DMEM_DEPTH),
         .DATA_WIDTH(XLEN),
         .ADDR_WIDTH(32),
         .ENDIANESS(0)
     ) data_mem (
         .wclk(~clk),
         .res(~res_n),
-        .ren(1'b1),
+        .ren(~dmem_wr),
         .wen(dmem_wr),
         `ifdef CLINT_EX_IRQ
             .req(dmem_req & dmem_addr[31:16] !== (CLINT_MSIP >> 16)), // TODO address decoder,

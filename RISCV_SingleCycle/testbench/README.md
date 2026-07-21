@@ -33,10 +33,13 @@ Status Done:
 - Test all Btype branch commands for positive jumps
 - Test all Btype branch commands for negative jumps
 - Zicsr tests
+- Interrupts: ebreak, illegal cmd, 1 external interrupt - in direct and vectored modes
 
 Status TBD:
 - JALR tests
-- Additional tests... (interrupts, negative)
+- CLINT verification
+- More interrupt tests: parallel interrupts, rest of interrupts
+- Additional tests?
 
 TODO:
 - RV64I: load test pattern upper bits into registers (like in test_btype_no_jumps)

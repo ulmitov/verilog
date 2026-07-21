@@ -23,6 +23,7 @@ public:
 
 
 void Driver::main() {
+    // wait for posedge
     if (!inf->get_clock()) {
         if (VERBOSITY) {
             //printf("[%ld] DRV: waiting to drive on HOLD_TIME after posedge\n", inf->timestamp);
@@ -30,13 +31,14 @@ void Driver::main() {
         while (!inf->get_clock()) inf->wait(1);
         inf->wait(SETUP_TIME + 1);
     }
+
     if (drv_fifo.empty()) return;
     // TODO: maybe drive 0 if nothing to drive ?
 
     // skip if mem operation not requested
     if (!inf->req()) return;
 
-    // skip if the address belongs to data memory
+    // skip if current address on bus belongs to data memory range
     if (inf->is_data_memory_address()) return;
 
     req = drv_fifo.front();
@@ -51,6 +53,7 @@ void Driver::main() {
 
     // drive
     inf->set_rd_data(req.rd_data);
+    inf->set_irq(req.irq);
 
     // post drive
     drv_fifo.pop();

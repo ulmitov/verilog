@@ -62,6 +62,7 @@ module riscv_core #(
     logic pc_jump;
     logic rd_ok;
     logic rs1_ok;
+    logic non_zero_cmd;
 
     // ZICSR:
     logic irq_start;
@@ -173,16 +174,10 @@ module riscv_core #(
             .sys_imm(immediate[11:0]),
             .pc(pc),
             .csr_din(alu_res),
-            .irq_illegal(illegal_dec),
-            `ifdef CLINT_EX_IRQ
-                .irq_ex_pending(irq_ex_pending),
-                .irq_sw_pending(irq_sw_pending),
-                .irq_timer_pending(irq_timer_pending),
-            `else
-                .irq_ex_pending(1'b0),
-                .irq_sw_pending(1'b0),
-                .irq_timer_pending(1'b0),
-            `endif
+            .irq_illegal(illegal_dec & non_zero_cmd),
+            .irq_ex_pending(irq_ex_pending),
+            .irq_sw_pending(irq_sw_pending),
+            .irq_timer_pending(irq_timer_pending),
         // outputs:
             .irq_start(irq_start),
             .irq_stop(irq_stop),
@@ -260,20 +255,23 @@ module riscv_core #(
             endcase
         end
         `ifdef ZICSR
-        else rf_wr_data = csr_data_out;
+            else rf_wr_data = csr_data_out;
         `endif
     end
 
 
     // --- FETCH LOGIC ---
     // halt on cmd zero, but allow cmd zero to be the first one
-    assign inst_req = (pc === INST_BASE_ADDRESS | |opcode);
+    assign non_zero_cmd = |instruction;     // maybe only |opcode will be enough?
+    assign inst_req = (pc === INST_BASE_ADDRESS | non_zero_cmd);
+
     always_ff @(posedge clk or negedge res_n) begin
         if (~res_n)
             imem_req <= 0;
         else
             imem_req <= inst_req;
     end
+
     // PC register
     always_ff @(posedge clk or negedge res_n) begin
         if (~res_n)
@@ -281,19 +279,24 @@ module riscv_core #(
         else if (imem_req === 1'b1)
             pc <= next_pc;
     end
+
     // PC select
-    assign pc_jump = branch_taken | pc_sel | (irq_start) | irq_stop;
+    assign pc_jump = branch_taken | pc_sel | irq_start | irq_stop;
+
     always_comb begin
         if (pc_jump)
             next_pc = {alu_res[31:1], 1'b0};    // for now Inst ROM is always 32 bits
         else
             next_pc = next_pc_default;
     end
+
     // TODO: dont need 32 bits for Y
+    logic [31:0] pc_alu_b;
+    assign pc_alu_b = {{29{1'b0}}, imem_req & is_32b_instr, imem_req & ~is_32b_instr, {1'b0}};  // 100 or 010 or 000
     adder #(32) pc_adder (
         .Nadd_sub(1'b0),
         .X(pc),
-        .Y({{29{1'b0}}, imem_req & is_32b_instr, imem_req & ~is_32b_instr, {1'b0}}),  // 100 or 010 or 000
+        .Y(pc_alu_b),  
         .sum(next_pc_default)
     );
 endmodule

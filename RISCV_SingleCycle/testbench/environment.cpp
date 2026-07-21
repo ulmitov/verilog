@@ -54,6 +54,7 @@ public:
                 printf("INFO: Caused by last transaction:\n");
                 inf->dump(1);
                 inf->dump_regfile();
+                inf->dump_data_mem();
                 printf("INFO: Peeking on the next transaction:\n");
                 inf->wait(CLK_PHASE * 2);
                 inf->dump(1);

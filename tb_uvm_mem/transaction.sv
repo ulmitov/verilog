@@ -2,6 +2,7 @@ import risc_pkg::*;
 
 
 class transaction extends uvm_sequence_item;
+    `uvm_object_utils(transaction)
     parameter WIDTH = mem_config::DATA_WIDTH;
     parameter DEPTH = mem_config::DEPTH;
 
@@ -12,15 +13,6 @@ class transaction extends uvm_sequence_item;
     rand bit [WIDTH-1:0] wr_data;
     bit [WIDTH-1:0] rd_data;
     bit req;
-
-    `uvm_object_utils_begin (transaction)
-        `uvm_field_int (wen, UVM_DEFAULT)
-        `uvm_field_int (ren, UVM_DEFAULT)
-        `uvm_field_int (addr, UVM_DEFAULT)
-        `uvm_field_int (wr_data, UVM_DEFAULT)
-        `uvm_field_int (rd_data, UVM_DEFAULT)
-        `uvm_field_enum (op_enum_dmem_size, blsize, UVM_DEFAULT)
-    `uvm_object_utils_end
 
     // Must be either read or write
     constraint c_wr_rd { wen ^ ren; };

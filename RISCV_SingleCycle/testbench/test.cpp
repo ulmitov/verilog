@@ -429,3 +429,19 @@ void test_zicsr(Environment *env) {
     env->main();
     printf("INFO: Finished OP_FUNCT3_CSRRCI test\n\n");
 }
+
+
+void test_traps(Environment* env) {
+    generate_trap_ebreak();
+    env->main();
+    printf("INFO: Finished EBREAK test\n\n");
+
+    generate_trap_illegal_cmd();
+    env->main();
+    printf("INFO: Finished illegal cmds test\n\n");
+
+    generate_trap_irq_external_disabled();
+    generate_trap_irq_external_enabled();
+    env->main();
+    printf("INFO: Finished external interrupt test\n\n");
+}

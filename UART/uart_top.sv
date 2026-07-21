@@ -27,7 +27,6 @@ module uart_top (
     logic [`UART_DATA_WIDTH-1:0] fcr;
     logic [`UART_DATA_WIDTH-1:0] dll;
     logic [`UART_DATA_WIDTH-1:0] dlm;
-    logic [`UART_DATA_WIDTH-1:0] thr;
     logic [`UART_DATA_WIDTH-1:0] mcr;
     logic [`UART_DATA_WIDTH-1:0] data_out;
     logic [`UART_DATA_WIDTH-1:0] data_in;

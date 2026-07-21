@@ -6,9 +6,9 @@
 class Interface {
 public:
     unsigned long timestamp;
-    Vriscv *top;
     VerilatedVcdC* vcd;
-    
+    Vriscv *top;
+
     Interface(char vcdc = 0):
         timestamp(0),
         top(new Vriscv()),
@@ -30,7 +30,7 @@ public:
             delete vcd;
         }
         top->final();
-        sprintf(vcd_file_path, "vcd/cov_riscdv_%d.dat", XLEN);
+        sprintf(vcd_file_path, "vcd/cov_riscdv%d.dat", XLEN);
         VerilatedCov::write(vcd_file_path);
         delete top;
     }
@@ -38,21 +38,29 @@ public:
     char req() {
         return top->dmem_req;
     }
+
     char wr() {
         return top->dmem_wr;
     }
+
     unsigned int addr() {
         return top->dmem_addr;
     }
+
     long wr_data() {
         return top->dbus_wr_data;
     }
+
     long rd_data() {
         return top->dbus_rd_data;
     }
 
     void set_rd_data(long data) {
         top->dbus_rd_data = data;
+    }
+
+    void set_irq(int val) {
+        top->irq = val;
     }
 
     void set_clock(int val) {
@@ -149,18 +157,6 @@ public:
     
     void dump(int std_out = 0) {
         if (std_out) {
-            /*
-            if (addr() >= DATA_MEMORY_BASE_ADDR && addr() < DATA_MEMORY_LAST_ADDR) {
-                printf("DMEM DUMP: ");
-                for (int i = 0; i < 4; i++) {
-                    try {
-                        printf("%d ", top->rootp->riscv__DOT__data_mem__DOT__MEMX[addr()][i]);
-                    } catch (...) {
-                        printf("Error dumping dmem address %d\n", addr() + i);
-                    }
-                }
-            }
-            */
             printf("[%lu] DEBUG: FETCH: imem_req=%d  imem_addr=%08x  instruction=%08x  imem_req=%d  next_pc=%08x\n",
                 timestamp,
                 top->rootp->riscv__DOT__core__DOT__imem_req,
@@ -181,7 +177,7 @@ public:
                 top->rootp->riscv__DOT__core__DOT__rs2_data,
                 top->rootp->riscv__DOT__core__DOT__immediate
             );
-            printf("[%lu] DEBUG: ALU:  opcode=%02x  alu_a=%d  alu_b=%08x  alu_res=%08x\n",
+            printf("[%lu] DEBUG: ALU:  opcode=%02x  alu_a=%08x  alu_b=%08x  alu_res=%08x\n",
                 timestamp,
                 top->rootp->riscv__DOT__core__DOT__alu_op,
                 top->rootp->riscv__DOT__core__DOT__alu_a,
@@ -249,16 +245,6 @@ public:
                 top->dbus_wr_data,
                 top->dbus_rd_data
             );
-            /*
-            fprintf(logger->fptr, "DUMP REGFILE: ");
-            for (int i = 0; i < 32; i++) {
-                try {
-                    fprintf(logger->fptr, "[%d]%lx ", i, top->rootp->riscv__DOT__reg_file__DOT__reg_mem[i]);
-                } catch (...) {
-                    fprintf(logger->fptr, "Error dumping array index %d\n", i);
-                }
-            }
-            fprintf(logger->fptr, "\n");*/
         }
     }
 
@@ -272,5 +258,21 @@ public:
                 printf("Error dumping array index %d\n", i);
             }
         }
+        //fprintf(logger->fptr, "\n");
+    }
+
+    void dump_data_mem() {
+        if (is_data_memory_address()) {
+            printf("DMEM DUMP at 0x%x: ", addr());
+            for (int i = 0; i < 4; i++) {
+                try {
+                    printf("%x ", top->rootp->riscv__DOT__data_mem__DOT__MEMX[addr() + i]);
+                } catch (...) {
+                    printf("Error dumping dmem address %d\n", addr() + i);
+                }
+            }
+            printf("\n");
+        }
+        else printf("WARNING: 0x%x is not a data memory address, skipping mem dump\n", addr());
     }
 };

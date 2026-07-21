@@ -1,6 +1,10 @@
 /* ZiCSR extension. For now only Machine mode.
 https://docs.riscv.org/reference/isa/priv/priv-csrs.html
 */
+`define MIE 3
+`define MPIE 7
+
+
 module csr #(parameter XLEN = RISCV_XLEN) (
     input logic clk,
     input logic res,
@@ -31,46 +35,50 @@ module csr #(parameter XLEN = RISCV_XLEN) (
     logic [XLEN-1:0] mtvec;
     logic [XLEN-1:0] mscratch;
     logic [XLEN-1:0] mstatus;
+    logic [XLEN-1:0] mtinst;
     logic [XLEN-1:0] mcause;
     logic [XLEN-1:0] mcause_data;
-    logic [XLEN-1:0] mtinst;
     logic wr_en;
     logic rd_en;
     logic irq_en;
     logic illegal;
-    logic irq_break;
-    logic irq_ecall;
-    logic irq_illegal_ack;
     logic irq_mmode_en;
     logic irq_mmode_ex_en;
     logic irq_mmode_sw_en;
     logic irq_mmode_tc_en;
+    logic irq_illegal_ack;
     logic irq_external;
     logic irq_software;
+    logic irq_break;
+    logic irq_ecall;
     logic irq_timer;
     logic irq_align;
     logic irq_fault;
+    logic irq_started;
 
     assign csr_out = irq_start ? mtvec : csr_val;
-    assign irq_mmode_en = ~irq_stop & mstatus[3];       // mstatus.MIE
+    assign irq_mmode_en = ~irq_stop & (mstatus[`MIE] | mstatus[`MPIE]);
     assign irq_mmode_ex_en = irq_mmode_en & mie[11];    // mie.MEIE
     assign irq_mmode_sw_en = irq_mmode_en & mie[3];     // mie.MSIE
     assign irq_mmode_tc_en = irq_mmode_en & mie[7];     // mie.MTIE
+
     assign irq_software = irq_mmode_sw_en & irq_sw_pending;
     assign irq_external = irq_mmode_ex_en & irq_ex_pending;
     assign irq_timer = irq_mmode_tc_en & irq_timer_pending;
     assign irq_illegal_ack = imem_req & (irq_illegal | illegal);
-    assign irq_align = ILEN > 16 ? imem_req & pc[0] & pc[1] : imem_req & pc[0]; //must be 4/2 bytes aligned
+    assign irq_align = ILEN > 16 ? imem_req & pc[0] & pc[1] : imem_req & pc[0]; // must be 4 or 2 bytes aligned
     assign irq_fault = imem_req & $isunknown(instruction);
 
-    assign irq_en = irq_external | irq_software | irq_timer | irq_align | 
-                    irq_fault | irq_illegal_ack | irq_break | irq_ecall;
+    assign irq_en = irq_external | irq_software | irq_timer | irq_align |
+                    irq_illegal_ack | irq_fault | irq_break | irq_ecall;
+
+    // if interrupt (not exception) and mtvec not in vectored mode then jump to base+offset
+    // on irq_start mcause will be also written with this mcause_data
+    assign offset = (mcause_data[31] & mtvec[0]) ? {mcause_data[29:0], 2'b00} : 'h0;  // TODO: if IALIGN is 16 then add only one zero
 
     // if rd is 0 then dont read, if rs1 is 0 then dont write
     assign wr_en = c_type & rs_ok;
     assign rd_en = c_type & rd_ok;
-    // if interrupt (not exception) and mtvec not in vectored mode then jump to base+offset
-    assign offset = (mcause[31] & mtvec[0]) ? {mcause[29:0], 2'b00} : 'h0;
 
     // Read CSR mux
     // irq started: mtvec; irq finished: mepc; csr read: value of csr
@@ -121,6 +129,12 @@ module csr #(parameter XLEN = RISCV_XLEN) (
 
 
     /***  set irq_start just for one tick  ***/
+    assign irq_start = irq_en & ~irq_started;
+    always_ff @(posedge clk) begin
+        irq_started <= imem_req & irq_en;
+        if (irq_en) $display("DEBUG: CSR: irq_en  mcause %0h  inst %0h", mcause_data, instruction);
+    end
+    /*
     always_ff @(negedge clk or posedge res) begin
         if (res)
             irq_start <= 0;
@@ -129,6 +143,7 @@ module csr #(parameter XLEN = RISCV_XLEN) (
             if (irq_en) $display("DEBUG: CSR: irq_en  mcause %0h  inst %0h", mcause_data, instruction);
         end
     end
+    */
 
 
     /***  Write CSRs on negedge with stable values  ***/
@@ -158,11 +173,11 @@ module csr #(parameter XLEN = RISCV_XLEN) (
         if (res)
             mstatus <= 0;
         else
-        if (irq_start)     // save mie to mpie and disable mie
-            mstatus <= {mstatus[XLEN-1:8], mstatus[3], mstatus[6:4], 1'b0, mstatus[2:0]};
+        if (irq_start)  // save mie to mpie and disable mie
+            mstatus <= {mstatus[XLEN-1:8], mstatus[`MIE], mstatus[6:4], 1'b0, mstatus[2:0]};
         else
-        if (irq_stop)     // Restore mstatus.mpie to mstatus.mie
-            mstatus <= {mstatus[XLEN-1:8], 1'b0, mstatus[6:4], mstatus[7], mstatus[2:0]};
+        if (irq_stop)   // Restore mpie to mie
+            mstatus <= {mstatus[XLEN-1:8], 1'b0, mstatus[6:4], mstatus[`MPIE], mstatus[2:0]};
         else
         if (wr_en & sys_imm === CSR_MSTATUS)
             mstatus <= csr_din;
@@ -171,7 +186,7 @@ module csr #(parameter XLEN = RISCV_XLEN) (
     always_ff @(negedge clk or posedge res) begin
         if (res)
             mepc <= 0;
-        else if (irq_start | irq_break | irq_ecall)
+        else if (irq_start)
             mepc <= pc;
         else if (wr_en & sys_imm === CSR_MEPC)
             mepc <= csr_din;
@@ -232,20 +247,20 @@ module csr #(parameter XLEN = RISCV_XLEN) (
         if (irq_timer)
             mcause_data = {1'b1, 27'b0, 4'b0111};
         else
-        if (irq_align)
-            mcause_data = {28'b0, 4'b0000};
-        else
         if (irq_fault)
             mcause_data = {28'b0, 4'b0001};
         else
         if (irq_illegal_ack)
             mcause_data = {28'b0, 4'b0010};
         else
-        if (irq_break)
-            mcause_data = {28'b0, 4'b0011};
+        if (irq_align)
+            mcause_data = {28'b0, 4'b0000};
         else
         if (irq_ecall)
             mcause_data = {28'b0, 4'b1011};
+        else
+        if (irq_break)
+            mcause_data = {28'b0, 4'b0011};
         else
             mcause_data = 0;
     end
