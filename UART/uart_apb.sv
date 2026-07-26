@@ -10,6 +10,7 @@
 
 `define REGS_ADDR_END 'h7
 
+
 module uart_apb #(parameter APB_DATA_WIDTH = 32) (
     input logic rclk,   // rx baud pin
     input logic sin,    // serial input to rx

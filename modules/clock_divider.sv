@@ -1,15 +1,15 @@
+`include "consts.vh"
 /*
     Clock divider (Baud Rate Generation)
-
-If divider value is unknown then clk out is a constant 1
 
 f="clock_divider.sv"; m="clock_divider";
 yosys -p "read_verilog -sv ${f}; hierarchy -check -top $m; proc; opt; clean; show -format svg -prefix ${m} ${m}; show ${m}"
 */
-module clock_divider #(parameter DIV_WIDTH = 16) (
-    input res,
-    input clk_in,
-    input [DIV_WIDTH-1:0] div,
+module clock_divider #(parameter DIV_WIDTH = 16, parameter DATA_WIDTH = 8) (
+    input logic res,
+    input logic clk_in,
+    input logic polarity,
+    input logic [DIV_WIDTH-1:0] div,
     output logic clk_out
 );
     logic [DIV_WIDTH-1:0] counter;
@@ -22,9 +22,9 @@ module clock_divider #(parameter DIV_WIDTH = 16) (
     logic dll_set;
 
     generate
-        if (`UART_DATA_WIDTH < DIV_WIDTH) begin
-            assign dlm_set      = |div[DIV_WIDTH-1:`UART_DATA_WIDTH];
-            assign dll_set      = |div[`UART_DATA_WIDTH-1:1];
+        if (DATA_WIDTH < DIV_WIDTH) begin
+            assign dlm_set      = |div[DIV_WIDTH-1:DATA_WIDTH];
+            assign dll_set      = |div[DATA_WIDTH-1:1];
         end else begin
             assign dlm_set      = 1'b1;
             assign dll_set      = |div[DIV_WIDTH-1:1];
@@ -54,7 +54,7 @@ module clock_divider #(parameter DIV_WIDTH = 16) (
     end
     always_ff @(posedge clk_in or posedge res) begin
         if (res)
-            baud_out <= 1'b1;
+            baud_out <= polarity;
         else if (switch_clk)
             baud_out <= #`T_DELAY_FF ~baud_out;
     end

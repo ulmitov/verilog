@@ -10,11 +10,11 @@ Each folder has a Readme
 
  - ![RISCV implementation](./RISCV_SingleCycle) of RV32I and RV64I single cycle and CLINT interrupts block
 
- - ![RISCV Design verification](./RISCV_SingleCycle/testbench) A C++ UVM like testbench
+ - ![RISCV Design verification](./RISCV_SingleCycle/testbench) is a C++ UVM like testbench
 
- - ![SystemVerilog testbench for ALU](./tb_sv_alu)
+ - ![SystemVerilog testbench for ALU module](./tb_sv_alu)
 
- - ![UART 16550 module](./UART) according to 16550 spec
+ - ![UART module](./UART) according to 16550 spec
  
  - ![UART UVM testbench](./tb_uvm_uart) with RAL model and APB driver
 
@@ -26,11 +26,11 @@ Each folder has a Readme
 
  - ![UVM testbench for FIFO](./tb_uvm_fifo)
  
- - ![modules:](./modules) verilog sub modules and sanity testbenches
+ - ![modules:](./modules) verilog sub modules and their acceptance tests
 
 
 # Run suites:
-- `make regression`: modules sanity testbenches
+- `make regression`: modules acceptance tests
 - `make uart`: UART testbenches
 - `make uartcpp`: UART C++ driver validation
 - `make uvm-uart`: UVM UART testbench
@@ -38,7 +38,7 @@ Each folder has a Readme
 - `make uvm-mem`: UVM Memory testbench
 - `make alu`: SystemVerilog ALU testbench
 - `make riscv`: RISCV assembly examples
-- `make riscdv`: RISCV C++ testbench
+- `make riscdv`: RISCV ISA C++ testbench
 - `make all`: all testbenches
 
 

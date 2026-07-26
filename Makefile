@@ -100,7 +100,7 @@ regression:
 	$(MAKE) -s adder half_adder fastadder mux decoder priority_enc mux_cmos mux_behavioral_tb
 	$(MAKE) -s sequence counters fifo memory shift_reg shift
 uart:
-	$(MAKE) -s uart_baud_tb uart_rx_tb uart_tx_tb uart_tb uart_top_tb uartcpp
+	$(MAKE) -s uart_rx_tb uart_tx_tb uart_tb uart_top_tb uartcpp
 risc_tb:
 	$(MAKE) -s risc_tb_arr risc_tb_bub risc_tb_fib
 
@@ -110,6 +110,8 @@ adder:
 	$(call run_module,adder_tb,adder_tb.v,adder.v)
 fastadder:
 	$(call run_module,fast_adder_tb,adder_tb.v,adder.v)
+clock_divider:
+	$(call run_module,clock_divider_tb,clock_divider_tb.sv,clock_divider.sv)
 counters:
 	$(call run_module,counter_dff_tb,counter_tb.v,counter.v)
 	$(call run_module,counter_jkff_tb,counter_tb.v,counter.v)
@@ -142,10 +144,14 @@ mux_cmos:
 endif
 
 
+# ALU SV-TB
+alu_src := RISCV_SingleCycle/risc_pkg.sv tb_sv_alu/top_tb.sv modules/mux.v modules/shift.v modules/adder.v RISCV_SingleCycle/alu.sv
+alu:
+	$(call run_verilator,top_tb,-DBEHAVIORAL=1 -DCONST_DELAYS_OFF -Itb_sv_alu $(alu_src))
+
+
 # UART
-uart_src := $(foreach x,testbench/testbench.sv uart_top.sv uart.sv clock_divider.sv uart_tx.sv uart_rx.sv,UART/$(x))
-uart_baud_tb:
-	$(call run_sim,baud_tb,-I./UART UART/testbench/testbench.sv UART/clock_divider.sv)
+uart_src := $(foreach x,testbench/testbench.sv ../modules/clock_divider.sv uart_top.sv uart.sv uart_tx.sv uart_rx.sv,UART/$(x))
 uart_rx_tb:
 	$(call run_sim,uart_rx_tb,-I./UART ${uart_src})
 uart_tx_tb:
@@ -160,7 +166,7 @@ uartcpp:
 	args="$(VERILATOR_ARGS) $(ARG) --public-flat-rw -DCONST_DELAYS_OFF -CFLAGS "-I../UART/driver" -IUART --exe"
 	verilator $$args --top $$tb $$src $(uart_src) && ./obj_dir/V$$tb
 	mv coverage.dat vcd/cov_uartcpp.dat
-	# for debugging add: ARG='-CFLAGS "-g -DDEBUG_MODE"'
+	# debugging: ARG='-CFLAGS "-g -DDEBUG_MODE"'
 
 
 # RISCV
@@ -169,6 +175,7 @@ risc_mod := memory.sv adder.v shift.v mux.v counter.v
 define run_risc
 	$(call run_sim,$(1),RISCV_SingleCycle/testbench/testbench.sv $(foreach x,$(risc_src),RISCV_SingleCycle/$(x)) $(foreach x,$(risc_mod),modules/$(x)))
 endef
+
 
 # Application tests
 risc_tb_arr:
@@ -185,12 +192,6 @@ riscdv:
 	src="$(foreach x,$(risc_src),RISCV_SingleCycle/$(x)) $(foreach x,$(risc_mod),modules/$(x)) RISCV_SingleCycle/testbench/testbench.cpp"
 	args="$(VERILATOR_ARGS) $(ARG) -DCONST_DELAYS_OFF --public-flat-rw -IRISCV_SingleCycle --exe"
 	verilator $$args --top $$tb $$src && ./obj_dir/V$$tb
-
-
-# ALU SV-TB
-alu_src := RISCV_SingleCycle/risc_pkg.sv tb_sv_alu/top_tb.sv modules/mux.v modules/shift.v modules/adder.v RISCV_SingleCycle/alu.sv
-alu:
-	$(call run_verilator,top_tb,-DBEHAVIORAL=1 -DCONST_DELAYS_OFF -Itb_sv_alu $(alu_src))
 
 
 # FIFO UVM
