@@ -1,4 +1,5 @@
 `include "regmap.vh"
+`include "clock_divider.sv"
 
 
 module uart #(

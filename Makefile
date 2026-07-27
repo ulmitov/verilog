@@ -98,7 +98,7 @@ all:
 	$(MAKE) -s regression uart risc_tb
 regression:
 	$(MAKE) -s adder half_adder fastadder mux decoder priority_enc mux_cmos mux_behavioral_tb
-	$(MAKE) -s sequence counters fifo memory shift_reg shift
+	$(MAKE) -s clock_divider sequence counters fifo memory shift_reg shift
 uart:
 	$(MAKE) -s uart_rx_tb uart_tx_tb uart_tb uart_top_tb uartcpp
 risc_tb:
@@ -151,18 +151,18 @@ alu:
 
 
 # UART
-uart_src := $(foreach x,testbench/testbench.sv ../modules/clock_divider.sv uart_top.sv uart.sv uart_tx.sv uart_rx.sv,UART/$(x))
+uart_src := $(foreach x,testbench/testbench.sv uart_top.sv uart.sv uart_tx.sv uart_rx.sv,UART/$(x))
 uart_rx_tb:
-	$(call run_sim,uart_rx_tb,-I./UART ${uart_src})
+	$(call run_sim,uart_rx_tb,-IUART ${uart_src})
 uart_tx_tb:
-	$(call run_sim,uart_tx_tb,-I./UART ${uart_src})
+	$(call run_sim,uart_tx_tb,-IUART ${uart_src})
 uart_tb:
-	$(call run_sim,uart_tb,-I./UART ${uart_src})
+	$(call run_sim,uart_tb,-IUART ${uart_src})
 uart_top_tb:
-	$(call run_sim,uart_top_tb,-I./UART ${uart_src})
+	$(call run_sim,uart_top_tb,-IUART ${uart_src})
 uartcpp:
 	tb=uart_top
-	src="./UART/testbench/uart_tb.cpp ./UART/driver/uart_driver.cpp ./UART/testbench/uart_verilated.cpp"
+	src="UART/testbench/uart_tb.cpp UART/driver/uart_driver.cpp UART/testbench/uart_verilated.cpp"
 	args="$(VERILATOR_ARGS) $(ARG) --public-flat-rw -DCONST_DELAYS_OFF -CFLAGS "-I../UART/driver" -IUART --exe"
 	verilator $$args --top $$tb $$src $(uart_src) && ./obj_dir/V$$tb
 	mv coverage.dat vcd/cov_uartcpp.dat

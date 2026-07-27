@@ -2022,7 +2022,7 @@ void generate_trap_irq_external_enabled() {
         ref_req.wr = 1;
         ref_req.addr = addi.imm;
         ref_req.rd_data = 0;
-        ref_req.wr_data = load.value & ((1UL << XLEN) - 1);
+        ref_req.wr_data = load.value & ((1UL << Vriscv_risc_pkg::IALIGN) - 1);
         sprintf(ref_req.str, "%s; %s", ctype.str, stype.str);
         push_ref(&ref_req);
 

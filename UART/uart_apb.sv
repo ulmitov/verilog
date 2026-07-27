@@ -2,7 +2,6 @@
     APB Slave UART interface wrapper
 */
 `include "regmap.vh"
-`include "clock_divider.sv"
 `include "uart_rx.sv"
 `include "uart_tx.sv"
 `include "uart.sv"
