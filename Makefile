@@ -144,6 +144,14 @@ mux_cmos:
 endif
 
 
+spi_src := -ISPI SPI/testbench.sv SPI/spi_top.sv modules/clock_divider.sv modules/shift_reg.v
+spi_tb:
+	$(call run_verilator,spi_tb,$(spi_src),"")
+	$(call run_sim,spi_tb,$(spi_src),"")
+	$(call run_sim,spi_single_slave_tb,$(spi_src),"")
+	$(call run_sim,spi_daisy_chain_tb,$(spi_src),"")
+
+
 # ALU SV-TB
 alu_src := RISCV_SingleCycle/risc_pkg.sv tb_sv_alu/top_tb.sv modules/mux.v modules/shift.v modules/adder.v RISCV_SingleCycle/alu.sv
 alu:

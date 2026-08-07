@@ -21,7 +21,7 @@ module uart_rx_tb;
     localparam DIV = 16'h4;
     localparam baud_wait = `TCLK*2*16*DIV;
 
-    clock_divider rx_baud (.clk_in(clk), .res(~res_n), .polarity(1'b1), .div(DIV), .clk_out(b_tick));
+    clock_divider rx_baud (.clk_in(clk), .res(~res_n), .div(DIV), .clk_out(b_tick));
 
     uart_rx dut (
         .res_n(res_n),
@@ -98,7 +98,7 @@ module uart_tx_tb;
     logic sreg_clk;
     logic [3:0] cnt;
 
-    clock_divider tx_baud (.clk_in(clk), .res(~res_n), .polarity(1'b1), .div(DIV), .clk_out(b_tick));
+    clock_divider tx_baud (.clk_in(clk), .res(~res_n), .div(DIV), .clk_out(b_tick));
 
     shift_reg #(.N(12)) tb_thr (
         .clk(sreg_clk),

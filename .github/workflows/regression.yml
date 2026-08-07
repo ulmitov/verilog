@@ -83,6 +83,9 @@ jobs:
       - name: ALU SystemVerilog testbench 64 bit
         run: make alu ARG=-DXLEN=64 RM_OBJDIR=true 2>&1 | tee sv_alu64.log
 
+      - name: SPI tests
+        run: make spi_tb 2>&1 | tee spi_tb.log
+
       - name: Results Summary
         run: make grep_err
 

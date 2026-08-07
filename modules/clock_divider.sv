@@ -8,7 +8,8 @@ yosys -p "read_verilog -sv ${f}; hierarchy -check -top $m; proc; opt; clean; sho
 module clock_divider #(parameter DIV_WIDTH = 16, parameter DATA_WIDTH = 8) (
     input logic res,
     input logic clk_in,
-    input logic polarity,
+    input logic polarity,   // initial value
+    input logic phase,      // one phase delay
     input logic [DIV_WIDTH-1:0] div,
     output logic clk_out
 );
@@ -20,13 +21,15 @@ module clock_divider #(parameter DIV_WIDTH = 16, parameter DATA_WIDTH = 8) (
     logic baud_out;
     logic dlm_set;
     logic dll_set;
+    logic fixed_phase;
+    logic fixed_pol;
 
     generate
         if (DATA_WIDTH < DIV_WIDTH) begin
             assign dlm_set      = |div[DIV_WIDTH-1:DATA_WIDTH];
             assign dll_set      = |div[DATA_WIDTH-1:1];
         end else begin
-            assign dlm_set      = 1'b1;
+            assign dlm_set      = 1'b0;
             assign dll_set      = |div[DIV_WIDTH-1:1];
         end
     endgenerate
@@ -37,24 +40,45 @@ module clock_divider #(parameter DIV_WIDTH = 16, parameter DATA_WIDTH = 8) (
     assign next_count   = counter + 1;
 
     always_comb begin
-        casez({dlm_set, dll_set, div[0]})
-            3'b11?:   clk_out = baud_out;
-            3'b01?:   clk_out = baud_out;
-            3'b10?:   clk_out = baud_out;
-            3'b001:   clk_out = clk_in;
-            default:  clk_out = 1'b1;
+        case (phase)
+            1'b1:       fixed_phase = 1'b1;
+            default:    fixed_phase = 1'b0;
         endcase
     end
-    // When either of the divisor latches is loaded, a 16-bit baud counter is also loaded to prevent long counts on initial load.
+
+    always_comb begin
+        case (polarity)
+            1'b0:       fixed_pol = 1'b0;
+            default:    fixed_pol = 1'b1;
+        endcase
+    end
+
+    always_comb begin
+        casez ({dlm_set, dll_set, div[0]})
+            3'b11?:   clk_out = baud_out;
+            3'b01?:   clk_out = baud_out;
+            3'b10?:   clk_out = baud_out;   // div > 1
+            3'b001:   clk_out = clk_in;     // div = 1
+            default:  clk_out = fixed_pol;  // div unset
+        endcase
+    end
+
+    // When either of the divisor latches is loaded,
+    // baud counter is also loaded to prevent long counts.
+    // if phase is 1 then start count from 0
     always_ff @(posedge clk_in or posedge res) begin
-        if (res | cycle_full)
+        if (res)
+            counter <= {{(DIV_WIDTH-1){1'b0}}, ~fixed_phase};
+        else if (cycle_full)
             counter <= 1;
         else
             counter <= next_count;
     end
+
+    initial baud_out = polarity === 1'b0 ? 1'b0 : 1'b1; // same as the above fixed_pol mux
     always_ff @(posedge clk_in or posedge res) begin
         if (res)
-            baud_out <= polarity;
+            baud_out <= fixed_pol;
         else if (switch_clk)
             baud_out <= #`T_DELAY_FF ~baud_out;
     end
