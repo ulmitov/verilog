@@ -25,6 +25,8 @@ Each folder has a Readme
  - ![UVM testbench for Memory module](./tb_uvm_mem)
 
  - ![UVM testbench for FIFO](./tb_uvm_fifo)
+
+ - ![SPI module and tests](./SPI)
  
  - ![modules:](./modules) verilog sub modules and their acceptance tests
 

@@ -51,6 +51,7 @@ module uart #(
 
     clock_divider #(.DIV_WIDTH(DIV_BITS), .DATA_WIDTH(`UART_DATA_WIDTH)) baud_gen (
         .clk_in(clk),
+        .polarity(1'b1),
         .res(~res_n | baud_res),
         .div(divisor),
         .clk_out(baudout)

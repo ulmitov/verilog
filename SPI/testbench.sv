@@ -329,7 +329,7 @@ module spi_daisy_chain_tb(inout logic spiclk_master);
     logic [15:0] paddr;
     logic [15:0] pwdata;
     logic [15:0] prdata;
-    logic [15:0] prdata_sl1, prdata_s2;
+    logic [15:0] prdata_sl1, prdata_sl2;
     logic [6:0] count_ticks;
     logic [3:0] dlen;
     logic clk = 1;
