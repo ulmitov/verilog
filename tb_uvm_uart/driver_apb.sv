@@ -20,8 +20,6 @@ class driver_apb extends uvm_driver#(transaction);
     endfunction
 
     task run_phase(uvm_phase ph);
-        super.run_phase(ph);
-        
         forever begin
             seq_item_port.get_next_item(req);
             drive();

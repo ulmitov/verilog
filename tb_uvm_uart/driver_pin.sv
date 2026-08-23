@@ -17,7 +17,6 @@ class driver_pin extends uvm_driver#(pin_sample);
     endfunction
 
     task run_phase(uvm_phase ph);
-        super.run_phase(ph);
         `PINS.sin <= 1'b1;
         forever begin
             seq_item_port.get_next_item(req);

@@ -16,9 +16,7 @@ import uvm_pkg::*;
 `include "test_base.sv"
 
 
-
 module top_tb;
-    bit res;
     bit clk = 0;
 
     fifo_interface IF(.clk(clk));

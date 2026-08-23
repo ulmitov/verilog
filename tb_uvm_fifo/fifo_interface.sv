@@ -1,6 +1,4 @@
-interface fifo_interface (
-    input logic clk
-);
+interface fifo_interface(input logic clk);
     logic push;
     logic pull;
     logic empty;
@@ -11,12 +9,7 @@ interface fifo_interface (
     logic [fifo_config::ADDR_WIDTH:0] counter;
 
     clocking cb_drv @(posedge clk);
-        /*
-        Input Skew: The input signals will be sampled 2 times unit before the clock edge.
-        Output Skew: Delays the driving of output signals by a specified time relative to clk edge.
-        default: input #1step output #0;
-        */
-        default input #fifo_config::SETUP_TIME output #(fifo_config::HOLD_TIME+1);
+        //default input #fifo_config::SETUP_TIME output #(fifo_config::HOLD_TIME+1);
         output push;
         output pull;
         output din;
@@ -28,7 +21,7 @@ interface fifo_interface (
     endclocking
 
     clocking cb_mon @(posedge clk);
-        default input #(fifo_config::SETUP_TIME+1);
+        //default input #(fifo_config::SETUP_TIME+1);
         input res;
         input push;
         input pull;
@@ -43,8 +36,8 @@ interface fifo_interface (
     modport MONITOR_MP(clocking cb_mon);
 
     /* ASSERTIONS */
-    static int THRESH_FULL = fifo_config::FIFO_DEPTH;
     static int THRESH_NONE = 0;
+    static int THRESH_FULL = fifo_config::FIFO_DEPTH;
     int count;
     always_ff @(posedge clk) begin
         if (res) count <= 0;
@@ -57,15 +50,15 @@ interface fifo_interface (
             if (count == THRESH_NONE) count <= count + 1;
             if (~push && count == THRESH_FULL) count <= count - 1;
         end
-        $strobe("%t STROBE COUNT=%0d", $time, count);
+        //$strobe("%t STROBE COUNT=%0d", $time, count);
     end
-
-    property unfull_on_res;
-        @(negedge res) disable iff (res) ~full;
-    endproperty
 
     property counter_check;
         @(posedge clk) disable iff (res) count == counter;
+    endproperty
+
+    property unfull_on_res;
+        @(negedge res) disable iff (res) ~full;
     endproperty
 
     property empty_on_res;
@@ -77,62 +70,66 @@ interface fifo_interface (
     endproperty
 
     property empty_to_high;
-        @(posedge clk) disable iff (res)
-            (count == THRESH_NONE) |-> empty;
+        @(posedge clk) disable iff (res) (count == THRESH_NONE) |-> empty;
     endproperty
 
     property empty_to_low;
-        @(posedge clk) disable iff (res)
-            (count > THRESH_NONE) |-> ~empty;
-    endproperty
-
-    property empty_stable;
-        @(posedge clk) disable iff (res)
-            (empty & pull & ~push) |=> $stable(empty);
+        @(posedge clk) disable iff (res) (count > THRESH_NONE) |-> ~empty;
     endproperty
 
     property full_to_high;
-        @(posedge clk) disable iff (res)
-            (count >= THRESH_FULL) |-> full;
+        @(posedge clk) disable iff (res) (count >= THRESH_FULL) |-> full;
+    endproperty
+
+    property empty_stable;
+        @(posedge clk) disable iff (res) (empty & pull & ~push) |=> $stable(empty);
     endproperty
 
     property full_to_low;
-        @(posedge clk) disable iff (res)
-            (full & push & ~pull) |=> $stable(full);
+        @(posedge clk) disable iff (res) (full & push & ~pull) |=> $stable(full);
     endproperty
 
     property full_stable;
-        @(posedge clk) disable iff (res)
-            (full & push & ~pull) |=> $stable(full);
+        @(posedge clk) disable iff (res) (full & push & ~pull) |=> $stable(full);
     endproperty
 
+    cover property (counter_check);
     assert_counter: assert property (counter_check)
     else log("assert_counter");
 
+    cover property (empty_on_res);
     assert_empty_on_res: assert property (empty_on_res)
     else log("assert_empty_on_res");
 
+    cover property (unfull_on_res);
     assert_unfull_on_res: assert property (unfull_on_res)
     else log("assert_unfull_on_res");
 
+    cover property (empty_full);
     assert_empty_full: assert property (empty_full)
     else log("assert_empty_full");
 
+    cover property (empty_to_high);
     assert_empty_to_high: assert property (empty_to_high)
     else log("assert_empty_to_high");
 
+    cover property (empty_to_low);
     assert_empty_to_low: assert property (empty_to_low)
     else log("assert_empty_to_low");
 
+    cover property (empty_stable);
     assert_empty_stable: assert property (empty_stable)
     else log("assert_empty_stable");
 
+    cover property (full_to_high);
     assert_full_to_high: assert property (full_to_high)
     else log("assert_full_to_high");
 
+    cover property (full_to_low);
     assert_full_to_low: assert property (full_to_low)
     else log("assert_full_to_low");
 
+    cover property (full_stable);
     assert_full_stable: assert property (full_stable)
     else log("assert_full_stable");
 

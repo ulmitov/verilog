@@ -1,15 +1,15 @@
 interface mem_interface (input logic clk);
+    risc_pkg::op_enum_dmem_size blsize;
+    logic [mem_config::ADDR_WIDTH-1:0] addr;
+    logic [mem_config::DATA_WIDTH-1:0] wr_data;
+    logic [mem_config::DATA_WIDTH-1:0] rd_data;
     logic wen;
     logic ren;
     logic res;
     logic req;
-    logic [mem_config::ADDR_WIDTH-1:0] addr;
-    logic [mem_config::DATA_WIDTH-1:0] wr_data;
-    logic [mem_config::DATA_WIDTH-1:0] rd_data;
-    risc_pkg::op_enum_dmem_size blsize;
 
     clocking cb_drv @(posedge clk);
-        default input #mem_config::SETUP_TIME output #mem_config::HOLD_TIME;
+        //default input #mem_config::SETUP_TIME output #mem_config::HOLD_TIME;
         output wen;
         output ren;
         output addr;
@@ -21,7 +21,7 @@ interface mem_interface (input logic clk);
     endclocking
 
     clocking cb_mon @(posedge clk);
-        default input #mem_config::SETUP_TIME;
+        //default input #mem_config::SETUP_TIME;
         input res;
         input req;
         input wen;

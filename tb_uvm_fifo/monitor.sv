@@ -17,7 +17,6 @@ class monitor extends uvm_monitor;
     endfunction
 
     virtual task run_phase(uvm_phase phase);
-        super.run_phase(phase);
         forever begin
             wait(!vif.DRIVER_MP.cb_mon.res);
             @(vif.MONITOR_MP.cb_mon);

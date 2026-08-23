@@ -3,12 +3,14 @@ class scoreboard extends uvm_scoreboard;
     parameter int WIDTH = mem_config::DATA_WIDTH;
     parameter int DEPTH = mem_config::DEPTH;
 
-    transaction req;
     uvm_tlm_analysis_fifo #(transaction) scb_fifo;
+    transaction req;
 
     bit [WIDTH-1:0] mem_ref [0:DEPTH];
     bit [WIDTH-1:0] tx_dout;
+    bit [WIDTH-1:0] prev_read;
     int count;
+    int rd_done = 0;
 
     function new(string name, uvm_component parent);
         super.new(name, parent);
@@ -16,7 +18,7 @@ class scoreboard extends uvm_scoreboard;
 
     virtual function void build_phase(uvm_phase phase);
         super.build_phase(phase);
-        scb_fifo = new("SCP_FIFO", this);
+        scb_fifo = new("SCB_FIFO", this);
     endfunction
 
     function void flush();
@@ -38,7 +40,7 @@ class scoreboard extends uvm_scoreboard;
                     mem_ref[i] = 0;
             end
             */
-            if ((!req.wen && !req.ren) | !req.req) continue;
+            if ( (!req.wen && !req.ren) | !req.req ) continue;
             count++;
             uvm_report_info("SCB_SEQ", $sformatf("[#%0d] %s", count, req.convert2string()), UVM_HIGH);
             check_req();
@@ -46,17 +48,16 @@ class scoreboard extends uvm_scoreboard;
     endtask
 
     function void check_req;
-        bit [WIDTH-1:0] prev_read;
         int i, x, y, blen;
-        int rd_done = 0;
+
         case (req.blsize)
-            OP_DMEM_BYTE: blen = 1;
-            OP_DMEM_HALF: blen = WIDTH > 8 ? 2 : mem_config::BUS_BLOCKS;
-            OP_DMEM_TRPL: blen = WIDTH > 16 ? 3 : mem_config::BUS_BLOCKS;
-            OP_DMEM_WORD: blen = WIDTH > 24 ? 4 : mem_config::BUS_BLOCKS;
-            OP_DMEM_DUBL: blen = WIDTH > 32 ? 8 : mem_config::BUS_BLOCKS;
+            OP_DMEM_BYTE:   blen = 1;
+            OP_DMEM_HALF:   blen = WIDTH > 8 ? 2 : mem_config::BUS_BLOCKS;
+            OP_DMEM_TRPL:   blen = WIDTH > 16 ? 3 : mem_config::BUS_BLOCKS;
+            OP_DMEM_WORD:   blen = WIDTH > 24 ? 4 : mem_config::BUS_BLOCKS;
+            OP_DMEM_DUBL:   blen = WIDTH > 32 ? 8 : mem_config::BUS_BLOCKS;
             //OP_DMEM_QUAD: blen = WIDTH > 64 ? 16 : mem_config::BUS_BLOCKS;
-            default: blen = mem_config::BUS_BLOCKS;
+            default:        blen = mem_config::BUS_BLOCKS;
         endcase
 
         if (req.addr < DEPTH && req.addr + blen >= DEPTH)
@@ -75,6 +76,7 @@ class scoreboard extends uvm_scoreboard;
                 else
                     this.failed(prev_read, req.rd_data);
             end
+            rd_done = 0;
         end
 
         if (req.ren) begin
@@ -100,7 +102,6 @@ class scoreboard extends uvm_scoreboard;
     endfunction
 
     function void passed(bit [WIDTH-1:0] exp, bit [WIDTH-1:0] rec);
-        //dump_mem();
         uvm_report_info(get_name(),
             $sformatf("--- PASSED MATCH: Exp=0x%0h | Rec=0x%0h", exp, rec));
     endfunction

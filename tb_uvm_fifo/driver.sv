@@ -15,7 +15,6 @@ class driver extends uvm_driver#(transaction);
     endfunction
 
     virtual task run_phase(uvm_phase phase);
-        super.run_phase(phase);
         forever begin
             seq_item_port.get_next_item(req);
             drive_task();

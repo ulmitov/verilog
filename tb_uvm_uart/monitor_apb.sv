@@ -21,7 +21,6 @@ class monitor_apb extends uvm_monitor;
     endfunction
 
     task run_phase(uvm_phase ph);
-        super.run_phase(ph);
         forever begin
             monitor();
         end

@@ -44,7 +44,7 @@ module top_tb;
     );
 
     always  #(mem_config::T_CLK) wclk = ~wclk;
-    initial run_test("test_regression");
+
     initial begin
         //$dumpfile("top_tb_mem.vcd");
         //$dumpvars(0);
@@ -69,4 +69,5 @@ module top_tb;
             end
         end
     end
+    initial run_test("test_regression");
 endmodule

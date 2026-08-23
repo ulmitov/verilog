@@ -33,23 +33,25 @@ class scoreboard extends uvm_scoreboard;
 
             // check empty sig
             if (!msize) begin
-                assert(ftr.empty) else
-                    uvm_report_error(get_name(), $sformatf("EMPTY sig not raised. Mem size=%0d", msize));
+                assert(ftr.empty) else uvm_report_error(get_name(),
+                    $sformatf("EMPTY sig not raised. Mem size=%0d", msize)
+                );
             end else begin
-                assert(!ftr.empty) else
-                    uvm_report_error(get_name(),
-                        $sformatf("EMPTY is set but fifo is not empty. Mem size=%0d", msize));
+                assert(!ftr.empty) else uvm_report_error(get_name(),
+                    $sformatf("EMPTY is set but fifo is not empty. Mem size=%0d", msize)
+                );
             end
 
             // check full sig
             exp_full = fifo_config::FIFO_DEPTH;
             if (msize < exp_full) begin
-                assert(!ftr.full) else
-                    uvm_report_error(get_name(),
-                        $sformatf("FULL is set but fifo is not full. Mem size=%0d", msize));
+                assert(!ftr.full) else uvm_report_error(get_name(),
+                    $sformatf("FULL is set but fifo is not full. Mem size=%0d", msize)
+                );
             end else begin
-                assert(ftr.full) else
-                    uvm_report_error(get_name(), $sformatf("FULL sig not raised. Mem size=%0d", msize));
+                assert(ftr.full) else uvm_report_error(get_name(),
+                    $sformatf("FULL sig not raised. Mem size=%0d", msize)
+                );
             end
 
             // print mem status
@@ -77,6 +79,7 @@ class scoreboard extends uvm_scoreboard;
         uvm_report_info(get_name(),
             $sformatf("--- PASSED MATCH: Exp=0x%0h | Rec=0x%0h", exp, rec));
     endfunction
+
     function void failed(int exp, int rec);
         uvm_report_info(get_name(), $sformatf("-------------------"));
         uvm_report_error(get_name(),
