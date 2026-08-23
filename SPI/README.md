@@ -1,6 +1,6 @@
 # SPI module
 
-According to spec: https://www.ti.com/lit/ug/sprug72/sprug72.pdf
+Spec reference: https://www.ti.com/lit/ug/sprug72/sprug72.pdf
 
 
 # Simulation results

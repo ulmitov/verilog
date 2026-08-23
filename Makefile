@@ -146,8 +146,8 @@ endif
 
 spi_src := -ISPI SPI/testbench.sv SPI/spi_top.sv modules/clock_divider.sv modules/shift_reg.v
 spi_tb:
-	$(call run_verilator,spi_tb,$(spi_src),"")
-	$(call run_sim,spi_tb,$(spi_src),"")
+	$(call run_verilator,spi_loopback_tb,$(spi_src),"")
+	$(call run_sim,spi_loopback_tb,$(spi_src),"")
 	$(call run_sim,spi_single_slave_tb,$(spi_src),"")
 	$(call run_sim,spi_daisy_chain_tb,$(spi_src),"")
 

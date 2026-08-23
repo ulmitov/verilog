@@ -1,11 +1,11 @@
 `include "consts.vh"
 /*
-    Clock divider (Baud Rate Generation)
+Clock divider (Baud Rate Generation)
 
 f="clock_divider.sv"; m="clock_divider";
 yosys -p "read_verilog -sv ${f}; hierarchy -check -top $m; proc; opt; clean; show -format svg -prefix ${m} ${m}; show ${m}"
 */
-module clock_divider #(parameter DIV_WIDTH = 16, parameter DATA_WIDTH = 8) (
+module clock_divider #(parameter DIV_WIDTH = 16) (
     input logic res,
     input logic clk_in,
     input logic polarity,   // initial value
@@ -18,16 +18,16 @@ module clock_divider #(parameter DIV_WIDTH = 16, parameter DATA_WIDTH = 8) (
     logic cycle_full;
     logic switch_clk;
     logic half_cycle;
-    logic baud_out;
     logic dlm_set;
     logic dll_set;
     logic fixed_phase;
     logic fixed_pol;
+    logic baud_out = polarity === 1'b0 ? 1'b0 : 1'b1; // default output, same as fixed_pol mux
 
     generate
-        if (DATA_WIDTH < DIV_WIDTH) begin
-            assign dlm_set      = |div[DIV_WIDTH-1:DATA_WIDTH];
-            assign dll_set      = |div[DATA_WIDTH-1:1];
+        if (DIV_WIDTH >= 8) begin
+            assign dlm_set      = |div[DIV_WIDTH-1:8];
+            assign dll_set      = |div[7:1];
         end else begin
             assign dlm_set      = 1'b0;
             assign dll_set      = |div[DIV_WIDTH-1:1];
@@ -75,7 +75,6 @@ module clock_divider #(parameter DIV_WIDTH = 16, parameter DATA_WIDTH = 8) (
             counter <= next_count;
     end
 
-    initial baud_out = polarity === 1'b0 ? 1'b0 : 1'b1; // same as the above fixed_pol mux
     always_ff @(posedge clk_in or posedge res) begin
         if (res)
             baud_out <= fixed_pol;

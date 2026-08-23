@@ -14,6 +14,8 @@ Each folder has a Readme
 
  - ![SystemVerilog testbench for ALU module](./tb_sv_alu)
 
+ - ![SPI module and tests](./SPI)
+
  - ![UART module](./UART) according to 16550 spec
  
  - ![UART UVM testbench](./tb_uvm_uart) with RAL model and APB driver
@@ -25,14 +27,13 @@ Each folder has a Readme
  - ![UVM testbench for Memory module](./tb_uvm_mem)
 
  - ![UVM testbench for FIFO](./tb_uvm_fifo)
-
- - ![SPI module and tests](./SPI)
  
  - ![modules:](./modules) verilog sub modules and their acceptance tests
 
 
 # Run suites:
 - `make regression`: modules acceptance tests
+- `make spi_tb`: SPI tests
 - `make uart`: UART testbenches
 - `make uartcpp`: UART C++ driver validation
 - `make uvm-uart`: UVM UART testbench

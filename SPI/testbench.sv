@@ -2,8 +2,10 @@
 `timescale 1ns / 1ns
 
 
-module spi_tb;
+// make vvp TOP=spi_loopback_tb SRC="-ISPI -Imodules SPI/testbench.sv SPI/spi_top.sv modules/clock_divider.sv modules/shift_reg.v"
+module spi_loopback_tb;
     string vcd = "vcd/spi_tb.vcd";
+    int repeats = 1000;
     logic clk = 1;
     logic res_n;
     logic ss_n;
@@ -33,6 +35,7 @@ module spi_tb;
     );
 
     task drive(input bit rx_int = 1);
+        data = data & ((1 << (dlen + 1)) - 1);
         $display("--- Sending data 0x%0h ---", data);
         #1;
         pwrite = 1;
@@ -78,7 +81,6 @@ module spi_tb;
         repeat(2) @(posedge clk);
         res_n = 1;
         div = 4;
-        dlen = 7;
         ss_n = 0;
         pwrite = 1;
 
@@ -91,20 +93,26 @@ module spi_tb;
         pwdata = 6; // master and spi en
         @(posedge clk) #1;
 
-        paddr = `SPICCR;
-        pwrite = 1;
-        pwdata = 'h90 + dlen;   // loopback + sw_res
-        @(posedge clk) #1;
+        repeat(repeats) begin
+            data = $urandom_range(255);
+            if (data % 3) begin
+                dlen = $urandom_range(7);
+                $display("Setting DLEN to %d", dlen + 1);
+                paddr = `SPICCR;
+                pwrite = 1;
+                pwdata = 'h90 + dlen;   // loopback + sw_res
+                @(posedge clk);
+            end
+            
+            drive(1);
+            read();
 
-        data = 'hAD;
-        drive(1);
-        read();
-
-        #1;
-        pwrite = 0;
-        paddr = `SPIST;
-        @(posedge clk);
-        if (prdata) $error("[%0t]: #1: SPIST %0h is not zero", $time, prdata);
+            #1;
+            pwrite = 0;
+            paddr = `SPIST;
+            @(posedge clk);
+            if (prdata) $error("[%0t]: #1: SPIST %0h is not zero", $time, prdata);
+        end
 
         data = 'h59;
         drive();

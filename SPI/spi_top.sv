@@ -58,7 +58,7 @@ module spi_top #(LEFT_JUSTIFY = 1, SLAVES_NUM = 1) (
     logic count_limit;
 
 
-    clock_divider #(.DIV_WIDTH(7), .DATA_WIDTH(8)) baud_spi (
+    clock_divider #(.DIV_WIDTH(7)) baud_spi (
         .clk_in(lspclk),
         .res(baud_res),
         .polarity(polarity),
