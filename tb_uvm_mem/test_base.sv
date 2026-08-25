@@ -40,10 +40,9 @@ class test_base #(type REQ = base_sequence) extends uvm_test;
         cfg = mem_config::type_id::create("CFG", this);
         seq = REQ::type_id::create("SEQ");
         seq_read = sequence_read_all::type_id::create("SEQ_RD");
-        if (!uvm_config_db #(virtual mem_interface)::get(this, "", "vif", vif))
-            uvm_report_fatal(get_name(), "build_phase: virtual interface was not set");
+        assert(uvm_config_db#(virtual mem_interface)::get(this, "", "vif", vif));
         // Test parameter passed to sequence via DB:
-        uvm_config_db #(int)::set(null, "*", "num_to_full", mem_config::DEPTH);
+        uvm_config_db#(int)::set(null, "*", "num_to_full", mem_config::DEPTH);
     endfunction
 
     virtual task run_phase(uvm_phase phase);

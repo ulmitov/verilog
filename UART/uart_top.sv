@@ -299,8 +299,7 @@ module uart_top (
     end
     */
     logic etbei_val;
-    logic clear_etbei;
-    assign clear_etbei = 0;
+    logic clear_etbei = 0;
     assign etbei_val = tx_empty;
     // TODO: receiver character time-out UART_IIR_TI
     always_ff @(posedge clk) begin

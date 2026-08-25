@@ -15,8 +15,7 @@ class driver_apb extends uvm_driver#(transaction);
         super.build_phase(ph);
         req = transaction::type_id::create("REQ");
         rsp = transaction::type_id::create("RSP");
-        if (!uvm_config_db#(virtual interface_apb)::get(this, "", "vif_apb", vif))
-            uvm_report_fatal(get_name(), "vif_apb is not in db");
+        assert(uvm_config_db#(virtual interface_apb)::get(this, "", "vif_apb", vif));
     endfunction
 
     task run_phase(uvm_phase ph);

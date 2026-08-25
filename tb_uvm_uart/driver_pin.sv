@@ -12,8 +12,7 @@ class driver_pin extends uvm_driver#(pin_sample);
     function void build_phase(uvm_phase ph);
         super.build_phase(ph);
         req = pin_sample::type_id::create("REQ");
-        if (!uvm_config_db#(virtual interface_pin)::get(this, "", "vif_pin", vif))
-            uvm_report_fatal(get_name(), "vif_pin is not in db");
+        assert(uvm_config_db#(virtual interface_pin)::get(this, "", "vif_pin", vif));
     endfunction
 
     task run_phase(uvm_phase ph);

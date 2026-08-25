@@ -48,7 +48,7 @@ module top_tb;
     initial begin
         //$dumpfile("top_tb_mem.vcd");
         //$dumpvars(0);
-        uvm_config_db #(virtual mem_interface)::set(null, "*", "vif", mif);
+        uvm_config_db#(virtual mem_interface)::set(null, "*", "vif", mif);
         // Wait for memory init task event
         ev_init = uvm_event_pool::get_global_pool().get("EV_INIT");
         ev_dump = uvm_event_pool::get_global_pool().get("EV_DUMP");

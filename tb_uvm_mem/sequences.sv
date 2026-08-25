@@ -44,8 +44,7 @@ class base_sequence extends uvm_sequence#(transaction);
     virtual task pre_start();
         super.pre_start();
 		req = transaction::type_id::create();
-        if (!uvm_config_db#(int)::get(null, "", "num_to_full", num_to_full))
-            uvm_report_fatal(get_name(), "num_to_full is not in db");
+        assert(uvm_config_db#(int)::get(null, "", "num_to_full", num_to_full));
 	endtask
 
     function void header(string txt, int num);

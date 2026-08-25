@@ -15,8 +15,7 @@ class monitor_pin extends uvm_monitor;
     function void build_phase(uvm_phase ph);
         super.build_phase(ph);
         mon_port = new("PIN_MON", this);
-        if (!uvm_config_db#(virtual interface_pin)::get(this, "", "vif_pin", vif_pin))
-            uvm_report_fatal(get_name(), "vif_pin is not in db");
+        assert(uvm_config_db#(virtual interface_pin)::get(this, "", "vif_pin", vif_pin));
     endfunction
 
     task run_phase(uvm_phase ph);

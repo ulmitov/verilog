@@ -37,14 +37,11 @@ class test_base #(type REQ = base_sequence) extends uvm_test;
         cfg = fifo_config::type_id::create("cfg", this);
         seq = REQ::type_id::create("SEQ");
         // Test parameter passed to sequence via DB:
-        uvm_config_db #(int)::set(null, "*", "num_to_full", fifo_config::FIFO_DEPTH * 2);
-        if (!uvm_config_db #(virtual fifo_interface)::get(this, "", "vif", vif))
-            uvm_report_fatal(get_name(), "build_phase: virtual interface was not set");
-
+        uvm_config_db#(int)::set(null, "*", "num_to_full", fifo_config::FIFO_DEPTH * 2);
+        assert(uvm_config_db#(virtual fifo_interface)::get(this, "", "vif", vif));
         // Register Config class in db. For now not used in this TB:
         //uvm_config_db#(fifo_config)::set(null, "*", "cfg", cfg);
-        //if (!uvm_config_db#(fifo_config)::get(this, "", "cfg", cfg))
-        //    uvm_report_fatal(get_name(), "fifo_config was not created in test build_phase");
+        //assert(uvm_config_db#(fifo_config)::get(this, "", "cfg", cfg));
     endfunction
 
     virtual task run_phase(uvm_phase phase);
@@ -110,9 +107,11 @@ endclass
 Not creating a class per each sequence
 as CI runs the regression suite anyway
 */
+`ifndef VERILATOR
 class test_single extends test_base#(sequence_push_pull_00);
     `uvm_component_utils(test_single)
     function new(string name = "test_single", uvm_component parent = null);
         super.new(name, parent);
     endfunction
 endclass
+`endif

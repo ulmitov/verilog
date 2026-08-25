@@ -34,8 +34,7 @@ class scoreboard extends uvm_scoreboard;
         ev_pool = uvm_event_pool::get_global_pool();
         scb_fifo = new("APB_Q", this);
         pin_fifo = new("PIN_Q", this);
-        if (!uvm_config_db#(top_config)::get(null, "", "cfg", cfg))
-            uvm_report_fatal(get_name(), "CFG is not in db");
+        assert(uvm_config_db#(top_config)::get(null, "", "cfg", cfg));
         flush();
     endfunction
 

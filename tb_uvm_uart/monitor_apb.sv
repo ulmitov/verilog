@@ -16,8 +16,7 @@ class monitor_apb extends uvm_monitor;
     function void build_phase(uvm_phase ph);
         super.build_phase(ph);
         mon_port = new("MNP", this);
-        if (!uvm_config_db#(virtual interface_apb)::get(this, "", "vif_apb", vif_apb))
-            uvm_report_fatal(get_name(), "vif_apb is not in db");
+        assert(uvm_config_db#(virtual interface_apb)::get(this, "", "vif_apb", vif_apb));
     endfunction
 
     task run_phase(uvm_phase ph);

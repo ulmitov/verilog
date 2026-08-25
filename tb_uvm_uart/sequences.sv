@@ -41,8 +41,7 @@ class base_sequence extends uvm_sequence#(transaction);
     endfunction
 
     virtual task pre_start();
-        if (!uvm_config_db#(ral_env)::get(null, "", "ral", ral))
-            uvm_report_fatal(get_name(), "RAL object is not in DB");
+        assert(uvm_config_db#(ral_env)::get(null, "", "ral", ral));
         seq_reset();    // reset before each test and check registers after reset
         seq_read_regs();
     endtask
@@ -1105,8 +1104,7 @@ class sequence_external extends uvm_sequence #(pin_sample);
 
     task pre_start;
         req = pin_sample::type_id::create();
-        if (!uvm_config_db#(top_config)::get(null, "", "cfg", cfg))
-            uvm_report_fatal(get_name(), "cfg is not in db");
+        assert(uvm_config_db#(top_config)::get(null, "", "cfg", cfg));
     endtask
 
     task send_sin(input bit din);
@@ -1236,8 +1234,7 @@ class sequence_send_sin extends base_sequence;
     task pre_start;
         super.pre_start();
         seq_ext = sequence_external::type_id::create();
-        if (!uvm_config_db#(sequencer_pins)::get(null, "", "sqr_pin", sqr_pin))
-            uvm_report_fatal(get_name(), "sqr_pin is not in db");
+        assert(uvm_config_db#(sequencer_pins)::get(null, "", "sqr_pin", sqr_pin));
         if (sqr_pin == null) uvm_report_fatal(get_name(), "PIN sequencer is null");
         seq_set_divisor($urandom_range(32, 2) & 'hFFFE);    // even divisor
     endtask

@@ -35,7 +35,6 @@ module spi_top #(LEFT_JUSTIFY = 1, SLAVES_NUM = 1) (
     logic wr_ist;
     logic sdat_clk;
     logic rx_overr;
-    logic tx_full;
     logic baudout;
     logic load_en;
     logic sreg_en;
@@ -142,15 +141,12 @@ module spi_top #(LEFT_JUSTIFY = 1, SLAVES_NUM = 1) (
         //$display("m=%0b, b=%0b spiclk=%0b, local_clk=%0b, pol=%0b", master, baudout, spiclk, local_clk, polarity);
     end
 
+
     always_latch begin
         if (spi_res)
             sreg_en = 0;
-        else if (~master) begin
-            if (spi_en)
-                sreg_en = 1;
-            else
-                sreg_en = 0;
-        end
+        else if (~master)
+            sreg_en = spi_en;
         else if (post_loaden)
             sreg_en = 1;
         else if (sreg_off_ok)
